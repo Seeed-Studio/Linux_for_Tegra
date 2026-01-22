@@ -1,0 +1,42 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ *
+ * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+ * property and proprietary rights in and to this material, related
+ * documentation and any modifications thereto. Any use, reproduction,
+ * disclosure or distribution of this material and related documentation
+ * without an express license agreement from NVIDIA CORPORATION or
+ * its affiliates is strictly prohibited.
+ */
+
+/dts-v1/;
+
+/ {
+    brbct {
+        ECID = <0x00000000 0x00000000 0x00000000 0x00000000>;
+        SecureDebugControlEcid = <0>;
+        SecureDebugControlNoneEcid = <0>;
+        preprod_dev_sign = <1>;
+        bf_bl_allbits {
+            bf_bl_gpio_select_boot_chain_1b                = <0>;
+            bf_bl_mb1_debug_production_1b                  = <0>;
+            bf_bl_sc7_rf_debug_production_1b               = <0>;
+            bf_bl_psc_bl_debug_production_1b               = <0>;
+            bf_bl_psc_rf_debug_production_1b               = <0>;
+            bf_bl_psc_fw_debug_production_1b               = <0>;
+            bf_bl_bpmp_debug_production_1b                 = <0>;
+            bf_bl_mce_debug_production_1b                  = <0>;
+            bf_bl_rtc_rail_violation_detect_1b             = <0>;
+            bf_bl_cust_nv_ccplex_dfd_en_1b                 = <0>;
+            bf_bl_debug_with_test_keys_1b                  = <0>;
+            bf_bl_debug_with_test_keys_during_psc_debug_1b = <0>;
+            bf_bl_disable_bootrom_clock_boost_1b           = <0>;
+            bf_bl_disable_pscrom_clk_boost_1b              = <0>;
+            bf_bl_enable_scpm_reset                        = <0>;
+            bf_bl_skip_oem_auth_diag_boot                  = <0>;
+            bf_bl_diag_boot                                = <0>;
+            bf_bl_bpmp_diag_boot                           = <1>;
+        };
+    };
+};

@@ -1,0 +1,46 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ *
+ * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+ * property and proprietary rights in and to this material, related
+ * documentation and any modifications thereto. Any use, reproduction,
+ * disclosure or distribution of this material and related documentation
+ * without an express license agreement from NVIDIA CORPORATION or
+ * its affiliates is strictly prohibited.
+ */
+
+// NOTE: This file was auto generated: No manual change must be made in this file
+
+McGeneralizedCarveout12Cfg0 = <0x120027fe>;
+McGeneralizedCarveout12Cfg1 = <0x60>;
+McGeneralizedCarveout12Access0 = <0x0>;
+McGeneralizedCarveout12Access1 = <0x2000080>;
+McGeneralizedCarveout12Access10 = <0x0>;
+McGeneralizedCarveout12Access11 = <0xc0000000>;
+McGeneralizedCarveout12Access12 = <0x4>;
+McGeneralizedCarveout12Access13 = <0x0>;
+McGeneralizedCarveout12Access14 = <0x0>;
+McGeneralizedCarveout12Access2 = <0x0>;
+McGeneralizedCarveout12Access3 = <0x3000000>;
+McGeneralizedCarveout12Access4 = <0x0>;
+McGeneralizedCarveout12Access5 = <0xc00000>;
+McGeneralizedCarveout12Access6 = <0x0>;
+McGeneralizedCarveout12Access7 = <0x0>;
+McGeneralizedCarveout12Access8 = <0x0>;
+McGeneralizedCarveout12Access9 = <0x0>;
+McGeneralizedCarveout12ForceInternalAccess0 = <0x0>;
+McGeneralizedCarveout12ForceInternalAccess1 = <0x0>;
+McGeneralizedCarveout12ForceInternalAccess10 = <0x0>;
+McGeneralizedCarveout12ForceInternalAccess11 = <0x0>;
+McGeneralizedCarveout12ForceInternalAccess12 = <0x0>;
+McGeneralizedCarveout12ForceInternalAccess13 = <0x0>;
+McGeneralizedCarveout12ForceInternalAccess14 = <0x0>;
+McGeneralizedCarveout12ForceInternalAccess2 = <0x0>;
+McGeneralizedCarveout12ForceInternalAccess3 = <0x0>;
+McGeneralizedCarveout12ForceInternalAccess4 = <0x0>;
+McGeneralizedCarveout12ForceInternalAccess5 = <0x0>;
+McGeneralizedCarveout12ForceInternalAccess6 = <0x0>;
+McGeneralizedCarveout12ForceInternalAccess7 = <0x0>;
+McGeneralizedCarveout12ForceInternalAccess8 = <0x0>;
+McGeneralizedCarveout12ForceInternalAccess9 = <0x0>;

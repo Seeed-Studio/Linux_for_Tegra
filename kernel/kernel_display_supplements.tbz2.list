@@ -1,0 +1,15 @@
+usr/
+usr/lib/
+usr/lib/modules/
+usr/lib/modules/6.8.12-tegra/
+usr/lib/modules/6.8.12-tegra/updates/
+usr/lib/modules/6.8.12-tegra/updates/drivers/
+usr/lib/modules/6.8.12-tegra/updates/drivers/platform/
+usr/lib/modules/6.8.12-tegra/updates/drivers/platform/tegra/
+usr/lib/modules/6.8.12-tegra/updates/drivers/platform/tegra/dce/
+usr/lib/modules/6.8.12-tegra/updates/drivers/platform/tegra/dce/tegra-dce.ko
+usr/share/
+usr/share/doc/
+usr/share/doc/kernel_display_supplements/
+usr/share/doc/kernel_display_supplements/LICENSE.display_kernel
+usr/share/doc/kernel_display_supplements/Tegra_Software_License_Agreement-Tegra-Linux.txt

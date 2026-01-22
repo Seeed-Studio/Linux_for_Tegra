@@ -1,0 +1,28 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ *
+ * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+ * property and proprietary rights in and to this material, related
+ * documentation and any modifications thereto. Any use, reproduction,
+ * disclosure or distribution of this material and related documentation
+ * without an express license agreement from NVIDIA CORPORATION or
+ * its affiliates is strictly prohibited.
+ */
+
+#include "tegra234-mb1-bct-p3701-0005-as-p3767-0000-rc00-204mhz.dtsi"
+#include "tegra234-mb1-bct-p3701-0005-as-p3767-0000-rc01-204mhz.dtsi"
+#include "tegra234-mb1-bct-p3701-0005-as-p3767-0000-rc02-204mhz.dtsi"
+#include "tegra234-mb1-bct-p3701-0005-as-p3767-0000-rc03-204mhz.dtsi"
+#include "tegra234-mb1-bct-p3701-0005-as-p3767-0000-rc04-204mhz.dtsi"
+#include "tegra234-mb1-bct-p3701-0005-as-p3767-0000-rc05-204mhz.dtsi"
+#include "tegra234-mb1-bct-p3701-0005-as-p3767-0000-rc06-204mhz.dtsi"
+#include "tegra234-mb1-bct-p3701-0005-as-p3767-0000-rc07-204mhz.dtsi"
+#include "tegra234-mb1-bct-p3701-0005-as-p3767-0000-rc08-204mhz.dtsi"
+#include "tegra234-mb1-bct-p3701-0005-as-p3767-0000-rc09-204mhz.dtsi"
+#include "tegra234-mb1-bct-p3701-0005-as-p3767-0000-rc10-204mhz.dtsi"
+#include "tegra234-mb1-bct-p3701-0005-as-p3767-0000-rc11-204mhz.dtsi"
+#include "tegra234-mb1-bct-p3701-0005-as-p3767-0000-rc12-204mhz.dtsi"
+#include "tegra234-mb1-bct-p3701-0005-as-p3767-0000-rc13-204mhz.dtsi"
+#include "tegra234-mb1-bct-p3701-0005-as-p3767-0000-rc14-204mhz.dtsi"
+#include "tegra234-mb1-bct-p3701-0005-as-p3767-0000-rc15-204mhz.dtsi"

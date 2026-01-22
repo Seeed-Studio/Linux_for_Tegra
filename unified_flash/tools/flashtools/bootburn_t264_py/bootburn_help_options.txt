@@ -1,0 +1,84 @@
+#Usage help file: Common options are for both safe and standard builds
+#Format: option followed by the command details separated by comma.
+#Command details include a token
+#        Common for safe and standard build
+#        Standard for Standard build
+
+            a, Standard::Use this option to flash native Android cfg (Not supported in Python)
+            b, Common::BoardHelpOptions
+            c, Standard::Flash SCE with Safety firmware.   Flash APE with camera firmware. (Currently not supported)
+            d, Standard::Provide DTB file to be used. Can be done for multiple partitions.  -d <PARTITION_NAME> <lename>.  Possible values for PARTITION_NAME are bpmp-fw-dtb and kernel-dtb.  Default file is dened in BoardSetlePathsAndDefaultValues.
+            e, Standard::Species the target board for emulation. Valid emulation targets are-  reilly, ohara-gfx & ohara-compute.
+            f, Standard::FA(Failure Analysis) mode Support.
+            g, Common::Generate binaries at mentioned path only and do not flash.
+            h, Common::Prints this message.
+            i, Standard::File path to Platform Configuration file. For hypervisor configurations - if this is not provided, then the tool expects Platform Configuration file to be present in hypervisor output directory
+            k, Standard::Absolute path of the native cfg file to be used (not applicable for hypervisor cfgs).  Default value is quickboot_qspi_linux.cfg for boot in case of linux.  Default value is quickboot_qspi_qnx.cfg for boot in case of qnx.
+            l, Standard::Use this option to flash native Linux cfg
+            m, Standard::Flashing Mods. This option enables mods specic-overrides.
+            o, Standard::Skip flashing recovery partitions.
+            p, Common::Provide PKC Key file. Flash PKC secured image.
+            q, Standard::Use this option to flash native QNX cfg
+            r, Common::Tegra Chip revision for which binaries are generated.  Supported revision are 01 and 02, Example,  -r 01  -r is ignored when target is being flashed.
+            s, Standard::Skip the FS flashing.
+            t, Common::Specify the output directory that will store the les being flashed.   Default name is _temp_dump with a random string appended at the end.
+            u, Common::Used with the PartitionName (see FileToFlash.txt) to generate individual components
+            v, Standard::Specify dGPU VBIOS FW update self extracting file.  File needs to be created with no user input option selected.  The -w option must be selected as well
+            w, Standard::Enable the dGPU VBIOS update process.
+            x, Common::Specify the aurix port for DDPX to put the tegras in recovery.
+            y, Standard::Dont pipeline Qspi0, Qspi1, Emmc, and UFS
+            z, Common::Update/Flash Sku-info, other-info.  --skunum 699-63550-0001-300 --setprodinfo 940-63550-1000-100 JJ.  --setskuversion GD  --setboardserial 1234567.   --setmacid mac0 0xaabbccddeeff.  Arguments other than --skunum/sku and --setskuversion are optional
+            A, Standard::Text file containing Sku-Info arguments similar to -z option arguments.
+            B, Common::Specify boot device. Supported boot device are qspi ,emmc and ufs. Default is qspi.
+            C, Standard::Use debug binaries for Bootloader
+            D, Common::Enable debug prints of the Flashing script.
+            E, Common::Use this option to Enable DRAM ECC.
+            G, Standard::Use this option to flash native Integrity cfg
+            H, Standard::Flash Hypervisor.
+            I, Common::Flash specic target.  When multiple targets are connected to your host use the Bus & Device number of   the device to differentiate among various devices to specify target to flash.   Example,  -I 003 043
+            L, Standard::Enable Low Power modes.
+            M, Standard::Development Version firmware
+            O, Standard::Fast Flash recovery partitions
+            P, Common::Pick prebuild binaries from mentioned path and do not generate.
+            R, Common::RCM Support. Boot without Flashing Software(BCT is used from Media). Default flash-boot.
+            S, Standard::Skip conrmation messeges from bootburn, select default y.
+            T, Standard::Enable tracing of bootburn operations to a trace log file.\n On Ubuntu 18.04 you will also need to install lockfile-progs\n EXAMPLE: sudo apt-get install -f lockfile-progs
+            U, Standard::Pass in the UFS provision cfg file.
+            V, Standard::Enable Read back verication to check flashing error if any.
+            X, Standard::Enable Golden Register Address:Value Dump into GR memory carveout.
+            Y, Standard::Specify dt-overlay odm-data parameter.
+            adbSerial, Standard::specify ADB seiral number of the target device
+            asymmetric, Standard::Used to perform operations specific to asymmetric boot chains
+            board_config, Standard::User defined bootburn helper json file
+            chain, Standard::Only Generate images either A or B chain
+            clean, Common::Clean/Full Erase of Non-volatile Storage Device
+            customer-data, Common::Update customer data in BR BCT. It can take two values: Customer data value and optional customer data value json file: <Customer data json file> [<Customer data schema file>]
+            dev, Standard::This is a development branch where targetConfig.TOP is set
+            devicetype, Common::Only Flash Type spi, sdhci or ufshci
+            disable-uart, Common::disables uart on target for rcm-boot and cold-boot
+            encryption_key, Common::Provide common encryption key file
+            encrypt, Common::Global switch to enable encryption.
+            pl_encryption_key, Common::Provide common PL encryption key file
+            filesystem, Standard::For PDK installer to pass location of root FS file system.  The --platform option must be used in conjunction with this call
+            logs, Common::Location for log files
+            platform, Standard::For PDK installer to pass location of prebuilt images created with create_bsp_images.py
+            pytest, Standard::Turn off time consuming features for pytest runs
+            safety, Common::This is production safety flashing.  Certain options are not allowed to comply to TCL-1 classification
+            toolsonly, Standard::Output tools to output directory only.  must use the -g option to specify the location to place the tools
+            user, Common::User who called the application to chown files to
+            setskuversion, Common::sku version (mandatory with -z), e.g. AB
+            setprodinfo, Common::prod id, e.g. 699-62382-0010-100 AB
+            setboardserial, Common::serial id, e.g. 1234567890
+            setmacid, Common::interface info, e.g. mac0 0xaabbccddeeff
+            setmacid0, Common::interface info, e.g. mac0 0xaabbccddeeff
+            setmacid1, Common::interface info, e.g. mac1 0xaabbccddeeff
+            setmacid2, Common::interface info, e.g. mac2 0xaabbccddeeff
+            setmacid3, Common::interface info, e.g. mac3 0xaabbccddeeff
+            skunum, sku id (mandatory with -z), e.g. 699-62382-0010-100
+            find_board_name, common::detects board name (base_board_name+chip_sku_name)
+            disable_hv, Common::Used to enable ENABLE_HV_LOAD in mb2 binary to indicate no qb binary
+            oot_kernel, Standard::Used to flash OOT kernel dtb to target
+            target_pvit, Common::target PVIT partition needed to generate and flash selected partitions
+            skipBctPreserve, Common::Skip Unsigned Customer Data Update from Target
+            usb-instance, Common::The USB port path to flash
+            no_firmware_update, Standard::Force all firmware updates to be canceled

@@ -1,0 +1,12 @@
+{
+    "number-of-chains": 2,
+    "boot-chains": {
+        "chain-1": "-m -g chain_1 --asymmetric -d kernel-dtb tegra194-e3550-0001-b03-A-mods.dtb -E --chain A",
+        "chain-2": "-g chain_2 --chain B"
+    },
+    "all-chains": "-r 02",
+    "generic": {
+        "save-intermediate": true,
+        "output-directory": "asymmetric_images"
+    }
+}

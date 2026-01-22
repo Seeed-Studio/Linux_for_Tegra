@@ -1,0 +1,29 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ *
+ * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+ * property and proprietary rights in and to this material, related
+ * documentation and any modifications thereto. Any use, reproduction,
+ * disclosure or distribution of this material and related documentation
+ * without an express license agreement from NVIDIA CORPORATION or
+ * its affiliates is strictly prohibited.
+ */
+
+/ {
+    mb1_bct {
+        tsc_controls {
+            tsc_locking_config = <0x119>;
+            tsc_locking_diff_configuration = <0x26c>;
+            tsc_locking_ref_frequency_configuration = <0x0>;
+            tsc_locking_control = <0x1>;
+            tsc_locking_adjust_configuration = <0x0>;
+            tsc_locking_fast_adjust_configuration = <0x57011>;
+            tsc_locking_adjust_delta_control = <0x67>;
+            tsc_capture_control_ptx = <0x0>;
+            tsc_capture_config_ptx = <0x313>;
+            tsc_stscrsr = <0x1>;
+            tsc_locking_adjust_num_control = <0x0>;
+        };
+    };
+};

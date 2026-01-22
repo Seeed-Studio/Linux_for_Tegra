@@ -1,0 +1,237 @@
+#!/bin/bash
+
+# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#  * Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#  * Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#  * Neither the name of NVIDIA CORPORATION nor the names of its
+#    contributors may be used to endorse or promote products derived
+#    from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY
+# EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+# PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+# PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+# OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+initrd_dir=/mnt/initrd;
+dhclient_flag="true";
+count=0;
+overlayfs_enabled=0
+TTY_CONSOLE="ttyTCU0"
+
+overlayfs_check() {
+	local efivar_dir="/sys/firmware/efi/efivars"
+	local prefix="L4TOverlayFsMode"
+	local uuid="360a04b9-3fe6-42c8-9fad-d9bf459c4770"
+	local varname="${prefix}-${uuid}"
+
+	if [ ! -d "${efivar_dir}" ]; then
+		echo "Overlayfs is disabled due to missing dir ${efivar_dir}..." > /dev/kmsg
+		overlayfs_enabled=0
+		return
+	fi
+
+	echo "Checking overlayfs setting..." > /dev/kmsg
+	# mount efivar to check overlayfs configuration in EFI runtime variable
+	mount -t efivarfs efivarfs "${efivar_dir}"
+	if [ $? -ne 0 ]; then
+		# With PREEMPT_RT enabled EFI runtime service is disabled by default.
+		# In this case we should continue the boot and don't enable overlayfs.
+		if [ $(grep -c 'PREEMPT_RT' /proc/version) -eq 1 ]; then
+			echo "WARNING: efivars is not available due to PREEMPT_RT. " > /dev/kmsg
+			overlayfs_enabled=0
+		else
+			echo "ERROR: mounting efivars fail..." > /dev/kmsg;
+			exec /bin/bash;
+		fi
+	elif [ -f "${efivar_dir}/${varname}" ]; then
+		local val=$(xxd -ps "${efivar_dir}/${varname}")
+		if [ "${val}" = "0700000001000000" ]; then
+			overlayfs_enabled=1
+		fi
+	fi
+
+	if [ "${overlayfs_enabled}" -eq 1 ]; then
+		echo "Overlayfs is enabled..." > /dev/kmsg
+	else
+		echo "Overlayfs is disabled..." > /dev/kmsg
+	fi
+}
+
+overlayfs_premount() {
+	echo "Pre-mounting file system for overlayfs..." > /dev/kmsg
+	mkdir /lower /upper
+	if [ $? -ne 0 ]; then
+		echo "ERROR: creating overlayfs dirs fail..." > /dev/kmsg;
+		exec /bin/bash;
+	fi
+	mount -t tmpfs tmpfs /upper
+	if [ $? -ne 0 ]; then
+		echo "ERROR: mounting tmpfs to /upper fail..." > /dev/kmsg;
+		exec /bin/bash;
+	fi
+	mkdir /upper/data /upper/work
+	if [ $? -ne 0 ]; then
+		echo "ERROR: creating overlayfs dirs under /upper fail..." > /dev/kmsg;
+		exec /bin/bash;
+	fi
+
+}
+
+overlayfs_mount_root() {
+	local dev="${1}"
+
+	if [ "${overlayfs_enabled}" -eq 1 ]; then
+		overlayfs_premount
+		echo "Mounting overlayfs for root ${dev}..." > /dev/kmsg
+		mount -r "${dev}" /lower
+		if [ $? -ne 0 ]; then
+			echo "ERROR: mounting ${dev} as /lower fail..." > /dev/kmsg;
+			exec /bin/bash;
+		fi
+		mount -t overlay -o lowerdir=/lower,upperdir=/upper/data/,workdir=/upper/work \
+			overlay /mnt
+		if [ $? -ne 0 ]; then
+			echo "ERROR: mounting overlayfs fail..." > /dev/kmsg;
+			exec /bin/bash;
+		fi
+	else
+		mount "${dev}" /mnt/;
+		return $?
+	fi
+}
+
+echo "Starting L4T initial RAM disk" > /dev/kmsg;
+
+# Start bash if user press Enter, or reboot the system
+process_bash_reboot ()
+{
+	# Check if console=ttyTCU0 is in /proc/cmdline
+	local find_console=""
+	find_console=$(grep "console=${TTY_CONSOLE}" /proc/cmdline);
+
+	# Reboot if ttyTCU0 is not found in /proc/cmdline or not found under /dev
+	if [ "${find_console}" = "" ] || [ ! -e "/dev/${TTY_CONSOLE}" ]; then
+		echo "No ${TTY_CONSOLE} is found. Rebooting system..." > /dev/kmsg;
+		reboot;
+	fi
+
+	# Check console ttyTCU0 input: start bash if user press Enter,
+	# or reboot the system
+	echo "Press [ENTER] to start bash..." > /dev/kmsg;
+	if read -t 30 -s < "/dev/${TTY_CONSOLE}"; then
+		echo "Starting bash..." > /dev/kmsg;
+		exec /bin/bash;
+	else
+		echo "Rebooting system..." > /dev/kmsg;
+		reboot;
+	fi
+}
+
+#Mount procfs, devfs, sysfs and debugfs
+mount -t proc proc /proc
+if [ $? -ne 0 ]; then
+	echo "ERROR: mounting proc fail..." > /dev/kmsg;
+	exec /bin/bash;
+fi;
+mount -t devtmpfs none /dev
+if [ $? -ne 0 ]; then
+	echo "ERROR: mounting dev fail..." > /dev/kmsg;
+	exec /bin/bash;
+fi;
+mount -t sysfs sysfs /sys
+if [ $? -ne 0 ]; then
+	echo "ERROR: mounting sys fail..." > /dev/kmsg;
+	exec /bin/bash;
+fi;
+mount -t debugfs none /sys/kernel/debug/
+if [ $? -ne 0 ]; then
+	echo "ERROR: mounting debugfs fail..." > /dev/kmsg;
+	exec /bin/bash;
+fi;
+
+# create reboot command based on sysrq-trigger
+if [ -e "/proc/sysrq-trigger" ]; then
+	echo -e "#!/bin/bash \nbusybox reboot -f" > /sbin/reboot;
+	chmod 755 /sbin/reboot;
+fi;
+
+overlayfs_check
+
+echo "Loading modules dependency" > /dev/kmsg;
+cd /usr/sbin;
+ln -s /bin/kmod depmod
+depmod -a
+cd /
+
+# Use r8168.ko (downstream) if present, else use r8169.ko (upstream)
+modprobe -v r8168 || modprobe -v r8169
+modprobe -v r8126
+
+echo "Running nv init script" > /dev/kmsg;
+
+# nv-init-int.sh is available in INTERNAL build only.
+if [ -e "/nv-init-int.sh" ]; then
+	. /nv-init-int.sh
+fi
+
+source /initrd_flash.cfg
+
+# Install drivers for T264 if machine is T264
+if [[ ( -e "/proc/device-tree/compatible" ) ]]; then
+	machine="$(tr -d '\0' < /proc/device-tree/compatible)"
+	if [[ "${machine}" =~ "tegra264" ]]; then
+		# Load Tegra264 PCIe and UFS drivers for T264 machine
+		modprobe -v pcie-tegra264;
+		if [ -n "${ufs_provision}" ]; then
+			modprobe -v ufs-tegra-provision;
+		else
+			modprobe -v ufs-tegra;
+		fi
+	fi
+fi
+
+echo "Starting flashing kernel" > /dev/kmsg;
+
+source /bin/nv_recovery.sh
+if [ -n "${boot_rootfs}" ] && [ -z "${initrd_only}" ]; then
+	sleep 1
+	rootip="${hostip:-"[fc00:1:1::1]"}"
+	mount -o nolock "${rootip}":"${host_mount_rootfs}" /mnt
+	if [ $? -ne 0 ]; then
+		echo "ERROR: mounting ${rootip}:${host_mount_rootfs} fail..." > /dev/kmsg;
+		exec /bin/bash;
+	fi;
+
+	mount -o bind /proc /mnt/proc;
+	mount -o bind /sys /mnt/sys;
+	mount -o bind /dev/ /mnt/dev;
+
+	cd /mnt;
+	mkdir -p opt/nvidia/l4t-usb-device-mode/device_mode_in_initrd
+	if [ -n "${erase_qspi}" ]; then
+		echo "Erasing QSPI..." > /dev/kmsg;
+		if mtd_debug erase /dev/mtd0 0 1048576; then
+			echo "Finish erasing QSPI..." > /dev/kmsg;
+			mkdir -p run/nvidia_rcm_qspi_erased
+			echo 1 > run/nvidia_rcm_qspi_erased/done
+			sync
+		fi
+	fi
+	echo "Switching from initrd to actual rootfs" > /dev/kmsg;
+	mount --no-mtab --move . /
+	exec chroot . /sbin/init 2;
+fi

@@ -1,0 +1,272 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ *
+ * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+ * property and proprietary rights in and to this material, related
+ * documentation and any modifications thereto. Any use, reproduction,
+ * disclosure or distribution of this material and related documentation
+ * without an express license agreement from NVIDIA CORPORATION or
+ * its affiliates is strictly prohibited.
+ */
+
+/* NOTE: This file was auto generated: No manual change must be made in this file */
+
+/ {
+	mb1_bct {
+		carveout {
+			aux_info@CARVEOUT_GPU_COMPTAGS {
+				size = <0x0 0x11200000>; // 274MB
+				alignment = <0x0 0x200000>; // 2MB
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_XUSB {
+				size = <0x0 0x100000>; // 1MB
+				alignment = <0x0 0x100000>; // 1MB
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_APE {
+				size = <0x0 0x400000>; // 4MB
+				alignment = <0x0 0x400000>; // 4MB
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_AON {
+				size = <0x0 0x400000>; // 4MB
+				alignment = <0x0 0x400000>; // 4MB
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_TEMP_MB2_IO_BUFFERS {
+				size = <0x0 0x2000000>; // 32MB
+				alignment = <0x0 0x200000>; // 2MB
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_SB_CPUTZ {
+				size = <0x0 0x300000>; // 3MB
+				alignment = <0x0 0x10000>; // 64KB
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_APE1 {
+				size = <0x0 0x400000>; // 4MB
+				alignment = <0x0 0x400000>; // 4MB
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_TEMP_MEMDTB_LOAD {
+				size = <0x0 0x100000>; // 1MB
+				alignment = <0x0 0x10000>; // 64KB
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_TEMP_TSECFW_LOAD {
+				size = <0x0 0x100000>; // 1MB
+				alignment = <0x0 0x10000>; // 64KB
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_HPSE_DCE {
+				size = <0x0 0x10000>; // 64KB
+				alignment = <0x0 0x10000>; // 64KB
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_HPSE_SB {
+				size = <0x0 0xa00000>; // 10MB
+				alignment = <0x0 0x10000>; // 64KB
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_VI_TASKLIST {
+				size = <0x0 0x100000>; // 1MB
+				alignment = <0x0 0x10000>; // 64KB
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_RCE {
+				size = <0x0 0x200000>; // 2MB
+				alignment = <0x0 0x10000>; // 64KB
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_PVA {
+				size = <0x0 0x280000>; // 2560KB
+				alignment = <0x0 0x10000>; // 64KB
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_DCE {
+				size = <0x0 0x2000000>; // 32MB
+				alignment = <0x0 0x2000000>; // 32MB
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_ETR {
+				size = <0x0 0x2000000>; // 32MB
+				alignment = <0x0 0x100000>; // 1MB
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_RCE_RW {
+				size = <0x0 0x400000>; // 4MB
+				alignment = <0x0 0x10000>; // 64KB
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_VI1_TASKLIST {
+				size = <0x0 0x100000>; // 1MB
+				alignment = <0x0 0x10000>; // 64KB
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_ISP_TASKLIST {
+				size = <0x0 0x2000000>; // 32MB
+				alignment = <0x0 0x10000>; // 64KB
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_ISP1_TASKLIST {
+				size = <0x0 0x2000000>; // 32MB
+				alignment = <0x0 0x10000>; // 64KB
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_CCPLEX_INTERWORLD_SHMEM {
+				size = <0x0 0x2000000>; // 32MB
+				alignment = <0x0 0x10000>; // 64KB
+				socket_mask = <0x3>;
+				allow_remote_access = <1>;
+			};
+			aux_info@CARVEOUT_FSI {
+				size = <0x0 0x2000000>; // 32MB
+				alignment = <0x0 0x2000000>; // 32MB
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_TEMP_FSI_LOAD {
+				size = <0x0 0x2000000>; // 32MB
+				alignment = <0x0 0x100000>; // 1MB
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_RCE1 {
+				size = <0x0 0x200000>; // 2MB
+				alignment = <0x0 0x10000>; // 64KB
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_HPSE_PSC {
+				size = <0x0 0x10000>; // 64KB
+				alignment = <0x0 0x10000>; // 64KB
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_HPSE_RCE {
+				size = <0x0 0x10000>; // 64KB
+				alignment = <0x0 0x10000>; // 64KB
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_TEMP_MB2_PGTABLES {
+				size = <0x0 0x1000000>; // 16MB
+				alignment = <0x0 0x100000>; // 1MB
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_ATF_FSI {
+				size = <0x0 0x10000>; // 64KB
+				alignment = <0x0 0x10000>; // 64KB
+				socket_mask = <0x3>;
+				allow_remote_access = <1>;
+			};
+			aux_info@CARVEOUT_OEM_SC7 {
+				size = <0x0 0xa00000>; // 10MB
+				alignment = <0x0 0x10000>; // 64KB
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_HPSE {
+				size = <0x0 0x4000000>; // 64MB
+				alignment = <0x0 0x10000>; // 64KB
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_SB {
+				size = <0x0 0x1000000>; // 16MB
+				alignment = <0x0 0x10000>; // 64KB
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_CCPLEX_SMMU_PTW {
+				size = <0x0 0xa000000>; // 160MB
+				alignment = <0x0 0x200000>; // 2MB
+				socket_mask = <0x3>;
+				allow_remote_access = <1>;
+			};
+			aux_info@CARVEOUT_FSI_KEY_BLOB {
+				size = <0x0 0x30000>; // 192KB
+				alignment = <0x0 0x10000>; // 64KB
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_FSI_CPU_NS {
+				size = <0x0 0x1000000>; // 16MB
+				alignment = <0x0 0x100000>; // 1MB
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_VPR {
+				size = <0x0 0x5000000>; // 80MB
+				alignment = <0x0 0x100000>; // 1MB
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_TSEC_DCE {
+				size = <0x0 0x100000>; // 1MB
+				alignment = <0x0 0x100000>; // 1MB
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_MTS {
+				size = <0x0 0x0>; // 0
+				alignment = <0x0 0x0>; // 0
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_RCM_BLOB {
+				size = <0x0 0x40000000>; // 1GB
+				alignment = <0x0 0x20000000>; // 512MB
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_UEFI {
+				size = <0x0 0x4000000>; // 64MB
+				alignment = <0x0 0x200000>; // 2MB
+				socket_mask = <0x1>;
+				allow_remote_access = <1>;
+			};
+			aux_info@CARVEOUT_DRAM_ECC_TEST {
+				size = <0x0 0x10000>; // 64KB
+				alignment = <0x0 0x10000>; // 64KB
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_PROFILING {
+				size = <0x0 0x600000>; // 6MB
+				alignment = <0x0 0x10000>; // 64KB
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_CCPLEX_LA_BUFFERS {
+				size = <0x0 0x120000>; // 1152KB
+				alignment = <0x0 0x10000>; // 64KB
+				socket_mask = <0x3>;
+				allow_remote_access = <1>;
+			};
+		};
+	};
+};

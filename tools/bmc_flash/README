@@ -1,0 +1,68 @@
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+# DEALINGS IN THE SOFTWARE.
+
+# Scripts to create an Orin/Thor qSPI tarball for IGX's BMC.
+
+      README                                        <-- this file
+      bmcflashqspi.sh                               <-- final BMC running script included in tarball
+      ../qspi_flash/kernel_flash_qspi.sh            <-- script inside downloaded rcm-boot initrd to flash IGX's qSPI
+      l4t_generate_igx_qspi_for_bmcflash.sh orin    <-- script to build Orin qSPI tarball for IGX's BMC flash
+      l4t_generate_igx_qspi_for_bmcflash.sh thor    <-- script to build Thor qSPI tarball for IGX's BMC flash
+
+# Prerequisites:
+      - x86-64 Linux build machine
+      - NVIDIA Orin/Thor sample file system or user provided root file system
+      - An ethernet connection to IGX's BMC for flashing
+
+
+# Build the Orin/Thor qSPI tarball for BMC
+
+This section explains how to build a BMC image and subsequent tarball. These steps must be completed
+using a x86-64 linux build machine. The usb connection to Orin/Thor is not required for this process.
+
+1. Download one of the following packages:
+      - customer_release.tbz2
+      - Jetson_Linux_<VERSION>_aarch64.tbz2
+
+2. Install the BSP package.
+
+3. After you installed customer_release.tbz2 or Jetson_Linux_<VERSION>_aarch64.tbz2:
+      a. Install NVIDIA Orin/Thor sample file system to Linux_for_Tegra/rootfs.
+      b. Go to the Linux_for_Tegra directory
+      c. Enter the following commands:
+           cd Linux_for_Tegra
+
+           sudo ./tools/bmc_flash/l4t_generate_igx_qspi_for_bmcflash.sh orin|thor
+
+           The script will create a tarball in
+               generic_release_aarch64/Linux_for_Tegra/bmc_tegraflash_<VERSION>.tbz2
+
+
+# Flash the Orin/Thor's qSPI image from IGX's BMC
+
+This section explains how to copy the built tarball from the Linux build machine to the IGX's BMC
+and run the BMC script to flash the Orin/Thor's qSPI flash memory.
+
+1. Copy the tarball to the BMC
+      scp generic_release_aarch64/Linux_for_Tegra/bmc_tegraflash_<VERSION>.tbz2 root@<bmc_ip>:/run/initramfs
+
+2. Log into the BMC with its credentials
+      ssh root@<bmc_ip>
+
+3. Untar the tarball
+      cd /run/initramfs
+      tar -xvf bmc_tegraflash_<VERSION>.tbz2
+
+4. Flash the Orin/Thor qSPI image from the BMC
+      bmcflash/bmcflashqspi.sh
+
+Note:
+1. Please replace <bmc_ip> with the IP address actually assigned to BMC(For example,192.168.1.110).
+2. Replace <VERSION> with the actual version number of the Orin/Thor release(for exmaple, R36.2.0).

@@ -1,0 +1,48 @@
+[submodule "source/hardware/nvidia/t264/nv-public"]
+	path = source/hardware/nvidia/t264/nv-public
+	url = http://192.168.1.77:1080/awesome-se/jetson/jetpack7/hardware/t264.git
+	branch = mybranch_2026-01-22-1769046719
+[submodule "source/hardware/nvidia/t23x/nv-public"]
+	path = source/hardware/nvidia/t23x/nv-public
+	url = http://192.168.1.77:1080/awesome-se/jetson/jetpack7/hardware/t23x.git
+	branch = mybranch_2026-01-22-1769046717
+[submodule "source/hardware/nvidia/tegra/nv-public"]
+	path = source/hardware/nvidia/tegra/nv-public
+	url = http://192.168.1.77:1080/awesome-se/jetson/jetpack7/hardware/tegra.git
+	branch = mybranch_2026-01-22-1769046720
+[submodule "source/dtc-src/1.4.5"]
+	path = source/dtc-src/1.4.5
+	url = http://192.168.1.77:1080/awesome-se/jetson/jetpack7/dtc-src.git
+	branch = mybranch_2026-01-22-1769046715
+[submodule "source/hwpm"]
+	path = source/hwpm
+	url = http://192.168.1.77:1080/awesome-se/jetson/jetpack7/hwpm.git
+	branch = mybranch_2026-01-22-1769046722
+[submodule "source/kernel-devicetree"]
+	path = source/kernel-devicetree
+	url = http://192.168.1.77:1080/awesome-se/jetson/jetpack7/kernel-devicetree.git
+	branch = mybranch_2026-01-22-1769046723
+[submodule "source/nvdisplay"]
+	path = source/nvdisplay
+	url = http://192.168.1.77:1080/awesome-se/jetson/jetpack7/nvdisplay.git
+	branch = mybranch_2026-01-22-1769047145
+[submodule "source/nvethernetrm"]
+	path = source/nvethernetrm
+	url = http://192.168.1.77:1080/awesome-se/jetson/jetpack7/nvethernetrm.git
+	branch = mybranch_2026-01-22-1769047147
+[submodule "source/kernel/kernel-noble"]
+	path = source/kernel/kernel-noble
+	url = http://192.168.1.77:1080/awesome-se/jetson/jetpack7/kernel-noble.git
+	branch = mybranch_2026-01-22-1769047138
+[submodule "source/nvgpu"]
+	path = source/nvgpu
+	url = http://192.168.1.77:1080/awesome-se/jetson/jetpack7/nvgpu.git
+	branch = mybranch_2026-01-22-1769047150
+[submodule "source/nvidia-oot"]
+	path = source/nvidia-oot
+	url = http://192.168.1.77:1080/awesome-se/jetson/jetpack7/nvidia-oot.git
+	branch = mybranch_2026-01-22-1769047148
+[submodule "source/unifiedgpudisp"]
+	path = source/unifiedgpudisp
+	url = http://192.168.1.77:1080/awesome-se/jetson/jetpack7/unifiedgpudisp.git
+	branch = mybranch_2026-01-22-1769047151

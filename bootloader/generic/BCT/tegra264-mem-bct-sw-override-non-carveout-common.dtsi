@@ -1,0 +1,49 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ *
+ * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+ * property and proprietary rights in and to this material, related
+ * documentation and any modifications thereto. Any use, reproduction,
+ * disclosure or distribution of this material and related documentation
+ * without an express license agreement from NVIDIA CORPORATION or
+ * its affiliates is strictly prohibited.
+ */
+
+McSmmuBypassCarveoutCfg14 = <0xffff00>;
+McSidStreamidOverrideConfigMiu0r = <0x00000000>;
+McSidStreamidSecurityConfigMiu0r = <0x01010101>;
+McSidStreamidOverrideConfigMiu0w = <0x00000000>;
+McSidStreamidSecurityConfigMiu0w = <0x01010101>;
+McSidStreamidOverrideConfigMiu1r = <0x00000000>;
+McSidStreamidSecurityConfigMiu1r = <0x01010101>;
+McSidStreamidOverrideConfigMiu1w = <0x00000000>;
+McSidStreamidSecurityConfigMiu1w = <0x01010101>;
+McSidStreamidOverrideConfigMiu2r = <0x00000000>;
+McSidStreamidSecurityConfigMiu2r = <0x01010101>;
+McSidStreamidOverrideConfigMiu2w = <0x00000000>;
+McSidStreamidSecurityConfigMiu2w = <0x01010101>;
+McSidStreamidOverrideConfigMiu3r = <0x00000000>;
+McSidStreamidSecurityConfigMiu3r = <0x01010101>;
+McSidStreamidOverrideConfigMiu3w = <0x00000000>;
+McSidStreamidSecurityConfigMiu3w = <0x01010101>;
+McSidStreamidOverrideConfigMiu4r = <0x00000000>;
+McSidStreamidSecurityConfigMiu4r = <0x01010101>;
+McSidStreamidOverrideConfigMiu4w = <0x00000000>;
+McSidStreamidSecurityConfigMiu4w = <0x01010101>;
+McSidStreamidOverrideConfigMiu5r = <0x00000000>;
+McSidStreamidSecurityConfigMiu5r = <0x01010101>;
+McSidStreamidOverrideConfigMiu5w = <0x00000000>;
+McSidStreamidSecurityConfigMiu5w = <0x01010101>;
+McSidStreamidOverrideConfigMiu6w = <0x00000000>;
+McSidStreamidSecurityConfigMiu6w = <0x01010101>;
+McSidStreamidOverrideConfigMiu7w = <0x00000000>;
+McSidStreamidSecurityConfigMiu7w = <0x01010101>;
+McSidStreamidOverrideConfigMiu8r = <0x00000000>;
+McSidStreamidSecurityConfigMiu8r = <0x01010101>;
+McSidStreamidOverrideConfigMiu8w = <0x00000000>;
+McSidStreamidSecurityConfigMiu8w = <0x01010101>;
+McSidStreamidOverrideConfigMiu9r = <0x00000001>;
+McSidStreamidSecurityConfigMiu9r = <0x01010101>;
+McSidStreamidOverrideConfigMiu9w = <0x00000001>;
+McSidStreamidSecurityConfigMiu9w = <0x01010101>;

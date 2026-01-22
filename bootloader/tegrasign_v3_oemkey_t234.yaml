@@ -1,0 +1,490 @@
+#
+# Copyright (c) 2020-2023, NVIDIA Corporation.  All Rights Reserved.
+#
+# NVIDIA Corporation and its licensors retain all intellectual property
+# and proprietary rights in and to this software, related documentation
+# and any modifications thereto.  Any use, reproduction, disclosure or
+# distribution of this software and related documentation without an express
+# license agreement from NVIDIA Corporation is strictly prohibited.
+#
+{"DER_OEM":
+    {
+    "0x230":
+        {
+            "AES" : {
+                "SBK" :
+                {
+                    #"Plain" : "63979cd900154cfaedc539cd17572387296058fe988013c055be99bfd8db41f9",
+                    "Plain" : "753aafbeab213322ef0f8cecc805d1b086e252953dfb3cac215a778f68cb5a72",
+                    #"Plain" : "0000000000000000000000000000000000000000000000000000000000000000",
+                },
+            },
+
+            "KDK" : {
+                "SBK_BCT_KDK" :
+                {
+                    "KDK" : "SBK",
+                    "Label" : "BCTB",
+                },
+                "SBK_MB1BCT_KDK" :
+                {
+                    "KDK" : "SBK",
+                    "Label" : "MBCT",
+                },
+                "SBK_MB2BCT_KDK" :
+                {
+                    "KDK" : "SBK",
+                    "Label" : "MBC2",
+                },
+                "SBK_MEMBCT0_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "MEM0",
+                },
+                "SBK_MEMBCT1_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "MEM1",
+                },
+                "SBK_MEMBCT2_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "MEM2",
+                },
+                "SBK_MEMBCT3_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "MEM3",
+                },
+                "SBK_MB1_KDK" :
+                {
+                    "KDK" : "SBK",
+                    "Label" : "MB1B",
+                },
+                "SBK_MB2_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "MB2B",
+                },
+                "SBK_MB2_RF_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "MB2R",
+                },
+                "SBK_SC7_RF_KDK" :
+                {
+                    "KDK" : "SBK",
+                    "Label" : "WB0B",
+                },
+                "SBK_BL1_KDK" :
+                {
+                    "KDK" : "SBK",
+                    "Label" : "PSCB",
+                },
+                "SBK_PSC_RF_KDK" :
+                {
+                    "KDK" : "SBK",
+                    "Label" : "PSCR",
+                },
+                "SBK_PSCFW_PKG_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "PFWP",
+                },
+             # NVMB  KDK  #
+                "SBK_NVMB_KDK" :
+                {
+                    "KDK" : "SBK",
+                },
+                "SBK_TZ_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                },
+                "SBK_GP_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                },
+
+             # MCE  KDK  #
+                "SBK_MCE_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "MTSM",
+                },
+             # BPMP-FW  KDK  #
+                "SBK_BPMP_FW_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "BPMF",
+                },
+             # BPMP-MB2  KDK  #
+                "SBK_BPMP_MB2_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "MB2A",
+                },
+                "SBK_BPMP_DTB_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "BPMD",
+                },
+             # BPMP-IST FW KDK  #
+                "SBK_BPMP_IST_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "BIST",
+                },
+             # CCPLEX_IST  KDK  #
+                "SBK_CCPLEX_IST_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "CIUC",
+                },
+             # IST_UCODE  KDK  #
+                "SBK_IST_UCODE_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "ISTU",
+                },
+             # IST_CONFIG  KDK  #
+                "SBK_IST_CONFIG_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "ISTC",
+                },
+             # IST_VECTOR  KDK  #
+                "SBK_IST_VECTOR_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "OITV",
+                },
+
+                "SBK_TSEC_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "TSEC",
+                },
+                "SBK_NVDEC_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "NDEC",
+                },
+             # APE  KDK  #
+                "SBK_APE_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "APEF",
+                },
+
+             # CPU BOOTLOADER  KDK  #
+                "SBK_CPU_BL_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "CPBL",
+                },
+             # DCE  KDK  #
+                "SBK_DCE_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "DCEF",
+                },
+             # EKS  KDK  #
+                "SBK_EKS_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "EKSB",
+                },
+             # FSI  KDK  #
+                "SBK_FSI_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "FSIF",
+                },
+             # PVAF  KDK  #
+                "SBK_PVAF_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "PVAF",
+                },
+                "SBK_RCE_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "RCEF",
+                },
+                "SBK_SCE_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "SCEF",
+                },
+
+                "SBK_SPE_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "SPEF",
+                },
+             # TOSB  KDK  #
+                "SBK_TOSB_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "TOSB",
+                },
+             # XUSB  KDK  #
+                "SBK_XUSB_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "XUSB",
+                },
+             # KRNL KDK    (for hypervisor)#
+                "SBK_KRNL_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "KRNL",
+                },
+             # KRNL DTB KDK    (L4T) #
+                "SBK_KDTB_KDK" :
+                {
+                    "KDK" : "SBK_GP_KDK",
+                    "Label" : "KDTB",
+                },
+             # DATA KDK    (L4T) #
+                "SBK_DATA_KDK" :
+                {
+                    "KDK" : "SBK_GP_KDK",
+                    "Label" : "DATA",
+                },
+             # GP_KRNL KDK (PL, for QNX/Linux)#
+               "SBK_GP_KRNL_KDK" :
+                {
+                    "KDK" : "SBK_GP_KDK",
+                    "Label" : "KRNL",
+                },
+             # CPDT KDK (PL, for QNX/Linux)#
+                "SBK_CPDT_KDK" :
+                {
+                    "KDK" : "SBK_GP_KDK",
+                    "Label" : "CPDT",
+                },
+             # CPBL KDK (PL, for QNX/Linux)#
+                "SBK_CPBL_KDK" :
+                {
+                    "KDK" : "SBK_GP_KDK",
+                    "Label" : "CPBL",
+                },
+             # GP_RAMD KDK#
+                "SBK_GP_RAMD_KDK" :
+                {
+                    "KDK" : "SBK_GP_KDK",
+                    "Label" : "RAMD",
+                },
+             # GP_OSDT KDK#
+                "SBK_GP_OSDT_KDK" :
+                {
+                    "KDK" : "SBK_GP_KDK",
+                    "Label" : "OSDT",
+                },
+
+            },
+
+            "DK" : {
+                "SBK_BCT_DK" :
+                {
+                    "KDK" : "SBK_BCT_KDK",
+                },
+                "SBK_MB1BCT_DK" :
+                {
+                    "KDK" : "SBK_MB1BCT_KDK",
+                },
+                "SBK_MB2BCT_DK" :
+                {
+                    "KDK" : "SBK_MB2BCT_KDK",
+                },
+                "SBK_MEMBCT0_DK" :
+                {
+                    "KDK" : "SBK_MEMBCT0_KDK",
+                },
+                "SBK_MEMBCT1_DK" :
+                {
+                    "KDK" : "SBK_MEMBCT1_KDK",
+                },
+                "SBK_MEMBCT2_DK" :
+                {
+                    "KDK" : "SBK_MEMBCT2_KDK",
+                },
+                "SBK_MEMBCT3_DK" :
+                {
+                    "KDK" : "SBK_MEMBCT3_KDK",
+                },
+                "SBK_BL1_DK" :
+                {
+                    "KDK" : "SBK_BL1_KDK",
+                },
+                "SBK_MB1_DK" :
+                {
+                    "KDK" : "SBK_MB1_KDK",
+                },
+                "SBK_MB2_DK" :
+                {
+                    "KDK" : "SBK_MB2_KDK",
+                },
+                "SBK_MB2_RF_DK" :
+                {
+                    "KDK" : "SBK_MB2_RF_KDK",
+                },
+                "SBK_SC7_RF_DK" :
+                {
+                    "KDK" : "SBK_SC7_RF_KDK",
+                },
+                "SBK_PSC_RF_DK" :
+                {
+                    "KDK" : "SBK_PSC_RF_KDK",
+                },
+                "SBK_PSCFW_PKG_DK" :
+                {
+                    "KDK" : "SBK_PSCFW_PKG_KDK",
+                },
+             # MCE  DK  #
+                "SBK_MCE_DK" :
+                {
+                    "KDK" : "SBK_MCE_KDK",
+                },
+             # BPMP  DK  #
+                "SBK_BPMP_FW_DK" :
+                {
+                    "KDK" : "SBK_BPMP_FW_KDK",
+                },
+             # BPMP-MB2  DK  #
+                "SBK_BPMP_MB2_DK" :
+                {
+                    "KDK" : "SBK_BPMP_MB2_KDK",
+                },
+
+             # BPMP-DTB  DK  #
+                "SBK_BPMP_DTB_DK" :
+                {
+                    "KDK" : "SBK_BPMP_DTB_KDK",
+                },
+             # BPMP-IST FW DK  #
+                "SBK_BPMP_IST_DK" :
+                {
+                    "KDK" : "SBK_BPMP_IST_KDK",
+                },
+             # CCPLEX_IST  DK  #
+                "SBK_CCPLEX_IST_DK" :
+                {
+                    "KDK" : "SBK_CCPLEX_IST_KDK",
+                },
+             # IST_UCODE   DK  #
+                "SBK_IST_UCODE_DK" :
+                {
+                    "KDK" : "SBK_IST_UCODE_KDK",
+                },
+             # IST_CONFIG   DK  #
+                "SBK_IST_CONFIG_DK" :
+                {
+                    "KDK" : "SBK_IST_CONFIG_KDK",
+                },
+             # IST_Test Vector  DK  #
+                "SBK_IST_VECTOR_DK" :
+                {
+                    "KDK" : "SBK_IST_VECTOR_KDK",
+                },
+
+                "SBK_TSEC_DK" :
+                {
+                    "KDK" : "SBK_TSEC_KDK",
+                },
+                "SBK_NVDEC_DK" :
+                {
+                    "KDK" : "SBK_NVDEC_KDK",
+                },
+             # MB2-loaded:  #
+                "SBK_APE_DK" :
+                {
+                    "KDK" : "SBK_APE_KDK",
+                },
+
+                "SBK_CPU_BL_DK" :
+                {
+                    "KDK" : "SBK_CPU_BL_KDK",
+                },
+                "SBK_EKS_DK" :
+                {
+                    "KDK" : "SBK_EKS_KDK",
+                },
+                "SBK_DCE_DK" :
+                {
+                    "KDK" : "SBK_DCE_KDK",
+                },
+                "SBK_FSI_DK" :
+                {
+                    "KDK" : "SBK_FSI_KDK",
+                },
+                "SBK_PVAF_DK" :
+                {
+                    "KDK" : "SBK_PVAF_KDK",
+                },
+                "SBK_RCE_DK" :
+                {
+                    "KDK" : "SBK_RCE_KDK",
+                },
+                "SBK_SCE_DK" :
+                {
+                    "KDK" : "SBK_SCE_KDK",
+                },
+                "SBK_SPE_DK" :
+                {
+                    "KDK" : "SBK_SPE_KDK",
+                },
+                "SBK_TOSB_DK" :
+                {
+                    "KDK" : "SBK_TOSB_KDK",
+                },
+                "SBK_XUSB_DK" :
+                {
+                    "KDK" : "SBK_XUSB_KDK",
+                },
+             # KRNL DK    (for hypervisor) #
+                "SBK_KRNL_DK" :
+                {
+                    "KDK" : "SBK_KRNL_KDK",
+                },
+             # KRNL DTB DK    (L4T) #
+                "SBK_KDTB_DK" :
+                {
+                    "KDK" : "SBK_KDTB_KDK",
+                },
+             # DATA DK    (L4T) #
+                "SBK_DATA_DK" :
+                {
+                    "KDK" : "SBK_DATA_KDK",
+                },
+             # GP_KRNL DK (PL, for QNX/Linux)#
+                "SBK_GP_KRNL_DK" :
+                {
+                    "KDK" : "SBK_GP_KRNL_KDK",
+                },
+             # CPDT DK  (PL, for QNX/Linux)#
+                "SBK_CPDT_DK" :
+                {
+                    "KDK" : "SBK_CPDT_KDK",
+                },
+             # CPBL DK  (PL, for QNX/Linux)#
+                "SBK_CPBL_DK" :
+                {
+                    "KDK" : "SBK_CPBL_KDK",
+                },
+             # GP_RAMD DK#
+                "SBK_GP_RAMD_DK" :
+                {
+                    "KDK" : "SBK_GP_RAMD_KDK",
+                },
+             # GP_OSDT DK#
+                "SBK_GP_OSDT_DK" :
+                {
+                    "KDK" : "SBK_GP_OSDT_KDK",
+                },
+            }
+        }
+
+    }
+}

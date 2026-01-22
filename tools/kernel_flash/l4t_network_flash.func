@@ -1,0 +1,348 @@
+#!/bin/bash
+
+# SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its
+# contributors may be used to endorse or promote products derived from
+# this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+# Contributor License Agreement (CLA):
+# https://github.com/NVIDIA/DALI_extra/blob/main/NVIDIA_CLA_v1.0.1.docx
+
+log() {
+	local LEVEL=$1
+	local MESSAGE=$2
+	local TIMESTAMP
+	TIMESTAMP=$(date +"%T.%3N")
+
+	if [[ "${LEVEL}" == "Error" ]]; then
+		echo "${TIMESTAMP} - ${LEVEL}: ${MESSAGE}" >&2
+    else
+		echo "${TIMESTAMP} - ${LEVEL}: ${MESSAGE}"
+	fi
+}
+
+log_info ()
+{
+	local MESSAGE=$1
+	log "Info" "${MESSAGE}"
+}
+
+log_debug ()
+{
+	local MESSAGE=$1
+	log "Debug" "${MESSAGE}"
+}
+
+log_error ()
+{
+	local MESSAGE=$1
+	log "Error" "${MESSAGE}"
+}
+
+is_inside_docker()
+{
+	local bsp_dir=$1
+	local nfs_rootfs=$2
+	if [ -e /run/nvidia_initrd_flash/docker_host_network ]; then
+		echo "Initrd flash script runs inside Docker. Make sure your host has an NFS server exposing folders:"
+		echo "${nfs_rootfs:+"${nfs_rootfs} and "}${bsp_dir}/tools/kernel_flash/images"
+		return 0
+	fi
+	if [ -e /.dockerenv ] || cat /proc/1/cgroup | grep -q docker; then
+		echo "WARNING: Initrd flash script seems to run inside docker. Consider creating"
+		echo "/run/nvidia_initrd_flash/docker_host_network if you use \"--network host\" option"
+	fi
+	return 1
+}
+
+network_prerequisite ()
+{
+	local networkargs=$1
+	local bsp_dir=$2
+	if ! command -v exportfs &> /dev/null
+	then
+		echo "ERROR nfs-kernel-server not found! To install - please run: " \
+				"\"sudo apt-get install nfs-kernel-server\""
+		exit 110
+	fi
+
+	validateNetworkArgs "${networkargs}"
+
+	if [ "$(sysctl -n net.ipv6.conf.all.disable_ipv6)" -eq 1 ]; then
+		IFS=':' read -r -a arr <<< "${networkargs}"
+		if [ "${arr[0]}" == "usb0" ]; then
+			echo "sysctl net.ipv6.conf.all.disable_ipv6"
+			sysctl net.ipv6.conf.all.disable_ipv6
+			echo "IPV6 is disabled. Please enable IPV6 when running this tool"
+			exit 113
+		fi
+	fi
+
+	if [ -f /etc/exports ]; then
+		# This cleans up any previous entries created by this interface
+		sed -i -e '/^# Entry added by NVIDIA initrd flash tool/,+1d' /etc/exports
+	fi
+	if ! grep -qvE "^\s*#|^\s*$" /etc/exports; then
+		mkdir -p "${bsp_dir}/tools/kernel_flash/tmp"
+		echo "# Entry added by NVIDIA initrd flash tool" | sudo tee -a /etc/exports
+		echo "${bsp_dir}/tools/kernel_flash/tmp 127.0.0.1(${PERMISSION_STR})" | sudo tee -a /etc/exports
+	fi
+	set +e
+	rpcbind >/dev/null 2>&1
+	set -e
+	service nfs-kernel-server restart
+	if ! showmount -e localhost; then
+		echo "NFS server is not running"
+		exit 114
+	fi
+}
+
+show_help_text()
+{
+	echo "Export them on the host by adding entries into /etc/exports on the host"
+	echo "For examples:"
+	echo "${bsp_dir}/tools/kernel_flash/images *(${PERMISSION_STR})"
+	if [ -n "${nfs_rootfs}" ]; then
+		echo "${nfs_rootfs} *(${PERMISSION_STR})"
+	fi
+	echo "Note that these entries exposes the folders to requests from any IPs"
+	echo
+	echo "Make sure that exported directories have following permissions and owners:"
+	if [ -n "${nfs_rootfs}" ]; then
+		echo "chmod 755 ${nfs_rootfs}"
+		echo "chown root.root ${nfs_rootfs}"
+	fi
+	echo "chmod 755 ${bsp_dir}/tools/kernel_flash/images"
+	echo "chown root.root ${bsp_dir}/tools/kernel_flash/images"
+}
+
+network_export ()
+{
+	local networkargs=$1
+	local bsp_dir=$2
+	local nfs_rootfs=$3
+
+	if is_inside_docker "${bsp_dir}" "${nfs_rootfs}" ; then
+		if ! nfs_check "${bsp_dir}" "${nfs_rootfs}"; then
+			echo "${nfs_rootfs:+"${nfs_rootfs} and "}${bsp_dir}/tools/kernel_flash/images seems to be not exported by host nfs server"
+			echo "Because you are inside docker right now, please:"
+			echo ""
+			echo "Add \"-v ${bsp_dir}:${bsp_dir}\" option to your docker command"
+			echo ""
+			show_help_text
+			exit 112
+		fi
+		return 0
+	fi
+
+	network_prerequisite "${networkargs}" "${bsp_dir}"
+	mkdir -p "${bsp_dir}/tools/kernel_flash/images"
+	if [ -n "${nfs_rootfs}" ]; then
+		enable_nfs_for_folder "${nfs_rootfs}" "${networkargs}"
+	fi
+	enable_nfs_for_folder "${bsp_dir}/tools/kernel_flash/images" "${networkargs}"
+
+	if ! nfs_check "${bsp_dir}" "${nfs_rootfs}"; then
+		echo "${nfs_rootfs} and ${bsp_dir}/tools/kernel_flash/images seems to be not exported by nfs server"
+		show_help_text
+		exit 111
+	fi
+}
+
+nfs_check()
+{
+	local contain_bsp_images=
+	local contain_nfs_rootfs=
+	while IFS=  read -r; do
+		path=$(echo "${REPLY}" | awk '{print $1}')
+		if [[ "${1}/tools/kernel_flash/images" == "${path}"* ]]; then
+			contain_bsp_images=1
+		fi
+		if [[ "${2}" == "${path}"* ]]; then
+			contain_nfs_rootfs=1
+		fi
+	done < <(showmount -e localhost | tail -n +2)
+	if [ -z "${2}" ]; then
+		contain_nfs_rootfs=1
+	fi
+	[ -n "${contain_bsp_images}" ] && [ -n "${contain_nfs_rootfs}" ]
+}
+
+
+enable_nfs_for_folder ()
+{
+
+	local nfs_dir=$1
+	local networkargs=$2
+
+	local arr=
+	IFS=':' read -r -a arr <<< "${networkargs}"
+
+	local target_ip=${arr[1]:-fc00:1:1::/48}
+
+	chmod 755 "${nfs_dir}"
+	chown root.root "${nfs_dir}"
+	if [[ "${target_ip}" =~ : ]]; then
+		target_ip="[${target_ip}]"
+	fi
+	exportfs -o "${PERMISSION_STR}" "${target_ip}:${nfs_dir}"
+}
+
+validateNetworkArgs ()
+{
+	local arr=
+	IFS=':' read -r -a arr <<< "${1}"
+
+	if [ "${arr[0]}" == "usb0" ]; then
+		return
+	fi
+
+	if ! ip route get "${arr[1]%%/*}" > /dev/null 2>&1; then
+		echo "Invalid target ip ${arr[1]}"
+		exit 101
+	fi
+
+	if ! ip route get "${arr[2]}" > /dev/null 2>&1; then
+		echo "Invalid host ip ${arr[2]}"
+		exit 101
+	fi
+}
+
+run_flash_commmand_on_target()
+{
+	echo "Run command: flash on ${1}"
+	local OLD_LC_ALL="${LC_ALL}"
+	local OLD_LANG="${LANG}"
+	local OLD_LANGUAGE="${LANGUAGE}"
+	export LC_ALL="" LANG="en_US.UTF-8" LANGUAGE=""
+	local cmd=()
+
+	if [ -n "${target_partname}" ]; then
+		cmd+=("-k" "${target_partname}")
+	fi
+
+	if [ -n "${external_only}" ]; then
+		cmd+=("${external_only}")
+	fi
+
+	if [ -n "${EKB_PAIR}" ]; then
+		cmd+=(--ekb-sn)
+	fi
+
+	count=0
+	maxcount=80
+	logline_count=5
+	debug_log=$(mktemp)
+	log_debug "Debug log saved to ${debug_log}."
+
+	while ! sshpass -p root ssh "root@${1}" "${SSH_OPT[@]}" "echo SSH ready" 2>&1 | tee -a "${debug_log}"
+	do
+		count=$((count + 1))
+		if [ "${count}" -ge "${maxcount}" ]; then
+			log_debug "Device should have booted into initrd kernel now. However, the host cannot connect to its ssh server"
+			log_error "Command failed: sshpass -p root ssh root@${1}. Check your network setting (VPN, firewall,...) to make sure the device can ssh root@${1}"
+			ip a
+			tail -n "${logline_count}" "${debug_log}"
+			print_debug_log >> "${debug_log}"
+			exit 102
+		fi
+		sleep 1
+	done
+
+	if ! sshpass -p root ssh "root@${1}" "${SSH_OPT[@]}" "NFS_ROOTFS_DIR=\"${NFS_ROOTFS_DIR}\" NFS_IMAGES_DIR=\"${NFS_IMAGES_DIR}\" /bin/${FLASH_FROM_NETWORK_SCRIPT} ${cmd[*]}" 2>&1 | tee -a "${debug_log}"; then
+		log_error "Flash failure."
+		log_error "Either the device cannot mount the NFS server on the host or a flash command has failed. Check your network setting (VPN, firewall,...) to make sure the device can mount NFS server. Debug log saved to ${debug_log}. You can access the target's terminal through \"sshpass -p root ssh root@${1}\" "
+		log_debug "The last ${logline_count} lines of the debug log are:"
+		tail -n "${logline_count}" "${debug_log}"
+		print_debug_log >> "${debug_log}"
+		exit 103
+	fi
+
+	if ! sshpass -p root ssh "root@${1}" "${SSH_OPT[@]}" "nohup reboot &>/dev/null & exit" 2>&1 | tee -a "${debug_log}"; then
+		log_error "Reboot failure. The last ${logline_count} lines of the debug log are:"
+		tail -n "${logline_count}" "${debug_log}"
+		print_debug_log >> "${debug_log}"
+		exit 104
+	fi
+
+	export LC_ALL="${OLD_LC_ALL}" LANG="${OLD_LANG}" LANGUAGE="${OLD_LANGUAGE}"
+}
+
+print_debug_log()
+{
+	echo "showmount -e"
+	showmount -e
+	echo "systemctl status nfs-kernel-server"
+	systemctl status nfs-kernel-server
+	echo "blkid"
+	blkid
+	echo "df -h"
+	df -h
+	echo "Checking folder ${NFS_ROOTFS_DIR}"
+	ls -la "${NFS_ROOTFS_DIR}/../" | grep rootfs
+	echo "Checking folder ${NFS_IMAGES_DIR}"
+	ls -la "${NFS_IMAGES_DIR}/../" | grep images
+	echo "iptables -vL -t filter"
+	iptables -vL -t filter
+}
+
+flash_through_ssh()
+{
+	wait_for_flash_ssh "${1}"
+	if [ -n "${initrd_only}" ]; then
+		echo "Device has booted into initrd. You can ssh to the target by the command:"
+		echo "$ ssh root@${1}"
+		exit
+	fi
+	run_flash_commmand_on_target "${1}"
+	exit 0
+}
+
+ping_flash_device()
+{
+	if [[ "${1}" =~ : ]]; then
+		ping6 -c 1 "$1" > /dev/null 2>&1;
+	else
+		ping -c 1 "$1" > /dev/null 2>&1;
+	fi
+}
+
+wait_for_flash_ssh()
+{
+	maxcount=${timeout:-60}
+	printf "%s" "Waiting for device to expose ssh ..."
+	count=0
+	while ! ping_flash_device "${1}"
+	do
+		printf "..."
+		count=$((count + 1))
+		if [ "${count}" -ge "${maxcount}" ]; then
+			echo "Timeout"
+			exit 105
+		fi
+		sleep 1
+	done
+}

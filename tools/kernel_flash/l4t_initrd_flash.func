@@ -1,0 +1,305 @@
+#!/bin/bash
+
+# SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: MIT
+#
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the "Software"),
+# to deal in the Software without restriction, including without limitation
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+# DEALINGS IN THE SOFTWARE.
+
+# Optional Environment Variables:
+# EXTOPTIONS ------------------- flash options when generating flash image for external devices
+# FLASHING_KERNEL -------------- define the path of the initrd image used for running the flashing process
+# ERASE_QSPI ------------------- set this bricks the device when running with --boot-rootfs option so that the device can only be rcmboot by l4t_initrd_flash.sh
+# ------------------------------ This option does nothing if --boot-rootfs is not used.
+# ADDITIONAL_DTB_OVERLAY_OPT --- define the path of the additional dtb overlay file
+
+# Board Configuration Variables:
+# EXTERNAL_PT_LAYOUT ----------- Default partition layout for external storage device
+# FLASHING_CONFIG_FILE --------- Board configuration to generate flashing image
+# EXTERNAL_DEVICE -------------- Default external storage device
+# _FLASHING_KERNEL ------------- The boot initrd used for flashing. For example, you can use
+# ------------------------------ _FLASHING_KERNEL="${LDK_DIR}/unified_flash/tools/flashtools/flashing_kernel/initramfs/t264/boot_flashing.img"
+# _FLASHING_KERNEL_CMDLINE ----- the kernel commandline used for flashing kernel
+# _FLASHING_UEFI --------------- the uefi binary used for flashing
+# MAX_MASSFLASH ---------------- Default number of devices can be flashed at the same time when using massflash tool
+# INTERNAL_PT_LAYOUT ----------- Default partition layout for internal storage device
+
+usage()
+{
+	echo -e "
+Usage: $0 <options> <board-name> <rootdev>
+Where,
+    -u <PKC key file>            PKC key used for ODM fused board.
+    -v <SBK key file>            SBK key used for encryption.
+    -p <option>                  Pass specified option to flash.sh when generating the image for internal storage.
+    -k <target_partition>        Flash only the specified partition.
+    -P <dir>                     specify the output directory (only applicable for 0x26 chip)
+    <board-name>                 Specify the board to use.
+    <rootdev>                    Specify the root device to use
+    --no-flash                   Generate the flash images.
+    --flash-only                 Flash using existing images.
+    --external-device <dev>      Generate or flash images for the specified external storage
+                                 device.
+    --external-only              Skip generating internal storage images
+    --usb-instance               Specify the USB port where the flashing cable is connected (such as 1-3).
+    --sparse                     Use sparse image to flash instead of tar image.
+    -c <config file>             The partition layout for the external storage device.
+    -S <size>                    Size of the external APP partition in bytes. KiB, MiB, and GiB shorthand notation is allowed; for example, 1GiB means 1024 * 1024 * 1024 bytes. (optional)
+    --massflash [<max_devices>]  Flash multiple device.  specify <max_devices> to limit the number of devices supported. Default is 10 if not specified in board config file
+    --showlogs                   Spawn gnome-terminal to show individual flash process logs. Applicable
+                                 for --massflash only.
+    --erase-all                  Erase all storage devices before flashing.
+    --initrd                     Stop after device boot into initrd.
+    --network <netargs>          Flash through Ethernet protocal using initrd flash. <netargs> can be \"usb0\" to flash through the USB Flashing cable
+                                 or \"eth0:<target-ip>/<subnet>:<host-ip>[:<gateway>]\" to flash through the LAN cable
+                                 For examples:
+                                 --network usb0
+                                 --network eth0:192.168.0.17/24:192.168.0.21
+                                 --network eth0:192.168.0.17/24:192.168.1.2:192.168.0.1
+    --reuse                      Use this option with the --append option below
+    --append                     Used only with --no-flash --external-only option. This option is parts of
+                                 the three steps flashing process to generate images for internal device and external device seperately
+                                 and flash them together.
+                                 For examples:
+                                1. sudo ./tools/kernel_flash/l4t_initrd_flash.sh --no-flash --reuse jetson-agx-orin-devkit internal
+                                2. sudo ./tools/kernel_flash/l4t_initrd_flash.sh --no-flash --external-device nvme0n1p1 -S 5120000000 -c flash_l4t_external.xml --external-only --append jetson-agx-orin-devkit internal
+                                3. sudo ./tools/kernel_flash/l4t_initrd_flash.sh --flash-only jetson-agx-orin-devkit internal
+
+    --direct <dev>               Flash specified device directly connected to host.
+                                 For examples,
+                                 sudo ./tools/kernel_flash/l4t_initrd_flash.sh --direct sdb --external-device sda -c flash_external.xml concord sda1
+
+    --with-systemimg            generate system image even when flashing individual partition.
+
+    --pv-enc <key_file>          The key to encrypt cpu_bootloader.
+
+    --pv-crt <crt_file>          The certificate for the key that is used to sign cpu_bootloader.
+
+    -i <enc_rfs_key_file>        Key for disk encryption support.
+
+    --uefi-keys <keys_conf>      Specify UEFI keys configuration file.
+
+    --uefi-enc <uefi_enc_key>    Key file (0x19: 16-byte; 0x23: 32-byte) to encrypt UEFI payloads.
+
+    --odm-image-gen              Generate ODM payload.
+
+    --mass-storage-only          Generate OEM payload for NVMe or eMMC.
+
+    --qspi-only                  Generate or flash only the QSPI package.
+
+    --profile                    Specify a chip mapping profile.
+
+    --ekb-pair                   Flash EKB that corresponds to the serial number of the target.
+
+    --boot-rootfs                Use flashing kernel initrd to mount Linux_for_tegra/rootfs as root file system.
+
+    --hsm                        Enable HSM for image signing/encryption.
+
+With --external-device options specified, the supported values for <dev> are
+    nvme0n1
+    nvme1n1
+    sda
+
+    --read-ramcode              Generate read_ramcode script.
+
+    --boot-chain-flash <c>      Flash only a specific boot chain (ex. \"A\", \"B\", \"all\").
+                                Defaults to \"all\". Not suitable for production.
+
+    --boot-chain-select <c>     Specify booting chain (ex. \"A\" or \"B\") after the board is flashed.
+                                Defaults to \"A\".
+
+Examples:
+	Both external and internal flash
+	sudo <BSP_TOOLS_DIR>/$0 --external-device nvme0n1 jetson-agx-orin-devkit internal
+
+	Internal only
+	sudo <BSP_TOOLS_DIR>/$0  jetson-agx-orin-devkit mmcblk0p1
+
+
+	External only:
+	sudo <BSP_TOOLS_DIR>/$0  --external-only --external-device nvme0n1 jetson-agx-orin-devkit external
+
+	"; echo;
+
+	SCRIPT_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+	echo "See ${SCRIPT_PATH} for additional environment variables to change the flash command behavior and the supported board configuration variables"
+	exit 1
+}
+
+
+parse_param(){
+    opstr+="u:p:P:v:c:-:S:k:i:"
+    while getopts "${opstr}" OPTION; do
+        case $OPTION in
+        c) config_file=${OPTARG}; ;;
+        t) timeout=${OPTARG}; ;;
+        k) target_partname=${OPTARG}; ;;
+        S) external_size=${OPTARG}; ;;
+        p) OPTIONS+=" ${OPTARG}"; ;;
+        u) KEY_FILE=${OPTARG}; ;;
+        v) SBK_KEY=${OPTARG}; ;;
+        i) ENC_RFS_KEY=${OPTARG}; ;;
+        P) mkdir -p "${OPTARG}"; BSP_IMAGES="$(realpath ${OPTARG})"; ;;
+        -) case ${OPTARG} in
+        external-device)
+            external_device="${!OPTIND}";
+            OPTIND=$((OPTIND + 1));
+        ;;
+        pv-crt)
+            pv_crt="${!OPTIND}";
+            OPTIND=$((OPTIND + 1));
+        ;;
+        pv-enc)
+            pv_enc="${!OPTIND}";
+            OPTIND="$((OPTIND + 1))";
+        ;;
+        network)
+            network="${!OPTIND}";
+            OPTIND=$((OPTIND + 1));
+        ;;
+        external-only)
+            external_only="--external-only"
+            ;;
+        initrd)
+            initrd_only=1 ;;
+        flash-only)
+            flash_only=1 ;;
+        no-flash)
+            no_flash=1
+            ;;
+        sparse)
+            sparse_mode=1; ;;
+        usb-instance)
+            usb_instance="${!OPTIND}";
+            OPTIND=$((OPTIND + 1));
+            ;;
+        device-instance)
+            device_instance="${!OPTIND}";
+            OPTIND=$((OPTIND + 1));
+            ;;
+            # --device-instance <instance> Indicate the device index that boots into recovery mode. The number
+            # is generated by the flashing tool by scanning all connected usb devices. Used by massflash
+        massflash)
+            massflash_mode=1
+            case "${!OPTIND}" in
+              *[!0-9]* | "");;
+              *) max_massflash="${!OPTIND}"; OPTIND=$((OPTIND + 1)) ;;
+            esac ;;
+        keep)
+            keep="1"
+            ;;
+        reuse)
+            reuse="1"
+            ;;
+        showlogs)
+            showlogs=1
+            ;;
+        skipuid)
+            skipuid=1
+            ;;
+        erase-all)
+            erase_all=1
+            ;;
+        image)
+            target_partfile="${!OPTIND}";
+            OPTIND=$((OPTIND + 1));
+            ;;
+        append)
+            append=1
+            ;;
+        use-backup-image)
+            reuse_package="1"; ;;
+        direct)
+            direct="${!OPTIND}";
+            OPTIND=$((OPTIND + 1));
+            external_only="--external-only";
+            ;;
+        with-systemimg)
+            with_systemimg="1";
+            ;;
+        uefi-keys)
+            # shellcheck disable=SC2034
+            UEFI_KEYS_CONF="${!OPTIND}";
+            OPTIND=$((OPTIND + 1));
+            ;;
+        uefi-enc)
+            # shellcheck disable=SC2034
+            UEFI_ENC="${!OPTIND}";
+            OPTIND=$((OPTIND + 1));
+            ;;
+        odm-image-gen)
+            ODM_IMAGE_GEN=1;
+            qspi_only=1;
+            ;;
+        qspi-only)
+            qspi_only=1;
+            ;;
+        mass-storage-only)
+            mass_storage_only=1;
+            ;;
+        ekb-pair)
+            EKB_PAIR="1";
+            ;;
+        boot-rootfs)
+            boot_rootfs=1
+            ;;
+        profile)
+            profile="${!OPTIND}";
+            OPTIND=$((OPTIND + 1));
+            ;;
+        ufs-provision)
+            enable_ufs_provision=1
+            ;;
+        read-ramcode)
+            gen_read_ramcode=1;
+            ;;
+        hsm)
+            hsm_enable=1;
+            ;;
+        boot-chain-flash)
+            boot_chain_flash="${!OPTIND}";
+            # store user string in uppercase
+            boot_chain_flash="${boot_chain_flash^^}"
+            OPTIND=$((OPTIND + 1));
+            ;;
+        boot-chain-select)
+            boot_chain_select="${!OPTIND}";
+            # store user string in uppercase
+            boot_chain_select="${boot_chain_select^^}"
+            OPTIND=$((OPTIND + 1));
+            ;;
+        *) usage ;;
+        esac;;
+        *)
+        usage
+        ;;
+        esac;
+    done
+}
+
+DEFAULT_MAX_MASSFLASH=10
+INITRD_FLASHPARAM="initrdflashparam.txt"
+get_max_flash()
+{
+    MAX_MASSFLASH=$(LDK_DIR=${LINUX_BASE_DIR}; source "${LDK_DIR}/${target_board}.conf";echo "${MAX_MASSFLASH}")
+    if [ "${massflash_mode}" = "1" ]; then
+        max_massflash=${max_massflash:-${MAX_MASSFLASH:-${DEFAULT_MAX_MASSFLASH}}}
+    else
+        max_massflash=1
+    fi
+}

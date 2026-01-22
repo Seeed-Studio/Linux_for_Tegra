@@ -1,0 +1,105 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice, this
+ * list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from
+ * this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#ifdef AUTO_BUILD
+#include "tegrabl_rollback_protection.h"
+#else
+#include "t264_tegrabl_rollback_protection.h"
+#endif
+
+/ {
+    ratchet@0 {
+        mb1bct          = <OEM_FW_RATCHET_IDX_MB1BCT        0>;
+        membct          = <OEM_FW_RATCHET_IDX_MEMBCT        0>;
+        bpmp_fw_dtb     = <OEM_FW_RATCHET_IDX_BPMP_DTB      0>;
+        mb2rf           = <OEM_FW_RATCHET_IDX_MB2_RF        0>;
+        mb2             = <OEM_FW_RATCHET_IDX_MB2           0>;
+        ist_config      = <OEM_FW_RATCHET_IDX_BPMP_IST_CFG  0>;
+        mb2_applet      = <OEM_FW_RATCHET_IDX_MB2_APPLET    0>;
+        fskp_fw         = <OEM_FW_RATCHET_IDX_FSKP_FW       0>;
+
+        pvit            = <OEM_FW_RATCHET_IDX_PVIT          0>;
+        memdtb          = <OEM_FW_RATCHET_IDX_MEMDTB        0>;
+        fsi             = <OEM_FW_RATCHET_IDX_FSI           0>;
+        rist_tid        = <OEM_FW_RATCHET_IDX_RST_TID       0>;
+        rce             = <OEM_FW_RATCHET_IDX_RCE           0>;
+        ape             = <OEM_FW_RATCHET_IDX_APE           0>;
+        ape1            = <OEM_FW_RATCHET_IDX_APE1          0>;
+        aon             = <OEM_FW_RATCHET_IDX_AON           0>;
+        dce             = <OEM_FW_RATCHET_IDX_DCE           0>;
+        pva             = <OEM_FW_RATCHET_IDX_PVA           0>;
+        atf             = <OEM_FW_RATCHET_IDX_ATF           0>;
+        secure_hv       = <OEM_FW_RATCHET_IDX_SECURE_HV     0>;
+        eks             = <OEM_FW_RATCHET_IDX_EKS           0>;
+        secure_fw_fip   = <OEM_FW_RATCHET_IDX_SECURE_FW_FIP 0>;
+        hv              = <OEM_FW_RATCHET_IDX_HV            0>;
+        cpubl           = <OEM_FW_RATCHET_IDX_CPU_BL        0>;
+        cpubl_dtb       = <OEM_FW_RATCHET_IDX_CPU_BL_DTB    0>;
+        efi_os_load     = <OEM_FW_RATCHET_IDX_EFI_OS_LOAD   0>;
+        kernel          = <OEM_FW_RATCHET_IDX_KERNEL        0>;
+        kernel_dtb      = <OEM_FW_RATCHET_IDX_KERNEL_DTB    0>;
+        ramdisk         = <OEM_FW_RATCHET_IDX_RAMDISK       0>;
+        misc_config     = <OEM_FW_RATCHET_IDX_MISC_CONFIG   0>;
+    };
+    ratchet@1 {
+        mb1bct          = <OEM_FW_RATCHET_IDX_MB1BCT        0>;
+        membct          = <OEM_FW_RATCHET_IDX_MEMBCT        0>;
+        bpmp_fw_dtb     = <OEM_FW_RATCHET_IDX_BPMP_DTB      0>;
+        mb2rf           = <OEM_FW_RATCHET_IDX_MB2_RF        0>;
+        mb2             = <OEM_FW_RATCHET_IDX_MB2           0>;
+        ist_config      = <OEM_FW_RATCHET_IDX_BPMP_IST_CFG  0>;
+        mb2_applet      = <OEM_FW_RATCHET_IDX_MB2_APPLET    0>;
+        fskp_fw         = <OEM_FW_RATCHET_IDX_FSKP_FW       0>;
+
+        pvit            = <OEM_FW_RATCHET_IDX_PVIT          0>;
+        memdtb          = <OEM_FW_RATCHET_IDX_MEMDTB        0>;
+        fsi             = <OEM_FW_RATCHET_IDX_FSI           0>;
+        rist_tid        = <OEM_FW_RATCHET_IDX_RST_TID       0>;
+        rce             = <OEM_FW_RATCHET_IDX_RCE           0>;
+        ape             = <OEM_FW_RATCHET_IDX_APE           0>;
+        ape1            = <OEM_FW_RATCHET_IDX_APE1          0>;
+        aon             = <OEM_FW_RATCHET_IDX_AON           0>;
+        dce             = <OEM_FW_RATCHET_IDX_DCE           0>;
+        pva             = <OEM_FW_RATCHET_IDX_PVA           0>;
+        atf             = <OEM_FW_RATCHET_IDX_ATF           0>;
+        secure_hv       = <OEM_FW_RATCHET_IDX_SECURE_HV     0>;
+        eks             = <OEM_FW_RATCHET_IDX_EKS           0>;
+        secure_fw_fip   = <OEM_FW_RATCHET_IDX_SECURE_FW_FIP 0>;
+        hv              = <OEM_FW_RATCHET_IDX_HV            0>;
+        cpubl           = <OEM_FW_RATCHET_IDX_CPU_BL        0>;
+        cpubl_dtb       = <OEM_FW_RATCHET_IDX_CPU_BL_DTB    0>;
+        efi_os_load     = <OEM_FW_RATCHET_IDX_EFI_OS_LOAD   0>;
+        kernel          = <OEM_FW_RATCHET_IDX_KERNEL        0>;
+        kernel_dtb      = <OEM_FW_RATCHET_IDX_KERNEL_DTB    0>;
+        ramdisk         = <OEM_FW_RATCHET_IDX_RAMDISK       0>;
+        misc_config     = <OEM_FW_RATCHET_IDX_MISC_CONFIG   0>;
+    };
+};
+

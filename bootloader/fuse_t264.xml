@@ -1,0 +1,23 @@
+<genericfuse MagicId="0x45535546" version="2.0.0">
+    <fuse name="PublicKeyHash" />
+    <fuse name="OptInEnable" />
+    <fuse name="BootSecurityInfo" />
+    <fuse name="ArmJtagDisable" />
+    <fuse name="SecurityMode" />
+    <fuse name="SwReserved" />
+    <fuse name="DebugAuthentication" />
+    <fuse name="OdmInfo" />
+    <fuse name="OdmId" />
+    <fuse name="OdmLock" />
+    <fuse name="ReservedOdm0" />
+    <fuse name="ReservedOdm1" />
+    <fuse name="ReservedOdm2" />
+    <fuse name="ReservedOdm3" />
+    <fuse name="ReservedOdm4" />
+    <fuse name="ReservedOdm5" />
+    <fuse name="ReservedOdm6" />
+    <fuse name="ReservedOdm7" />
+    <fuse name="Sku" />
+    <fuse name="Uid" />
+	<!--    <fuse name="OptMssDisable" /> -->
+</genericfuse>

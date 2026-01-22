@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+#
+# NVIDIA CORPORATION and its licensors retain all intellectual property
+# and proprietary rights in and to this software, related documentation
+# and any modifications thereto.  Any use, reproduction, disclosure or
+# distribution of this software and related documentation without an express
+# license agreement from NVIDIA CORPORATION is strictly prohibited.
+
+bct_defines:
+  number_of_chains: 2
+  common_flags: &common_flags {}
+  rcm_boot:
+      <<: *common_flags
+      ? "ENABLE_DCE"
+      ? "CONFIG_ENABLE_SC7"
+  rcm_flash:
+      <<: *common_flags
+  chains:
+      chain_A:
+        <<: *common_flags
+        ? "CONFIG_ENABLE_SC7"
+      chain_B:
+        <<: *common_flags
+        ? "CONFIG_ENABLE_SC7"

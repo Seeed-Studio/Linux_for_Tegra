@@ -1,0 +1,59 @@
+/*
+ * Copyright (c) 2021, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+/dts-v1/;
+
+/ {
+	sdram {
+		mem_cfg_0: mem-cfg@0 {
+		#include "tegra234-mb1-bct-p3701-0002-p3711-0000-sdram-16gb-Micron-lpddr5-204MHz.dtsi"
+		};
+
+	/*	mem_cfg_1: mem-cfg@1 {
+		#include "tegra234-mb1-bct-p3701-0002-p3711-0000-sdram-16gb-Micron-lpddr5-204MHz-ecc.dtsi"
+		};
+
+		mem_cfg_2: mem-cfg@2 {
+		#include "tegra234-mb1-bct-p3701-0002-p3711-0000-sdram-16gb-Micron-lpddr5-204MHz-encr.dtsi"
+		};
+
+		mem_cfg_3: mem-cfg@3 {
+		#include "tegra234-mb1-bct-p3701-0002-p3711-0000-sdram-16gb-Micron-lpddr5-204MHz-ecc-encr.dtsi"
+		}; */
+	};
+};
+
+&mem_cfg_0 {
+#include "tegra234-mem-bct-sw-override-carveout-common.dtsi"
+#include "tegra234-mem-bct-sw-override-carveout-l4t.dtsi"
+#include "tegra234-mem-bct-sw-override-non-carveout-common.dtsi"
+};
+
+/*
+&mem_cfg_1 {
+#include "tegra234-mem-bct-sw-override-carveout-common.dtsi"
+#include "tegra234-mem-bct-sw-override-carveout-l4t.dtsi"
+#include "tegra234-mem-bct-sw-override-non-carveout-common.dtsi"
+};
+
+&mem_cfg_2 {
+#include "tegra234-mem-bct-sw-override-carveout-common.dtsi"
+#include "tegra234-mem-bct-sw-override-carveout-l4t.dtsi"
+#include "tegra234-mem-bct-sw-override-non-carveout-common.dtsi"
+};
+
+&mem_cfg_3 {
+#include "tegra234-mem-bct-sw-override-carveout-common.dtsi"
+#include "tegra234-mem-bct-sw-override-carveout-l4t.dtsi"
+#include "tegra234-mem-bct-sw-override-non-carveout-common.dtsi"
+}; */

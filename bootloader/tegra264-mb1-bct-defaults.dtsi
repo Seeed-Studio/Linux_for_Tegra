@@ -1,0 +1,205 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ *
+ * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+ * property and proprietary rights in and to this material, related
+ * documentation and any modifications thereto. Any use, reproduction,
+ * disclosure or distribution of this material and related documentation
+ * without an express license agreement from NVIDIA CORPORATION or
+ * its affiliates is strictly prohibited.
+ */
+
+/ {
+    mb1_bct {
+
+        ///////// FMON ////////////
+        fmon {
+            fsi_threshold_low  = <3756>; // 16 bit long
+            fsi_threshold_high = <4244>; // 16 bit long
+        };
+
+        ///////// VMON ///////////
+        vmon {
+            vrefo_calib_override = <0>;
+            vrefo_min_rev_threshold = <1>;
+            vrefo_calib_val = <0>;
+            min_adc_fuse_rev = <1>;
+            vdd_soc {
+                soc_vmon_config@0 {
+                    sku_info = <0x00>;
+                    vmin_threshold = <0x0F>; // 7 bit long
+                    vmax_threshold = <0x72>; // 7 bit long
+                };
+                soc_vmon_config@1 {
+                    sku_info = <0xA3>;       // TA1080SA
+                    vmin_threshold = <0x15>; // 7 bit long
+                    vmax_threshold = <0x72>; // 7 bit long
+                };
+                soc_vmon_config@2 {
+                    sku_info = <0xA0>;       // TA1090SA
+                    vmin_threshold = <0x15>; // 7 bit long
+                    vmax_threshold = <0x72>; // 7 bit long
+                };
+                soc_vmon_config@3 {
+                    sku_info = <0xE0>;       // TE1090M
+                    vmin_threshold = <0x0D>; // 7 bit long
+                    vmax_threshold = <0x75>; // 7 bit long
+                };
+                soc_vmon_config@4 {
+                    sku_info = <0xE2>;       // TE1070M
+                    vmin_threshold = <0x15>; // 7 bit long
+                    vmax_threshold = <0x72>; // 7 bit long
+                };
+            };
+            vdd_mss {
+                mss_vmon_config@0 {
+                    sku_info = <0x00>;
+                    vmin_threshold = <0x0F>; // 7 bit long
+                    vmax_threshold = <0x72>; // 7 bit long
+                };
+                mss_vmon_config@1 {
+                    sku_info = <0xA3>;       // TA1080SA
+                    vmin_threshold = <0x15>; // 7 bit long
+                    vmax_threshold = <0x72>; // 7 bit long
+                };
+                mss_vmon_config@2 {
+                    sku_info = <0xA0>;       // TA1090SA
+                    vmin_threshold = <0x15>; // 7 bit long
+                    vmax_threshold = <0x72>; // 7 bit long
+                };
+                mss_vmon_config@3 {
+                    sku_info = <0xE0>;       // TE1090M
+                    vmin_threshold = <0x0D>; // 7 bit long
+                    vmax_threshold = <0x74>; // 7 bit long
+                };
+                mss_vmon_config@4 {
+                    sku_info = <0xE2>;       // TE1070M
+                    vmin_threshold = <0x15>; // 7 bit long
+                    vmax_threshold = <0x72>; // 7 bit long
+                };
+            };
+            vdd_cpu {
+                cpu_vmon_config@0 {
+                    sku_info = <0x00>;
+                    vmin_threshold = <0x0E>; // 7 bit long
+                    vmax_threshold = <0x72>; // 7 bit long
+                };
+                cpu_vmon_config@1 {
+                    sku_info = <0xA3>;       // TA1080SA
+                    vmin_threshold = <0x13>; // 7 bit long
+                    vmax_threshold = <0x72>; // 7 bit long
+                };
+                cpu_vmon_config@2 {
+                    sku_info = <0xA0>;       // TA1090SA
+                    vmin_threshold = <0x13>; // 7 bit long
+                    vmax_threshold = <0x72>; // 7 bit long
+                };
+                cpu_vmon_config@3 {
+                    sku_info = <0xE0>;       // TE1090M
+                    vmin_threshold = <0x0D>; // 7 bit long
+                    vmax_threshold = <0x75>; // 7 bit long
+                };
+                cpu_vmon_config@4 {
+                    sku_info = <0xE2>;       // TE1070M
+                    vmin_threshold = <0x13>; // 7 bit long
+                    vmax_threshold = <0x72>; // 7 bit long
+                };
+            };
+            vdd_fsi {
+                fsi_vmon_config@0 {
+                    sku_info = <0x00>;
+                    vmin_threshold = <0x35>; // 7 bit long
+                    vmax_threshold = <0x49>; // 7 bit long
+                };
+                fsi_vmon_config@1 {
+                    sku_info = <0xA3>;       // TA1080SA
+                    vmin_threshold = <0x34>; // 7 bit long
+                    vmax_threshold = <0x4A>; // 7 bit long
+                };
+                fsi_vmon_config@2 {
+                    sku_info = <0xA0>;       // TA1090SA
+                    vmin_threshold = <0x34>; // 7 bit long
+                    vmax_threshold = <0x4A>; // 7 bit long
+                };
+                fsi_vmon_config@3 {
+                    sku_info = <0xE0>;       // TE1090M
+                    vmin_threshold = <0x2C>; // 7 bit long
+                    vmax_threshold = <0x6A>; // 7 bit long
+                };
+                fsi_vmon_config@4 {
+                    sku_info = <0xE2>;       // TE1070M
+                    vmin_threshold = <0x34>; // 7 bit long
+                    vmax_threshold = <0x4A>; // 7 bit long
+                };
+            };
+            vdd_gpu {
+                gpu_vmon_config@0 {
+                    sku_info = <0x00>;
+                    vmin_threshold = <0x12>; // 7 bit long
+                    vmax_threshold = <0x7F>; // 7 bit long
+                };
+                gpu_vmon_config@1 {
+                    sku_info = <0xA3>;       // TA1080SA
+                    vmin_threshold = <0x18>; // 7 bit long
+                    vmax_threshold = <0x7F>; // 7 bit long
+                };
+                gpu_vmon_config@2 {
+                    sku_info = <0xA0>;       // TA1090SA
+                    vmin_threshold = <0x18>; // 7 bit long
+                    vmax_threshold = <0x7F>; // 7 bit long
+                };
+                gpu_vmon_config@3 {
+                    sku_info = <0xE0>;       // TE1090M
+                    vmin_threshold = <0x0D>; // 7 bit long
+                    vmax_threshold = <0x7F>; // 7 bit long
+                };
+                gpu_vmon_config@4 {
+                    sku_info = <0xE2>;       // TE1070M
+                    vmin_threshold = <0x18>; // 7 bit long
+                    vmax_threshold = <0x7F>; // 7 bit long
+                };
+            };
+        };
+
+        ///////// SOCTHERM ///////////
+        soctherm {
+            max_chip_limit = <0x69>; // Max to 105C
+            min_chip_limit = <0xFFFFFFE7>; // Min to -25C
+        };
+
+        //////// VPR OVERRIDES //////
+        vpr_data {
+            vpr_override = <0x520300>;
+            vpr_override2 = <0x601801E>;
+        };
+
+        //////// DISPLAY /////////////
+        display {
+            pmc_2sor0_force_internal = <0>;
+            pmc_2sor1_force_internal = <0>;
+            pmc_2sor_vpr_secure_mode = <1>;
+            pmc_2sor_clk_ctrl_owner = <0>;
+            pmc_2disp_pnl_rd_ctrl_owner = <0>;
+            pmc_2disp_pnl_ctrl_owner = <0>;
+            pmc_2disp_dsi_pad_ctrl_owner = <0>;
+        };
+
+        ///////// MULTISKU ///////////
+        multi_sku {
+             test_sku_selection = <0x0>;
+             num_sku_select_gpios = <0x0>;
+             sku_select_gpio_cfg_addr = <0x0 0x0 0x0>;
+             sku_select_gpio_padctl_addr = <0x0 0x0 0x0>;
+        };
+    };
+};
+
+#include "tegra264-mb1-bct-boot-clocks-defaults.dtsi"
+#include "tegra264-mb1-bct-debug-defaults.dtsi"
+#include "tegra264-mb1-bct-cpu-defaults.dtsi"
+#include "tegra264-mb1-bct-ist-keys-defaults.dtsi"
+#include "tegra264-mb1-bct-c2c-defaults.dtsi"
+#include "tegra264-mb1-bct-features-defaults.dtsi"
+#include "tegra264-mb1-bct-tsc-defaults.dtsi"
+#include "tegra264-mb1-bct-mbwt-settings-defaults.dtsi"

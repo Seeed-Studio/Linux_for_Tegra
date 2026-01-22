@@ -1,0 +1,640 @@
+# SPDX-FileCopyrightText: Copyright (c) 2015-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#  * Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#  * Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#  * Neither the name of NVIDIA CORPORATION nor the names of its
+#    contributors may be used to endorse or promote products derived
+#    from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY
+# EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+# PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+# PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+# OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+chksbin ()
+{
+	local var="$1";
+	if [ "${!var}" = "" ]; then
+		echo "Error: ${var} unspecified.";
+		exit 1;
+	fi;
+	if [ ! -f "${!var}" ]; then
+		echo "Error: ${!var} not found.";
+		exit 1;
+	fi;
+	local fn=$(basename "${!var}");
+	local ext="${fn##*.}";
+	fn="${fn%.*}";
+	if [ "${var}" = "bctfilename" ]; then
+		eval "s${var}=${fn}_signed.bct";
+	elif [ "${var}" = "localcfgfile" ]; then
+		eval "c${var}=${fn}_clean.${ext}";
+	else
+		eval "s${var}=${fn}_signed.${ext}";
+	fi;
+}
+
+validateMaster ()
+{
+	if [[ "$1" =~ ^[^@]{1,}@[^@]{1,}$ ]]; then
+		return 0
+	fi;
+	echo "Error: dbmaster is not in <user>@<db server> format.";
+	exit 1;
+}
+
+setsudocmd ()
+{
+	if [ "${SUDO_USER}" != "" ]; then
+		sudocmd="sudo -u ${SUDO_USER}";
+	fi;
+}
+
+chext ()
+{
+	local var="$1";
+	local fname=`basename "$2"`;
+	local OIFS=${IFS};
+	IFS='.';
+	na=($fname);
+	IFS=${OIFS};
+	eval "${var}=${na[0]}.${3}";
+}
+
+extsig ()
+{
+	local var="$1";
+	filename=$(basename -- "$2")
+	extension="${filename##*.}"
+	filename_base="${filename%.*}"
+	# Fix the case that filename has no extension
+	if [ "${filename_base}" = "${extension}" ] && [ "${filename}" != "${filename_base}"."${extension}" ]; then
+		eval "${var}=${filename_base}${3}.${4}";
+	else
+		eval "${var}=${filename_base}${3}.${extension}.${4}";
+	fi;
+}
+
+sigbins ()
+{
+	local var="$1";
+	local OIFS=${IFS};
+	local str=`echo ${!var} | sed -e s/\;//g -e s/\"//g`;
+	IFS=' ';
+	local ba=($str);
+	IFS=${OIFS};
+	local i;
+	local NBIN;
+	local NEWBINS="";
+
+	if [ "${ba[0]}" != "--bins" ] && [ "${ba[0]}" != "--bin" ]; then
+		echo "Error: bad BINSARGS format: Q${ba[0]}Q";
+		exit 1;
+	fi;
+	local basize=${#ba[@]};
+	for (( i=1; i < ${basize}; )); do
+		if [[ ${ba[$((i+1))]} =~ "/" ]]; then
+			echo "Error: full path is not allowed in BINSARGS:";
+			echo "       ${ba[$((i+1))]}";
+			exit 1;
+		fi;
+
+		if [ "${ba[$i]}" = "bpmp_fw_dtb" ] && [ "${CHIPID}" = "0x23" ]; then
+			echo "Using bpmp-dtb concatenated with odmdata in blob for t23x";
+			ba[$((i+1))]=`echo "${ba[$((i+1))]}" | sed "s|.dtb|_with_odm.dtb|"`;
+		fi
+
+		extsig NBIN ${ba[$((i+1))]} "${2}" "${3}";
+		if [[ (${ba[$i]} = "kernel" || ${ba[$i]} = "kernel_dtb") ]]; then
+			NEWBINS+="${ba[$i]} ${ba[$((i+1))]}";
+		else
+			NEWBINS+="${ba[$i]} ${NBIN}";
+		fi
+		i=$((i+2));
+		if [ ${i} -lt ${basize} ]; then
+			NEWBINS+="; ";
+		fi;
+	done;
+	eval "${4}='${NEWBINS}'";
+}
+
+#
+# odmsign_ext_sign
+#
+# This function encrypts and signs bootloader images when only PKC or PKCSBK
+# keys are present. However, when only PKC key is present. it will only do
+# image signing without encrypting.
+#
+odmsign_ext_sign ()
+{
+	local kernel_name;
+	local kernel_name_b;
+	local dtb_name;
+
+	# PKC+SBC is supported currently only on T194, T234, T264
+	if  [ "${CHIPID}" != "0x19" ] && [ "${CHIPID}" != "0x23" ]  && [ "${CHIPID}" != "0x26" ]; then
+		echo "Error: ${CHIPID} is not supported."
+		return 1;
+	fi;
+
+	# Generate sign command:
+	#   Use ${FLASHARGS} from the main (flash.sh) as SIGNARGS, Except ${FBARGS}.
+	#   Replace ${FBARGS} with '--cmd "sign"'
+	#   Add --ramcode option to FLASHARGS
+	if [ "${RAMCODE}" != "" ]; then
+		FLASHARGS+=" --ramcode ${RAMCODE} ";
+	fi;
+	if [ "${debug_mode}" -eq 1 ]; then
+		FLASHARGS+="--keep "
+	fi;
+	SIGNARGS=${FLASHARGS};
+
+	# Replace ${FBARGS} in ${SIGNARGS} to ${NEWFBARGS}
+	# NVSIGN_CMD is required in order to dev_signed the binaries if required. This variable is
+	# defined in the board config file
+	NEWFBARGS="${FBOTPS} --cmd \"${FBCMD}${NVSIGN_CMD} sign\" ";
+	SIGNARGS=$(echo "${FLASHARGS}" | sed "s|${FBARGS}|${NEWFBARGS}|");
+
+	# Clean signed or enc_signed directory in case there is any left from previous run
+	rm -rf "$(odmsign_get_folder)";
+
+	# Sign binaries with PKC key
+	signcmd="./${flashappname} ${SIGNARGS} ";
+	if [ -n "${keyfile}" ]; then
+		signcmd+="--key ${keyfile} "
+	fi
+
+	# Handle PKC only
+	if [ "${sbk_keyfile}" = "" ]; then
+		echo "${signcmd}";
+		eval "${signcmd}";
+		cp -f signed/* .;
+		return $?;
+	fi;
+
+	# Sign binaries with both PKC and SBK keys
+	signcmd+="--encrypt_key ${sbk_keyfile} ";
+	if [ "${disable_random_iv}" = "True" ]; then
+		echo "Disable random IV"
+		signcmd+="--disable_random_iv ";
+	fi
+	echo "${signcmd}";
+	eval "${signcmd}";
+
+	if [ "${temp_user_dir}" != "" ]; then
+		# if user_keyfile is present, use encrypt_signed files in $temp_user_dir
+		if [ "${user_keyfile}" != "" ]; then
+			extsig kernel_name ${localbootfile} "_sigheader" "encrypt.signed";
+			cp -f "${temp_user_dir}/${kernel_name}" "$(odmsign_get_folder)/";
+			if [[ "${rootfs_ab}" == 1 ]]; then
+				extsig kernel_name_b "${localbootfile}_b" "_sigheader" "encrypt.signed";
+				cp -f "${temp_user_dir}/${kernel_name_b}" "$(odmsign_get_folder)/";
+			fi
+			extsig dtb_name ${dtbfilename} "_sigheader" "encrypt.signed";
+			cp -f "${temp_user_dir}/${dtb_name}" "$(odmsign_get_folder)/";
+		fi;
+	fi;
+
+	cp -f "$(odmsign_get_folder)"/* .
+
+	return 0;
+}
+
+odmsign_convert_part_image_type ()
+{
+	local part="${1}";
+	local from="${2}"
+	local to="${3}"
+	local part_layout_file="${4}";
+	local line;
+
+	line=`sed -n "/\"${part}\"/=" "${part_layout_file}"`
+	line=$(( line+7 ));
+	sed -i "${line}s/${from}/${to}/g" "${part_layout_file}"
+}
+
+odmsign_get_folder()
+{
+	# Handle PKC only
+	if [ "${sbk_keyfile}" = "" ]; then
+		echo "signed"
+		return 0
+	fi;
+	if [ "${CHIPID}" = "0x23" ] || [ "${CHIPID}" = "0x26" ]; then
+		echo "enc_signed";
+	elif [ "${CHIPID}" = "0x19" ]; then
+		echo "encrypted_signed_t19x"
+	elif [ "${CHIPID}" = "0x18" ]; then
+		echo "encrypted_signed";
+	fi;
+}
+
+#
+# This function prepares a command script (a text string)
+# to do read_ramcode command.
+#
+# The text string, ${read_ramcode_cmd}, is used in both
+# flashcmd.txt and rcmbootcmd.txt.
+#
+t234_set_read_ramcode_cmd()
+{
+	read_ramcode_cmd=$(cat << EOF
+tar -xf rcmdump_blob.tar;
+if [ \$? -ne 0 ]; then
+    echo "Failed to extract rcmdump_blob.tar";
+    exit 1;
+fi;
+
+source read_ramcode.func;
+
+ramcode=${RAMCODE};
+mem_rcm_file=${mem_rcm_file};
+
+# Read on-board ramcode from the target
+read_ramcode 0x23;
+
+# Set mem_bct binary based on the ramcode
+t234_set_ramcode_mem_bct;
+
+
+EOF
+)
+}
+
+#
+# odmsign_gen_rcmboot_blob
+#
+# This function will add '--no_flash' option to tegraflash.py
+# so tegraflash.py will generate rcmboot_blob.
+#
+# If ${gen_read_ramcode} is also set, this function will add
+# ${read_ramcode_cmd} script string to the beginning of
+# rcmbootcmd.txt.
+#
+odmsign_gen_rcmboot_blob ()
+{
+	echo "--rcm-boot with --no-flash, prepare rcmboot_blob."
+	# ${flashcmd} may contain the read_ramcode commands script.
+	# Retrieve the actual tegraflash.py command from ${flashcmd}.
+	tegraflashcmd=$(echo "${flashcmd}" | grep "tegraflash.py")
+	# Add --no_flash to tegraflash.py command so it will generate rcmboot_blob.
+	tegraflashcmd+=" --no_flash "
+	echo "tegraflashcmd with --no_flash:"
+	echo "${tegraflashcmd}"
+	eval "${tegraflashcmd}"
+	echo "rcmboot_blob generated."
+	# If gen_read_ramcode is set, insert the read_ramcode_cmd string to the beginning
+	# of rcmbootcmd.txt.
+	if [ "${gen_read_ramcode}" -eq 1 ]; then
+		rcmbootcmd_file="rcmboot_blob/rcmbootcmd.txt";
+		t234_set_read_ramcode_cmd;
+		rcmboot_cmd="${read_ramcode_cmd}";
+		rcmboot_cmd+="\n\n";
+		rcmboot_cmd+=$(cat ${rcmbootcmd_file});
+		rcmboot_cmd=$(printf "${rcmboot_cmd}");
+		echo "Adding read_ramcode codes to ${rcmbootcmd_file}";
+		echo "${rcmboot_cmd}" > "${rcmbootcmd_file}";
+		# rcmdump_blob.tar is needed to do read_ramcode stuff.
+		# Copy rcmdump_blob.tar to rcmboot_blob.
+		cp rcmdump_blob.tar rcmboot_blob/;
+	fi
+}
+
+#
+# odmsign_ext_flash
+#
+# This functin flashes device with pre-signed images. However, if
+# --no-flash option is present, this function will only save the
+# generated secure flash command into a file without proceeding
+# flashing. The saved secure flash command file can be used to flash
+# device with pre-signed images where no keys are required to be present.
+#
+# This function handles both SBK+PKC and PKC only signed images.
+#
+odmsign_ext_flash ()
+{
+	local tmp;
+
+	# Prepare flashing signed xml:
+	securecfgfile="secureflash.xml";
+	# pkc only and pkc+sbk use different tmp xml name
+	if [ "${sbk_keyfile}" = "" ]; then
+		tmp="signed/${localcfgfile}.tmp";
+	else
+		if [ "${CHIPID}" = "0x18" ]; then
+			tmp="$(odmsign_get_folder)/${localcfgfile}.tmp";
+		fi;
+		if [ "${CHIPID}" = "0x19" ]; then
+			tmp="$(odmsign_get_folder)/output.xml";
+		fi;
+		if [ "${CHIPID}" = "0x23" ]; then
+			tmp="$(odmsign_get_folder)/${localcfgfile}.tmp";
+		fi;
+	fi;
+	cp -f "${tmp}" "./${localcfgfile}.tmp"
+
+	# insert line '<?xml version="1.0"?>' at top
+	sed -e '1 i<?xml version="1.0"?>\n' "${localcfgfile}.tmp" \
+		> "${securecfgfile}";
+
+	localcfgfile="${securecfgfile}";
+
+	# Prepare flashing signed binaries command
+	# pkc only and pkc+sbk use different filename extension
+
+	if [ "${keyfile}" = "" ]; then
+		tmp="encrypt"
+	elif [ "${sbk_keyfile}" = "" ]; then
+		tmp="signed";
+	else
+		tmp="encrypt.signed";
+	fi;
+	if [ "${keyfile}" = "" ]; then
+		tmp2="encrypt"
+	else
+		tmp2="signed"
+	fi
+
+	extsig flashername ${flashername} "_sigheader" "${tmp}";
+	BCT="--bct";
+	# Select boot chain
+	if [ "${boot_chain_select}" == "A" ]; then
+		bctfilename="br_bct_BR.bct";
+	else
+		bctfilename="br_bct_${boot_chain_select,,}_BR.bct";
+	fi
+
+	# remove kernel and kernel-dtb from --bins
+	if [ "${rcm_boot}" -eq 0 ] && [ -n "${BINSARGS}"  ]; then
+		BINSARGS=$(echo "${BINSARGS}" | sed "s|kernel boot.img; ||")
+		# Removing kernel_dtb is different for T23x, because kernel_dtb item is the last in BINSARGS, it has no ;
+		if [ "${CHIPID}" != "0x23" ]; then
+			BINSARGS=$(echo "${BINSARGS}" | sed "s|kernel_dtb ${DTB_FILE}; ||")
+		else
+			BINSARGS=$(echo "${BINSARGS}" | sed "s|kernel_dtb ${DTB_FILE}||")
+		fi;
+	else
+		BINSARGS=$(echo "${BINSARGS}" | sed "s|kernel_dtb ${DTB_FILE}; |kernel_dtb kernel_${DTB_FILE}; |")
+	fi
+	# convert ext to signed
+	if [ -n "${BINSARGS}" ]; then
+		sigbins BINSARGS "_sigheader" "${tmp}" SIGNEDBINSARGS;
+	fi
+
+	if [ "${CHIPID}" = "0x18" ]; then
+		BCTARGS="--mb1_bct mb1_cold_boot_bct_MB1_sigheader.bct.${tmp} ";
+		SOSARGS="--applet rcm_1_${tmp2}.rcm ";
+		BCTARGS+="--mb1_cold_boot_bct mb1_cold_boot_bct_MB1_sigheader.bct.${tmp} ";
+	fi;
+	if [ "${CHIPID}" = "0x19" ]; then
+		# handle differently with and without SBK key
+		if [ "${sbk_keyfile}" != "" ]; then
+			flashername=`echo "${flashername}" | \
+				sed "s|_sigheader.bin|.bin_sigheader|"`
+			SIGNEDBINSARGS=`echo "${SIGNEDBINSARGS}" | \
+				sed "s|_recovery_t194_sigheader.bin|_recovery_t194.bin_sigheader|"`
+			BCTARGS="--mb1_bct mb1_bct_MB1.bct_sigheader.encrypt.signed ";
+			BCTARGS+="--mem_bct mem_rcm.bct_sigheader.encrypt.signed ";
+			BCTARGS+="--mb1_cold_boot_bct mb1_cold_boot_bct_MB1.bct_sigheader.encrypt.signed ";
+		else
+			BCTARGS="--mb1_bct mb1_bct_MB1_sigheader.bct.${tmp2} ";
+			BCTARGS+="--mem_bct mem_rcm_sigheader.bct.${tmp2} ";
+			BCTARGS+="--mb1_cold_boot_bct mb1_cold_boot_bct_MB1_sigheader.bct.${tmp2} ";
+		fi;
+		BCTARGS+="--mem_bct_cold_boot mem_coldboot_sigheader.bct.${tmp2} ";
+		SOSARGS="--applet rcm_2_${tmp2}.rcm --applet_softfuse rcm_1_${tmp2}.rcm ";
+	fi;
+
+	if [ "${CHIPID}" = "0x23" ]; then
+		# If there is coldboot and rcmboot cpubl seperation, we use the dedicated
+		# cpubl image name (flashername). Otherwise, we use the coldboot cpubl name
+		# stored in the partition layout for rcmboot.
+		if [ "${rcm_tbcfile}" = "" ]; then
+			get_value_from_PT_table "A_cpu-bootloader" "filename" ${securecfgfile} flashername
+		elif [ "${sbk_keyfile}" != "" ]; then
+			flashername="${flashername//.bin.encrypt/_encrypt.bin}"
+		fi
+
+		# handle differently with and without SBK key
+		if [ "${sbk_keyfile}" != "" ]; then
+			# Special handling for --mb1_bin
+			extsig tmp_mb1bin ${mb1filename} '_aligned_sigheader_encrypt' 'signed'
+			# Special handling for --psc_bl1_bin
+			extsig tmp_pscbl1bin ${pscbl1filename} '_aligned_sigheader_encrypt' 'signed'
+
+			BCTARGS="--mb1_bct mb1_bct_MB1_sigheader_encrypt.bct.signed ";
+			BCTARGS+="--mem_bct mem_rcm_sigheader_encrypt.bct.signed ";
+			BCTARGS+="--mb1_cold_boot_bct mb1_cold_boot_bct_MB1_sigheader_encrypt.bct.signed ";
+			BCTARGS+="--mb1_bin ${tmp_mb1bin} ";
+			BCTARGS+="--psc_bl1_bin ${tmp_pscbl1bin} ";
+			BCTARGS+="--mem_bct_cold_boot mem_coldboot_aligned_sigheader_encrypt.bct.signed ";
+			sigbins BINSARGS "_sigheader_encrypt" "signed" SIGNEDBINSARGS;
+			# Special handling for mb2_bootloader binary
+			if [ "${rcm_boot}" -eq 0 ]; then
+				SIGNEDBINSARGS=`echo "${SIGNEDBINSARGS}" | \
+					sed "s|mb2_t234_sigheader_encrypt.bin.signed|mb2_t234_with_mb2_bct_MB2_sigheader_encrypt.bin.signed|"`
+			else
+				SIGNEDBINSARGS=`echo "${SIGNEDBINSARGS}" | \
+					sed "s|mb2_t234_sigheader_encrypt.bin.signed|mb2_t234_with_mb2_cold_boot_bct_MB2_sigheader_encrypt.bin.signed|"`
+			fi
+		else
+			# Special handling for --mb1_bin
+			extsig tmp_mb1bin ${mb1filename} '_aligned_sigheader' '${tmp2}'
+			# Special handling for --psc_bl1_bin
+			extsig tmp_pscbl1bin ${pscbl1filename} '_aligned_sigheader' '${tmp2}'
+
+			BCTARGS="--mb1_bct mb1_bct_MB1_sigheader.bct.${tmp2} ";
+			BCTARGS+="--mem_bct mem_rcm_sigheader.bct.${tmp2} ";
+			BCTARGS+="--mb1_cold_boot_bct mb1_cold_boot_bct_MB1_sigheader.bct.${tmp2} ";
+			BCTARGS+="--mb1_bin ${tmp_mb1bin} ";
+			BCTARGS+="--psc_bl1_bin ${tmp_pscbl1bin} ";
+			BCTARGS+="--mem_bct_cold_boot mem_coldboot_sigheader.bct.${tmp2} ";
+
+			# Special handling for mb2_bootloader binary
+			if [ "${rcm_boot}" -eq 0 ]; then
+				SIGNEDBINSARGS=`echo "${SIGNEDBINSARGS}" | \
+					sed "s|mb2_t234_sigheader.bin.${tmp2}|mb2_t234_with_mb2_bct_MB2_sigheader.bin.${tmp2}|"`
+			else
+				SIGNEDBINSARGS=`echo "${SIGNEDBINSARGS}" | \
+					sed "s|mb2_t234_sigheader.bin.${tmp2}|mb2_t234_with_mb2_cold_boot_bct_MB2_sigheader.bin.${tmp2}|"`
+			fi
+		fi;
+		SOSARGS="--applet rcm_2_${tmp2}.rcm --applet_softfuse rcm_1_${tmp2}.rcm ";
+	fi;
+	if [ -n "${SIGNEDBINSARGS}" ]; then
+		BINSARGS="--bins \"${SIGNEDBINSARGS}\" ";
+	fi
+	FLASHARGS="--bl ${flashername} ${BCT} ${bctfilename}";
+
+	if [ "${rcm_boot}" -eq 0 ]; then
+		FBARGS="--cmd \"secureflash;reboot\" ";
+	else
+		FBARGS="--cmd \"rcmboot\" ";
+		FLASHARGS+=" --securedev ";
+	fi
+	FLASHARGS+=" ${DTBARGS}${MTSARGS}${SOSARGS}${NCTARGS}${FBARGS} ";
+
+	FLASHARGS+="--cfg ${localcfgfile} ";
+
+	if [ "${CHIPMAJOR}" != "" ]; then
+		FLASHARGS+="--chip \"${tegraid} ${CHIPMAJOR}\" ";
+	else
+		FLASHARGS+="--chip ${tegraid} ";
+	fi;
+
+	FLASHARGS+="${BCTARGS} ";
+	FLASHARGS+="${BINSARGS} ";
+	FLASHARGS+="${SKIPUID} ";
+
+	if [ -n "${usb_instance}" ]; then
+		FLASHARGS+="--instance ${usb_instance} ";
+	fi;
+
+	# Need to write BCT backup partition if it exists
+	if partition_exists_in_PT_table "BCT-boot-chain_backup" "${cfgfile}"; then
+		FLASHARGS+=" --bct_backup ";
+	fi;
+
+	if [ "${debug_mode}" -eq 1 ]; then
+		FLASHARGS+="--keep "
+	fi;
+
+	tegraflash_cmd="./${flashappname} ${FLASHARGS}";
+
+	if [ "${gen_read_ramcode}" -eq 1 ]; then
+		mem_rcm_file=$(echo "${FLASHARGS}" | awk -F"mem_bct " '/mem_bct /{print $2}' | cut -f1 -d' ');
+		# Append all 4 ramcode mem_rcm binaries to rcmdump_blob.tar
+		for i in {0..3}
+		do
+			mem_rcm_i_file="${mem_rcm_file//mem_rcm_/mem_rcm_${i}_}"
+			tar -rf rcmdump_blob.tar "${mem_rcm_i_file}"
+		done
+
+		# Prepare a read_ramcode_cmd string.
+		t234_set_read_ramcode_cmd;
+		# Insert the read_ramcode_cmd string to the beginning of tegraflash_cmd.
+		flashcmd="${read_ramcode_cmd}";
+		flashcmd+="\n\n";
+		flashcmd+="${tegraflash_cmd}";
+		flashcmd=$(printf "${flashcmd}");
+	else
+		flashcmd=${tegraflash_cmd}
+	fi
+
+	flashcmdfile="flashcmd.txt"
+	echo "${flashcmd}";
+	echo "saving flash command in ${flashcmdfile}"
+	echo "${flashcmd}" > "${flashcmdfile}"
+	sed -i 's/--skipuid//g' "${flashcmdfile}"
+
+	if [ "${no_flash}" -ne 0 ]; then
+		if [ "${rcm_boot}" -ne 0 ]; then
+			odmsign_gen_rcmboot_blob
+		fi
+		echo ""
+		echo "*** no-flash flag enabled. Exiting now... *** ";
+		echo ""
+		echo "User can run above saved command in factory environment without ";
+		echo "providing pkc and sbk keys to flash a device";
+		echo ""
+		echo "Example:";
+		echo ""
+		echo "    $ cd bootloader ";
+		echo "    $ sudo bash ./flashcmd.txt";
+		echo ""
+		exit 0;
+	fi;
+
+	echo "*** Flashing target device started. ***"
+	eval "${flashcmd}";
+
+	return $?;
+}
+
+odmsign_ext_sign_and_flash ()
+{
+	odmsign_ext_sign;
+	if [ ${bup_blob} -eq 1 ]; then
+		# In BUP generation, it doesn't need flash device
+		# Continue to be handled by main
+		return 0;
+	fi
+	odmsign_ext_flash;
+	return $?;
+}
+
+odmsign_sanity_check_keyfile()
+{
+	local lkf=`basename ${1}`;
+	if [ -f "${lkf}" ]; then
+		echo "Error: KEY file ${lkf} found in bootloader directory.";
+		echo -n "KEY file ${lkf} should be located in safe directory "
+		echo "other than bootloader.";
+		exit 1;
+	fi;
+}
+
+odmsign_ext ()
+{
+	if [ "${CHIPID}" = "0x23" ]; then
+		if [ "${rcm_tbcfile}" != "" ]; then
+			flashername="${RCM_UEFIBL}"
+		else
+			flashername="${UEFIBL}"
+		fi
+	fi;
+
+	if  [ "${rcm_boot}" -eq 1 ] && [ "${CHIPID}" = "0x26" ]; then
+		# rcmboot --securedev is currently disabled. In the future, we will use the unified flash tool for --securedev flash purpose
+		return 0
+	fi
+
+	if  [ "${rcm_boot}" -eq 1 ]; then
+		if [ -n "${keyfile}" ]; then
+			odmsign_sanity_check_keyfile "${keyfile}";
+		fi
+		if [ -n "${sbk_keyfile}" ]; then
+			odmsign_sanity_check_keyfile "${sbk_keyfile}";
+		fi
+		odmsign_ext_sign_and_flash
+		exit 0
+	else
+		# If there is no keyfile and ${to_sign} is 0, let main (flash.sh) handle it.
+		if [ "${keyfile}" = "" ] && [ ${to_sign} == 0 ]; then
+			return 0;
+		fi;
+	fi;
+
+	# Comes here when ${to_sign} is 1 or there is pkc key or pkc+sbk keys.
+	# Note: if there is no keyfile and ${to_sign} is 1, binaries are signed with zero-key.
+	if [ -n "${keyfile}" ]; then
+		odmsign_sanity_check_keyfile "${keyfile}";
+	fi
+	if [ -n "${sbk_keyfile}" ]; then
+		odmsign_sanity_check_keyfile "${sbk_keyfile}";
+	fi
+	odmsign_ext_sign_and_flash;
+	if [ ${bup_blob} -eq 1 ]; then
+		# In BUP generation, continue to be handled by main
+		return 0;
+	fi
+
+	exit 0;
+
+	echo "Error: should not reach here"
+	exit 1
+}

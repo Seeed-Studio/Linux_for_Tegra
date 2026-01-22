@@ -1,0 +1,43 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ *
+ * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+ * property and proprietary rights in and to this material, related
+ * documentation and any modifications thereto. Any use, reproduction,
+ * disclosure or distribution of this material and related documentation
+ * without an express license agreement from NVIDIA CORPORATION or
+ * its affiliates is strictly prohibited.
+ */
+/*
+# CFG Version 1.0
+# This File contains the configuration of multiple rails.
+ */
+
+/ {
+	mb1_bct {
+		pmic_config@0 {
+			pmic {
+				core {
+					block@1 {
+						i2c-controller;
+						controller-id = <0x5>;
+						slave-addr = <0x78>;
+						reg-data-size = <16>;
+						reg-addr-size = <8>;
+						block-delay = <3>;
+						i2c-transaction-type = <1>; /* command Read-modify-write */
+						commands {
+							/* Assert EN12 pin to high */
+							command@0 {
+								reg-addr = <0x25>;
+								mask = <0xFFFF>;
+								value = <0xE108>; //Format: <PEC><VALUE> where PEC = CRC8(<slave-addr><reg-addr><VALUE>)
+							};
+						};
+					};
+				};
+			};
+		};
+	};
+};

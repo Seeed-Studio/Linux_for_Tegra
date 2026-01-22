@@ -1,0 +1,198 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice, this
+ * list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from
+ * this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+/*
+# CFG Version 1.0
+# This File contains the configuration of multiple rails.
+ */
+
+/dts-v1/;
+
+#include "tegra264-mb1-bct-pmic-p3834-common.dtsi"
+#include "tegra264-mb1-bct-pmic-p3834-0008-vdd-fuse-on.dtsi"
+
+/ {
+	mb1_bct {
+		pmic_config@0 {
+			pmic {
+				cpu {
+					block@0 {
+						commands {
+							command@2 {
+								/* Disable DCM mode for LOOP-A/B (CPU/SOC) */
+								reg-addr = <0x4B>;
+								mask = <0xFFFF>;
+								value = <0x3700>; //Format: <PEC><VALUE> where PEC = CRC8(<slave-addr><reg-addr><VALUE>)
+							};
+						};
+					};
+				};
+				gpu {
+					block@0 {
+						commands {
+							command@2 {
+								/* Disable DCM mode for LOOP-A/B (GPU/MSS) */
+								reg-addr = <0x4B>;
+								mask = <0xFFFF>;
+								value = <0xE100>; //Format: <PEC><VALUE> where PEC = CRC8(<slave-addr><reg-addr><VALUE>)
+							};
+						};
+					};
+				};
+				core {
+					block@0 {
+						commands {
+							command@1 {
+								reg-addr = <0x53>;
+								mask = <0xFFFF>;
+								value = <0x0500>; //Format: <PEC><VALUE> where PEC = CRC8(<slave-addr><reg-addr><VALUE>)
+							};
+							command@2 {
+								reg-addr = <0x54>;
+								mask = <0xFFFF>;
+								value = <0x1713>; //Format: <PEC><VALUE> where PEC = CRC8(<slave-addr><reg-addr><VALUE>)
+							};
+							command@3 {
+								reg-addr = <0x55>;
+								mask = <0xFFFF>;
+								value = <0x7B00>; //Format: <PEC><VALUE> where PEC = CRC8(<slave-addr><reg-addr><VALUE>)
+							};
+							command@4 {
+								reg-addr = <0x56>;
+								mask = <0xFFFF>;
+								value = <0x4400>; //Format: <PEC><VALUE> where PEC = CRC8(<slave-addr><reg-addr><VALUE>)
+							};
+							command@5 {
+								reg-addr = <0x57>;
+								mask = <0xFFFF>;
+								value = <0x5100>; //Format: <PEC><VALUE> where PEC = CRC8(<slave-addr><reg-addr><VALUE>)
+							};
+							command@6 {
+								reg-addr = <0x58>;
+								mask = <0xFFFF>;
+								value = <0x0531>; //Format: <PEC><VALUE> where PEC = CRC8(<slave-addr><reg-addr><VALUE>)
+							};
+							command@7 {
+								reg-addr = <0x59>;
+								mask = <0xFFFF>;
+								value = <0x8700>; //Format: <PEC><VALUE> where PEC = CRC8(<slave-addr><reg-addr><VALUE>)
+							};
+							command@8 {
+								reg-addr = <0x5A>;
+								mask = <0xFFFF>;
+								value = <0x7841>; //Format: <PEC><VALUE> where PEC = CRC8(<slave-addr><reg-addr><VALUE>)
+							};
+							command@9 {
+								reg-addr = <0x5B>;
+								mask = <0xFFFF>;
+								value = <0x6D41>; //Format: <PEC><VALUE> where PEC = CRC8(<slave-addr><reg-addr><VALUE>)
+							};
+							command@10 {
+								reg-addr = <0x5C>;
+								mask = <0xFFFF>;
+								value = <0xC600>; //Format: <PEC><VALUE> where PEC = CRC8(<slave-addr><reg-addr><VALUE>)
+							};
+							command@11 {
+								reg-addr = <0x5D>;
+								mask = <0xFFFF>;
+								value = <0xD300>; //Format: <PEC><VALUE> where PEC = CRC8(<slave-addr><reg-addr><VALUE>)
+							};
+							command@12 {
+								reg-addr = <0x5E>;
+								mask = <0xFFFF>;
+								value = <0xEC00>; //Format: <PEC><VALUE> where PEC = CRC8(<slave-addr><reg-addr><VALUE>)
+							};
+						};
+					};
+				};
+				thermal {
+					/* Program PWM fan which is cvb-specific */
+					block@0 {
+						pwm;
+						controller-id = <4>; /* PWM4 for soc fan */
+						source-frq-hz = <27000000>; /* OSC clock */
+						period-ns = <40000>; /* 25 KHz */
+						min-microvolts = <0>;
+						max-microvolts = <5000000>;
+						init-microvolts = <2500000>;
+						pwm-clock-enable;
+						enable;
+					};
+					/* Override TMP451 threshold limits which is cvm-sku-specific */
+					block@3 {
+						commands {
+							command@0 {
+								reg-addr = <0x11>; /* Remote temperature offset */
+								value = <0xfd>; /* -2.5C for bias correction */
+							};
+							command@1 {
+								reg-addr = <0x12>; /* Remote temperature offset */
+								value = <0x80>; /* -2.5C for bias correction */
+							};
+							command@2 {
+								reg-addr = <0x19>; /* Remote temperature THERM limit */
+								value = <0xb8>;	/* 120C added with 64 */
+							};
+							command@3 {
+								reg-addr = <0x20>; /* Local Temperature THERM Limit */
+								value = <0xb8>; /* 120C added with 64 */
+							};
+						};
+					};
+					/* Override TMP451 threshold limits which is cvm-sku-specific */
+					block@4 {
+						commands {
+							command@0 {
+								reg-addr = <0x0d>; /* Remote temperature high limit (high byte) */
+								value = <0xb7>;	/* 119C added with 64 */
+							};
+							command@1 {
+								reg-addr = <0x0b>; /* Local temperature high limit */
+								value = <0xb7>;	/* 119C added with 64 */
+							};
+						};
+					};
+					/* Override TMP451 threshold limits which is cvm-sku-specific */
+					block@5 {
+						commands {
+							command@0 {
+								reg-addr = <0x07>; /* Remote temperature high limit (high byte) */
+								value = <0xb7>;	/* 119C added with 64 */
+							};
+							command@1 {
+								reg-addr = <0x05>; /* Local temperature high limit */
+								value = <0xb7>;	/* 119C added with 64 */
+							};
+						};
+					};
+				};
+			};
+		};
+	};
+};

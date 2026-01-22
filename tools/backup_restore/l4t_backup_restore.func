@@ -1,0 +1,207 @@
+#!/bin/bash
+
+# SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its
+# contributors may be used to endorse or promote products derived from
+# this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+# Contributor License Agreement (CLA):
+# https://github.com/NVIDIA/DALI_extra/blob/main/NVIDIA_CLA_v1.0.1.docx
+
+L4T_BACKUP_PARTITIONS_SCRIPT="nvbackup_partitions.sh"
+L4T_RESTORE_PARTITIONS_SCRIPT="nvrestore_partitions.sh"
+
+
+function is_tar_archive
+{
+	[[ "${1}" =~ \.tar\.zst ]]
+}
+
+addentry() {
+	if [ "$#" -ne 7 ]; then
+		print_message "addentry function needs 6 parameters when adding an entry to partition map."
+		return 1
+	fi
+	# shellcheck disable=SC2001
+	echo "${@}" | sed s/" "/,/g
+}
+
+convert_backup_image_to_initrd_flash()
+{
+	local source="${1}"
+	local destination="${2}"
+	local line_index=0
+	local internal_text
+	local external_text=""
+	local mmc_text=""
+	local qspi_text=""
+	declare -iA APPcount
+
+	rm -rf "${destination:?}"/*
+
+	pushd "${source}"
+
+	mkdir -p "${destination}/internal"
+
+	local external_images="$(ls | grep -E 'nvme0n1|sda|mmcblk1')"
+	if [[ -n "${external_images}" ]]; then
+		mkdir -p "${destination}/external"
+		ls | grep -v -E 'nvme0n1|sda|mmcblk1' | xargs cp -r -t "${destination}/internal/"
+		ls | grep -E 'nvme0n1|sda|mmcblk1' | xargs cp -r -t "${destination}/external/"
+	else
+		cp  -r * "${destination}/internal/"
+	fi
+
+	while read -r p; do
+		if [ "${line_index}" = "0" ]; then
+			line_index=$((line_index + 1))
+			continue
+		fi
+		declare -a FIELDS
+		for part in {1..6}; do
+			FIELDS[part]=$(echo "$p" | awk -F, -v part="${part}" '{print $part}')
+		done
+
+		if [ "${FIELDS[2]}" = "gpt_1" ]; then
+			local sha1_chksum_gen=
+			sha1_chksum_gen=$(sha1sum "${FIELDS[1]}" | cut -d\  -f 1)
+			local size_file=
+			size_file=$(stat -c%s "${FIELDS[1]}")
+			if [[ "${FIELDS[1]}" =~ "mmcblk0" ]]; then
+				mmc_text+="$(addentry "1:3:primary_gpt" "$((FIELDS[3] * 512))" "$((FIELDS[4] * 512))" \
+					"${FIELDS[1]}" "${size_file}" "fixed-<reserved>-0" "${sha1_chksum_gen}")"
+				mmc_text+="\n"
+			else
+				external_text+="$(addentry "9:0:primary_gpt" "$((FIELDS[3] * 512))" "$((FIELDS[4] * 512))" \
+					"${FIELDS[1]}" "${size_file}" "fixed-<reserved>-0" "${sha1_chksum_gen}")"
+				external_text+="\n"
+			fi
+		elif [ "${FIELDS[2]}" = "gpt_2" ]; then
+			local sha1_chksum_gen=$(sha1sum "${FIELDS[1]}" | cut -d\  -f 1)
+			local size_file=$(stat -c%s "${FIELDS[1]}")
+			if [[ "${FIELDS[1]}" =~ "mmcblk0" ]]; then
+				mmc_text+="$(addentry "1:3:secondary_gpt" "$((FIELDS[3] * 512))" "$((FIELDS[4] * 512))" \
+					"${FIELDS[1]}" "${size_file}" "fixed-<reserved>-0" "${sha1_chksum_gen}")"
+				mmc_text+="\n"
+			else
+				external_text+="$(addentry "9:0:secondary_gpt" "$((FIELDS[3] * 512))" "$((FIELDS[4] * 512))" \
+					"${FIELDS[1]}" "${size_file}" "fixed-<reserved>-0" "${sha1_chksum_gen}")"
+				external_text+="\n"
+			fi
+		elif [[ "${FIELDS[2]}" =~ mmcblk0 || "${FIELDS[2]}" =~ nvme0n1 || "${FIELDS[2]}" =~ sda || "${FIELDS[2]}" =~ mmcblk1 ]]; then
+			local partition_name
+			local sha1_chksum_gen=
+			sha1_chksum_gen=$(sha1sum "${FIELDS[1]}" | cut -d\  -f 1)
+			local size_file=
+			local partition_index
+			if [[ "${FIELDS[2]}" =~ mmcblk0 ]]; then
+				partition_index=$([[ ${FIELDS[1]} =~ mmcblk0p([[:digit:]]+) ]] && echo "${BASH_REMATCH[1]}")
+			elif [[ "${FIELDS[2]}" =~ nvme0n1 ]]; then
+				partition_index=$([[ ${FIELDS[1]} =~ nvme0n1p([[:digit:]]+) ]] && echo "${BASH_REMATCH[1]}")
+			elif [[ "${FIELDS[2]}" =~ sda ]]; then
+				partition_index=$([[ ${FIELDS[1]} =~ sda([[:digit:]]+) ]] && echo "${BASH_REMATCH[1]}")
+			else
+				partition_index=$([[ ${FIELDS[1]} =~ mmcblk1p([[:digit:]]+) ]] && echo "${BASH_REMATCH[1]}")
+			fi
+			if is_tar_archive "${FIELDS[1]}"; then
+				device_name=${FIELDS[2]%[0-9]}
+				device_name=${device_name%p}
+
+				partition_name="APP"
+				if [[ -n "${APPcount["${device_name}"]}" ]]; then
+					APPcount["${device_name}"]+=1
+				else
+					APPcount["${device_name}"]=1
+				fi
+				if [ ${APPcount["${device_name}"]} -eq 2 ]; then
+					partition_name="APP_b"
+				fi
+				APP="${FIELDS[1]%%.*}_bak.img"
+
+				if [[ "${FIELDS[2]}" =~ mmcblk0 ]]; then
+					pushd "${destination}/internal"
+					mv "${FIELDS[1]}" "${APP}"
+					echo "${partition_name}=${APP}" >> "${destination}/internal/flash.cfg"
+					sha1sum "${APP}" > "${APP}.sha1sum"
+					popd
+
+					mmc_text+="$(addentry "1:3:${partition_name}" "$((FIELDS[3] * 512))" "$((FIELDS[4] * 512))" \
+						"${APP}" "$((FIELDS[4] * 512))" "fixed-<reserved>-${partition_index}" "${sha1_chksum_gen}")"
+					mmc_text+="\n"
+				else
+					pushd "${destination}/external"
+					mv "${FIELDS[1]}" "${APP}"
+					echo "external_device=${FIELDS[2]}" >> "${destination}/internal/flash.cfg"
+					echo "${partition_name}_ext=${APP}" >> "${destination}/external/flash.cfg"
+					echo "external_device=${FIELDS[2]}" >> "${destination}/external/flash.cfg"
+					sha1sum "${APP}" > "${APP}.sha1sum"
+					popd
+
+					external_text+="$(addentry "9:0:${partition_name}" "$((FIELDS[3] * 512))" "$((FIELDS[4] * 512))" \
+						"${APP}" "$((FIELDS[4] * 512))" "fixed-<reserved>-${partition_index}" "${sha1_chksum_gen}")"
+					external_text+="\n"
+				fi
+			else
+				if [[ "${FIELDS[2]}" =~ mmcblk0 ]]; then
+					mmc_text+="$(addentry "1:3:${FIELDS[1]/%_bak.img/}" "$((FIELDS[3] * 512))" "$((FIELDS[4] * 512))" \
+						"${FIELDS[1]}" "$((FIELDS[4] * 512))" "fixed-<reserved>-${partition_index}" "${sha1_chksum_gen}")"
+					mmc_text+="\n"
+				else
+					external_text+="$(addentry "9:0:${FIELDS[1]/%_bak.img/}" "$((FIELDS[3] * 512))" "$((FIELDS[4] * 512))" \
+						"${FIELDS[1]}" "$((FIELDS[4] * 512))" "fixed-<reserved>-${partition_index}" "${sha1_chksum_gen}")"
+					external_text+="\n"
+				fi
+			fi
+		elif [[ "${FIELDS[2]}" =~ qspi ]]; then
+			local sha1_chksum_gen=$(sha1sum "${FIELDS[1]}" | cut -d\  -f 1)
+			local size_file=$(stat -c%s "${FIELDS[1]}")
+			qspi_text+="$(addentry "3:0:${FIELDS[2]}" "$((FIELDS[3] * 512))" "$((FIELDS[4] * 512))" \
+				"${FIELDS[1]}" "${size_file}" "fixed-<reserved>-0" "${sha1_chksum_gen}")"
+			qspi_text+="\n"
+		fi
+		line_index=$((line_index + 1))
+	done < "nvpartitionmap.txt"
+
+	internal_text="${qspi_text}${mmc_text}"
+	line_index=0
+	internal_text="$(echo -en "${internal_text}" | while read -r line; do
+		echo "${line_index}, ${line}"; line_index=$((line_index + 1))
+		done
+		)"
+	echo -e "${internal_text}" > "${destination}/internal/flash.idx"
+
+	if [ -n "${external_text}" ]; then
+		line_index=0
+		external_text="$(echo -en "${external_text}" | while read -r line; do
+			echo "${line_index}, ${line}"; line_index=$((line_index + 1))
+			done
+			)"
+		echo -e "${external_text}" > "${destination}/external/flash.idx"
+	fi
+
+	cp "${destination}/../l4t_flash_from_kernel.sh" "${destination}"
+	popd
+}

@@ -1,0 +1,98 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ *
+ * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+ * property and proprietary rights in and to this material, related
+ * documentation and any modifications thereto. Any use, reproduction,
+ * disclosure or distribution of this material and related documentation
+ * without an express license agreement from NVIDIA CORPORATION or
+ * its affiliates is strictly prohibited.
+ */
+
+// NOTE: This file was auto generated: No manual change must be made in this file
+
+McGeneralizedCarveout12Cfg0 = <0x120027fa>;
+McGeneralizedCarveout12Cfg1 = <0x60>;
+McGeneralizedCarveout12Access0 = <0x0>;
+McGeneralizedCarveout12Access1 = <0x2000080>;
+McGeneralizedCarveout12Access10 = <0x0>;
+McGeneralizedCarveout12Access11 = <0xcc000000>;
+McGeneralizedCarveout12Access12 = <0x4>;
+McGeneralizedCarveout12Access13 = <0x0>;
+McGeneralizedCarveout12Access14 = <0x0>;
+McGeneralizedCarveout12Access2 = <0x0>;
+McGeneralizedCarveout12Access3 = <0x0>;
+McGeneralizedCarveout12Access4 = <0x0>;
+McGeneralizedCarveout12Access5 = <0x0>;
+McGeneralizedCarveout12Access6 = <0x0>;
+McGeneralizedCarveout12Access7 = <0x0>;
+McGeneralizedCarveout12Access8 = <0x0>;
+McGeneralizedCarveout12Access9 = <0x0>;
+McGeneralizedCarveout12ForceInternalAccess0 = <0x0>;
+McGeneralizedCarveout12ForceInternalAccess1 = <0x0>;
+McGeneralizedCarveout12ForceInternalAccess10 = <0x0>;
+McGeneralizedCarveout12ForceInternalAccess11 = <0x0>;
+McGeneralizedCarveout12ForceInternalAccess12 = <0x0>;
+McGeneralizedCarveout12ForceInternalAccess13 = <0x0>;
+McGeneralizedCarveout12ForceInternalAccess14 = <0x0>;
+McGeneralizedCarveout12ForceInternalAccess2 = <0x0>;
+McGeneralizedCarveout12ForceInternalAccess3 = <0x0>;
+McGeneralizedCarveout12ForceInternalAccess4 = <0x0>;
+McGeneralizedCarveout12ForceInternalAccess5 = <0x0>;
+McGeneralizedCarveout12ForceInternalAccess6 = <0x0>;
+McGeneralizedCarveout12ForceInternalAccess7 = <0x0>;
+McGeneralizedCarveout12ForceInternalAccess8 = <0x0>;
+McGeneralizedCarveout12ForceInternalAccess9 = <0x0>;
+McGeneralizedCarveout30Cfg0 = <0x320037fa>;
+McGeneralizedCarveout30Cfg1 = <0x60>;
+McGeneralizedCarveout30Access0 = <0x0>;
+McGeneralizedCarveout30Access1 = <0x2000080>;
+McGeneralizedCarveout30Access10 = <0x0>;
+McGeneralizedCarveout30Access11 = <0x0>;
+McGeneralizedCarveout30Access12 = <0x0>;
+McGeneralizedCarveout30Access13 = <0x0>;
+McGeneralizedCarveout30Access14 = <0x0>;
+McGeneralizedCarveout30Access2 = <0x0>;
+McGeneralizedCarveout30Access3 = <0x0>;
+McGeneralizedCarveout30Access4 = <0x0>;
+McGeneralizedCarveout30Access5 = <0x0>;
+McGeneralizedCarveout30Access6 = <0x0>;
+McGeneralizedCarveout30Access7 = <0x0>;
+McGeneralizedCarveout30Access8 = <0xc>;
+McGeneralizedCarveout30Access9 = <0x0>;
+McGeneralizedCarveout30ForceInternalAccess0 = <0x0>;
+McGeneralizedCarveout30ForceInternalAccess1 = <0x0>;
+McGeneralizedCarveout30ForceInternalAccess10 = <0x0>;
+McGeneralizedCarveout30ForceInternalAccess11 = <0x0>;
+McGeneralizedCarveout30ForceInternalAccess12 = <0x0>;
+McGeneralizedCarveout30ForceInternalAccess13 = <0x0>;
+McGeneralizedCarveout30ForceInternalAccess14 = <0x0>;
+McGeneralizedCarveout30ForceInternalAccess2 = <0x0>;
+McGeneralizedCarveout30ForceInternalAccess3 = <0x0>;
+McGeneralizedCarveout30ForceInternalAccess4 = <0x0>;
+McGeneralizedCarveout30ForceInternalAccess5 = <0x0>;
+McGeneralizedCarveout30ForceInternalAccess6 = <0x0>;
+McGeneralizedCarveout30ForceInternalAccess7 = <0x0>;
+McGeneralizedCarveout30ForceInternalAccess8 = <0x0>;
+McGeneralizedCarveout30ForceInternalAccess9 = <0x0>;
+McGeneralizedCarveoutLite38Cfg0 = <0x7fa>;
+McGeneralizedCarveoutLite38Cfg1 = <0x66>;
+McGeneralizedCarveoutLite38Access0 = <0x0>;
+McGeneralizedCarveoutLite38Access1 = <0x0>;
+McGeneralizedCarveoutLite38Access10 = <0x0>;
+McGeneralizedCarveoutLite38Access11 = <0x0>;
+McGeneralizedCarveoutLite38Access12 = <0x0>;
+McGeneralizedCarveoutLite38Access13 = <0x0>;
+McGeneralizedCarveoutLite38Access14 = <0x0>;
+McGeneralizedCarveoutLite38Access2 = <0x0>;
+McGeneralizedCarveoutLite38Access3 = <0x0>;
+McGeneralizedCarveoutLite38Access4 = <0x0>;
+McGeneralizedCarveoutLite38Access5 = <0x0>;
+McGeneralizedCarveoutLite38Access6 = <0x0>;
+McGeneralizedCarveoutLite38Access7 = <0x0>;
+McGeneralizedCarveoutLite38Access8 = <0x0>;
+McGeneralizedCarveoutLite38Access9 = <0x0>;
+McVideoProtectGpuOverride0 = <0x1>;
+McVideoProtectGpuOverride1 = <0x0>;
+McVideoProtectWriteAccess = <0x305>;

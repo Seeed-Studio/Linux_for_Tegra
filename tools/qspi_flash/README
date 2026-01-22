@@ -1,0 +1,85 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: MIT
+#
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the "Software"),
+# to deal in the Software without restriction, including without limitation
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+# DEALINGS IN THE SOFTWARE.
+
+# This directory contains scripts to create a QSPI tarball and flash QSPI to Jetson.
+
+	README                                    <-- This file
+	host_flash_qspi.sh                        <-- Final host running script included in tarball
+	kernel_flash_qspi.sh                      <-- Script included in downloaded rcm-boot invoked initrd to flash Jetson's QSPI
+	generate_qspi_for_flash.sh                <-- Script to build QSPI tarball for Jetson's flash
+
+# Prerequisites:
+	- x86-64 Linux build machine
+	- NVIDIA sample file system or user provided root file system
+
+
+# Build the QSPI tarball
+
+This section explains how to build a QSPI image and subsequent tarball. These steps must be completed
+using an x86-64 linux build machine. The usb connection to Jetson is not required for this process.
+
+1. Download one of the following packages:
+	- customer_release.tbz2
+	- Jetson_Linux_<VERSION>_aarch64.tbz2
+
+2. Install the BSP package.
+
+3. After you installed customer_release.tbz2 or Jetson_Linux_<VERSION>_aarch64.tbz2:
+	a. Install NVIDIA Orin/Thor sample file system to Linux_for_Tegra/rootfs.
+	b. Go to the Linux_for_Tegra directory
+	c. Choose the online or offline mode to generate the QSPI image:
+		Online mode - Put the board into recovery mode, then issue the command:
+		$ sudo ./tools/qspi_flash/generate_qspi_for_flash.sh <board-name>
+		Offline mode:
+		$ sudo BOARDID=<BOARDID> FAB=<FAB> BOARDSKU=<BOARDSKU> CHIP_SKU="00:00:00:xx" ./tools/qspi_flash/generate_qspi_for_flash.sh <board-name>
+
+		The script will create a tarball in
+			generic_release_aarch64/Linux_for_Tegra/host_tegraflash_<VERSION>.tbz2
+
+
+# Flash the Jetson's QSPI image from host
+
+This section explains run the script to flash the Jetson's QSPI flash memory.
+
+1. Untar the tarball
+	$ tar -xvf host_tegraflash_<VERSION>.tbz2
+
+2. Flash the Jetson's QSPI image from the host
+	Option 1. User manually put the board into recovery mode:
+		$ sudo hostflash/host_flash_qspi.sh
+	Option 2. Use the boardctl tool in BSP to put the board into recovery mode:
+		$ cd Linux_for_Tegra
+		$ sudo ./hostflash/host_flash_qspi.sh -b
+
+
+# Create the customized QSPI tarball
+
+This section describes how to create a customized QSPI tarball for different board configurations.
+
+The usage for the generate_qspi_for_flash.sh script is:
+	Usage: <env-var> generate_qspi_for_flash.sh [-u <PKC key file>] [-v <SBK key file>] [-p <options>] [-f <flash-mode>] <board-name>
+
+To see more details on specifying board configurations and examples, run the following command:
+	$ sudo ./tools/qspi_flash/generate_qspi_for_flash.sh -h
+
+
+Note:
+1. Replace <VERSION> with the actual version number of the Jetson release(for example, R36.4.0).

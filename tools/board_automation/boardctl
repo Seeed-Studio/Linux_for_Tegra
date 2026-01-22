@@ -1,0 +1,216 @@
+#! /usr/bin/env python3
+
+# SPDX-FileCopyrightText: Copyright (c) 2013-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+#
+# NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+# property and proprietary rights in and to this material, related
+# documentation and any modifications thereto. Any use, reproduction,
+# disclosure or distribution of this material and related documentation
+# without an express license agreement from NVIDIA CORPORATION or
+# its affiliates is strictly prohibited.
+
+from __future__ import print_function
+
+import json
+import os
+import sys
+import importlib
+from optparse import OptionParser
+
+
+print("BOARDCTL: version 20250517.1")
+try:
+    import board_info
+except:
+    print("External distribution detected.", file=sys.stderr)
+    class board_info:
+        @classmethod
+        def enum_target_variant(cls):
+            return (None, None)
+
+
+def _scan_for_targets(subdir):
+    mypath = os.path.dirname(os.path.abspath(__file__))
+    subpath = os.path.join(mypath, subdir)
+    found = []
+    for file in os.listdir(subpath):
+        if os.path.isfile(os.path.join(subpath, file)):
+            if file.endswith('.py') and not file.startswith('_'):
+                found.append(os.path.splitext(file)[0])
+    return found
+
+def _explain_bad_target(target_name, target_list, reason=None):
+    print("ERROR: '"+target_name+"' is not a supported target board.", file=sys.stderr)
+    if reason:
+        print("DIAGNOSTIC: "+reason, file=sys.stderr)
+    print("Use one of following: [%s]"%(" | ".join(target_list)), file=sys.stderr)
+
+def _show_commands(cmdlist):
+    print("AVAILABLE: %s\n"%' | '.join(cmdlist), file=sys.stderr)
+
+if __name__ == "__main__":
+    pm342_targets = [] # _scan_for_targets("_targets/_legacy/pm342")
+    nv_topo_targets = _scan_for_targets("_targets")
+
+    parser = OptionParser()
+    parser.set_defaults()
+    parser.add_option("--target", "-t", action="store", type="string",
+                      dest="target", help="Target board [%s]" % " | ".join(pm342_targets + nv_topo_targets))
+    parser.add_option("--serial", "-s", action="store", type="string",
+                      dest="serial", help="Serial of debug board (or primary if target requires two.) Defaults to the value of PMXXX_SERIAL environment variable.")
+    parser.add_option("--variant", "-v", action="store", type="string",
+                      dest="variant", help="Target board variant [A00 | A01 | A02 | A03 | ...]")
+    parser.add_option("--delay", "-d", action="store", type="int",
+                      dest="delay", help="onkey press time in seconds",
+                      default=0.25)
+    parser.add_option("--index", "-i", action="store", type="int",
+                      dest="index", help="Instance of debug board (or primary if target requires two.)  Zero-based numbering",
+                      default=None)  # we use None here instead of 0, because other default values could be inferred from the presents of --secidx
+    parser.add_option("--secidx", "-j", action="store", type="int",
+            dest="secidx", help="Instance of secondary debug board if target requires two. Can be inferred if unambiguous.  Zero-based numbering.",
+            default=None)
+    parser.add_option("--boot-device", "", action="store", type="string",
+            dest="bdevice", help="Boot device of target.  Choices are target-specific.")
+    parser.add_option("--boot-chain", "", action="store", type="string",
+            dest="bchain", help="Desired boot-chain of target.  Choices are target-specific.")
+    parser.add_option("--config", "", action="store", type="string",
+            dest="config", help="Desired config of target.  Choices are target-specific.")
+
+    (options, args) = parser.parse_args()
+
+    try:
+        bi_target, bi_variant = board_info.enum_target_variant()
+    except board_info.Error as e:
+        print(e, file=sys.stderr)
+        sys.exit(1)
+
+    if not options.target:
+        if bi_target:
+            print("INFO: Using dev-platform's enumerated target '"+bi_target+"', since user didn't specify on command-line.", file=sys.stderr)
+            options.target = bi_target
+        else:
+            print("ERROR: Option '-t' not given, and no target type is enumerated by the dev-platform.", file=sys.stderr)
+            sys.exit(1)
+    else:
+        if bi_target and bi_target != options.target:
+            print("WARNING: Overriding dev-platform's enumerated target '"+bi_target+"' detected with user-supplied '"+options.target+"'.", file=sys.stderr)
+    if options.target == 'thor-jetson':  # temporary alias, don't rely on this
+        options.target = 'thor-jetson-devkit'
+    try:
+        _tname = options.target.lstrip('_')  # avoid importing certain files, here
+        _tmodule = importlib.import_module("_targets." + _tname)
+        tgt_cfg_boardctl = getattr(_tmodule, 'BOARDCTL', {})
+        tgt_opt_policies = tgt_cfg_boardctl.get('opt_policies', {})
+        DFLT_CMD_SUPPORT = ['reset', 'recovery', 'usb_on', 'usb_off', 'recovery_up', 'recovery_down', 'onkey', 'power_on', 'power_off', 'status']
+        tgt_cmd_support = tgt_cfg_boardctl.get('cmd_support', DFLT_CMD_SUPPORT)
+    except ImportError as e:
+        _explain_bad_target(options.target, pm342_targets+nv_topo_targets, reason=str(e))
+        sys.exit(1)
+    DFLT_OPT_POLICIES = {'config':'verboten', 'command':'required', 'devchain':'verboten'}
+    opt_policies = dict(DFLT_OPT_POLICIES, **tgt_opt_policies)
+    cmd_support = tgt_cmd_support
+    if options.target:
+        if bi_target and bi_target != options.target:
+            print("WARNING: Overriding dev-platform's enumerated target '"+bi_target+"' detected with user-supplied '"+options.target+"'.", file=sys.stderr)
+    elif bi_target:
+        print("INFO: Using dev-platform's enumerated target '"+bi_target+"', since user didn't specify on command-line.", file=sys.stderr)
+        options.target = bi_target
+    else:
+        print("ERROR: Option '-t' not given, and no target type is enumerated by the dev-platform.", file=sys.stderr)
+        sys.exit(1)
+
+    if (opt_policies['devchain'] == 'verboten') and (options.bdevice or options.bchain):
+        print("ERROR: Neither '--boot-device' nor '--boot-chain' are allowed with target '"+options.target+"'.", file=sys.stderr)
+        sys.exit(1)
+
+    if (opt_policies['config'] == 'verboten') and options.config:
+        print("ERROR: '--config' is not allowed with target '"+options.target+"'.", file=sys.stderr)
+        sys.exit(1)
+
+    if options.variant:
+        if bi_variant and bi_variant != options.variant:
+            print("WARNING: Overriding dev-platform's enumerated variant '"+bi_variant+"' detected with user-supplied '"+options.variant+"'.", file=sys.stderr)
+    elif bi_variant:
+        options.variant = bi_variant
+
+    if options.serial is None and "PMXXX_SERIAL" in os.environ:
+        options.serial = os.environ["PMXXX_SERIAL"]
+        print("NOTE: Using --serial=%s from environment." % options.serial, file=sys.stderr)
+
+    if options.target in pm342_targets:
+        from pm342 import pm342
+        pmxxx = pm342(serial = options.serial, target = options.target, variant = options.variant)
+    elif options.target in nv_topo_targets:
+        from nvtopo import nv_topo
+        pmxxx = nv_topo(target=options.target, serial=options.serial, index=options.index, secidx=options.secidx)
+    else:
+        _explain_bad_target(options.target, pm342_targets+nv_topo_targets)
+        sys.exit(1)
+
+    if (opt_policies['config'] == 'required') and (not options.config):
+        print("%s operation requires `--config`" % options.target, file=sys.stderr)
+        sys.exit(1)
+
+    if (opt_policies['command'] == 'verboten'):
+        if len(args) != 0:
+            print("%s operation is option-only (no commands)" % options.target, file=sys.stderr)
+            sys.exit(1)
+        pmxxx.target_options_only(options)
+    else:
+        if len(args) != 1:
+            print("ERROR: missing required command", file=sys.stderr)
+            _show_commands(cmd_support)
+            sys.exit(1)
+        if args[0] == "ec_reset":
+            if options.target in nv_topo_targets:
+                pmxxx.target_ec_reset()
+        elif args[0] == "reset":
+            if options.target in nv_topo_targets:
+                pmxxx.target_reset(options)
+            else:
+                pmxxx.target_reset()
+        elif args[0] == "recovery":
+            if options.target in nv_topo_targets:
+                pmxxx.target_recovery_mode(options)
+            else:
+                pmxxx.target_recovery_mode()
+        elif args[0] == "usb_on":
+            pmxxx.enable_USB()
+        elif args[0] == "usb_off":
+            pmxxx.disable_USB()
+        elif args[0] == "recovery_down":
+            pmxxx.hold_button("FORCE_RECOVERY")
+        elif args[0] == "recovery_up":
+            pmxxx.release_button("FORCE_RECOVERY")
+        elif args[0] == "onkey":
+            if options.target in nv_topo_targets:
+                pmxxx.push_button("ONKEY", options)
+            else:
+                pmxxx.push_button("ONKEY", options.delay)
+        elif args[0] == "onkey_down":
+            pmxxx.hold_button("ONKEY")
+        elif args[0] == "onkey_up":
+            pmxxx.release_button("ONKEY")
+        elif args[0] == "power_on":
+            if options.target in nv_topo_targets:
+                pmxxx.target_power_on(options)
+            else:
+                pmxxx.target_power_on()
+        elif args[0] == "power_off":
+            pmxxx.target_power_off()
+        elif args[0] == "status":
+            if options.target not in nv_topo_targets:
+                print("VDD_CORE is %s" % ("on" if pmxxx.is_VDD_CORE_on() else "off"))
+                print("VDD_CPU is %s" % ("on" if pmxxx.is_VDD_CPU_on() else "off"))
+                for gpio in sorted([x for x in pmxxx.get_IO_names() if "GPIO" in x]):
+                    print(gpio + " is %d" % pmxxx.get_IO(gpio))
+            else:
+                pmxxx.target_status()
+        else:
+            print("ERROR: unknown command '%s'"%args[0], file=sys.stderr)
+            _show_commands(cmd_support)
+            sys.exit(1)
+
+sys.exit(0)
+

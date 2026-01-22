@@ -1,0 +1,86 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ *
+ * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+ * property and proprietary rights in and to this material, related
+ * documentation and any modifications thereto. Any use, reproduction,
+ * disclosure or distribution of this material and related documentation
+ * without an express license agreement from NVIDIA CORPORATION or
+ * its affiliates is strictly prohibited.
+ */
+
+/* NOTE: This file was auto generated: No manual change must be made in this file */
+
+/ {
+	mb1_bct {
+		carveout {
+			aux_info@CARVEOUT_WPR1 {
+				size = <0x0 0x20000000>; // 512MB
+				alignment = <0x0 0x800000>; // 8MB
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_DISP_EARLY_BOOT_FB {
+				size = <0x0 0x4000000>; // 64MB
+				alignment = <0x0 0x4000000>; // 64MB
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_HPSE_CCPLEX {
+				size = <0x0 0x100000>; // 1MB
+				alignment = <0x0 0x10000>; // 64KB
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_VM_ENCRYPT {
+				size = <0x0 0x0>; // 0MB
+				alignment = <0x0 0x0>; // 0
+				socket_mask = <0x3>;
+				allow_remote_access = <1>;
+			};
+			aux_info@CARVEOUT_TZDRAM {
+				size = <0x0 0x5000000>; // 80MB
+				alignment = <0x0 0x200000>; // 2MB
+				socket_mask = <0x1>;
+				allow_remote_access = <1>;
+			};
+			aux_info@CARVEOUT_VPR {
+				size = <0x0 0x36800000>; // 872MB
+				alignment = <0x0 0x100000>; // 1MB
+#ifdef ENABLE_128GB_MEMORY
+				pref_base = <0x20 0x04600000>;
+#endif
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+			aux_info@CARVEOUT_OPTEE_DTB {
+				size = <0x0 0x20000>; // 128KB
+				alignment = <0x0 0x10000>; // 64KB
+				socket_mask = <0x1>;
+				allow_remote_access = <1>;
+			};
+			aux_info@CARVEOUT_RAM_OOPS {
+				size = <0x0 0x200000>; // 2MB
+				alignment = <0x0 0x10000>; // 64KB
+				socket_mask = <0x1>;
+				allow_remote_access = <1>;
+			};
+			aux_info@CARVEOUT_ETR {
+				size = <0x0 0x2000000>; // 32MB
+				alignment = <0x0 0x100000>; // 1MB
+#ifdef ENABLE_128GB_MEMORY
+				pref_base = <0x20 0x7E000000>;
+#endif
+#ifdef ENABLE_64GB_MEMORY
+				pref_base = <0x10 0x7E000000>;
+#endif
+#ifdef ENABLE_32GB_MEMORY
+				pref_base = <0x08 0x7E000000>;
+#endif
+				socket_mask = <0x3>;
+				allow_remote_access = <0>;
+			};
+		};
+	};
+};

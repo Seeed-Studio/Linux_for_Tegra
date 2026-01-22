@@ -1,0 +1,1 @@
+Linux_for_Tegra/bootloader/LICENSE.bl31_t264.bin.rst

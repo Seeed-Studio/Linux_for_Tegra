@@ -1,0 +1,53 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ *
+ * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+ * property and proprietary rights in and to this material, related
+ * documentation and any modifications thereto. Any use, reproduction,
+ * disclosure or distribution of this material and related documentation
+ * without an express license agreement from NVIDIA CORPORATION or
+ * its affiliates is strictly prohibited.
+ */
+
+/ {
+    br_bct: brbct {
+        ECID = <0x00000000 0x00000000 0x00000000 0x00000000>;
+        SecureDebugControlEcid = <0>;
+        SecureDebugControlNoneEcid = <0>;
+        preprod_dev_sign = <0>;
+        psc_fw_pub_key = <0x0> , "99:66:c2:56:0b:df:a9:d2:2a:dd:fa:86:03:30:15:3c:00:0a:0d:c6:01:15:94:88:e1:d8:41:9e:b4:08:c9:ca:8f:8a:6c:54:dd:4a:2c:9e:08:16:75:91:20:15:e5:1d:db:51:79:a7:02:c1:d5:cb:33:6b:b7:b3:aa:80:04:bd:41:e3:ab:2e:1c:f5:4a:a2:5e:a6:ae:eb:05:54:24:fd:20:35:bb:94:e7:f1:10:30:bd:8e:e8:a2:97:83:f5:21";
+        bf_bl_allbits {
+            bf_bl_gpio_select_boot_chain_1b                = <0>;
+            bf_bl_mb1_debug_production_1b                  = <0>;
+            bf_bl_sc7_rf_debug_production_1b               = <0>;
+            bf_bl_psc_bl_debug_production_1b               = <0>;
+            bf_bl_psc_rf_debug_production_1b               = <0>;
+            bf_bl_psc_fw_debug_production_1b               = <0>;
+            bf_bl_bpmp_debug_production_1b                 = <0>;
+            bf_bl_bpmp_ist_debug_production_1b             = <0>;
+            bf_bl_mce_debug_production_1b                  = <0>;
+            bf_bl_ist_ccplex_debug_production_1b           = <0>;
+            bf_bl_ist_fw_debug_production_1b               = <0>;
+            bf_bl_rtc_rail_violation_detect_1b             = <0>;
+            bf_bl_cust_nv_ccplex_dfd_en_1b                 = <0>;
+            bf_bl_debug_with_test_keys_1b                  = <0>;
+            bf_bl_debug_with_test_keys_during_psc_debug_1b = <0>;
+            bf_bl_disable_bootrom_clock_boost_1b           = <0>;
+            bf_bl_disable_pscrom_clk_boost_1b              = <0>;
+            bf_bl_enable_scpm_reset                        = <0>;
+            bf_bl_skip_oem_auth_diag_boot                  = <0>;
+            bf_bl_diag_boot                                = <0>;
+            bf_bl_bpmp_diag_boot                           = <0>;
+            bf_bl_l0_ist                                   = <0>;
+            bf_bl_l1_ist                                   = <1>;
+        };
+    };
+};
+
+
+#ifdef BR_BCT_ENG_OVERRIDE
+&br_bct {
+    #include "br_bct_eng_override.dts"
+};
+#endif

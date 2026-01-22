@@ -1,0 +1,1486 @@
+#!/bin/bash
+
+# SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: MIT
+#
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the "Software"),
+# to deal in the Software without restriction, including without limitation
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+# DEALINGS IN THE SOFTWARE.
+
+# This is a script that exports common functions
+
+
+_CRYPT_ROOT_NAME="crypt_root"
+_BASE_RECOVERY_IMAGE=
+_BASE_RECOVERY_DTB=
+_EFIVARFS_DIR="/sys/firmware/efi/efivars"
+_ESP_MNT="/opt/nvidia/esp"
+_K_BYTES=1024
+_L4T_LAUNCHER="BOOTAA64.efi"
+_NV_BOOT_CONTROL_CONF="nv_boot_control.conf"
+_SDMMC_USER_DEVICE="/dev/mmcblk0"
+_UEFI_CAPSULE_FILE="TEGRA_BL.Cap"
+_UEFI_CAPSULE_DIR="/opt/nvidia/esp/EFI/UpdateCapsule"
+_UEFI_SECUREBOOT_OVERLAY_PACKAGE="uefi_secureboot_overlay.tar.gz"
+_UEFI_SECUREBOOT_OVERLAY_PACKAGE_MULTI_SPECS="uefi_secureboot_overlay_multi_specs.tar.gz"
+_UPDATE_SPEC_SCRIPT="nv-l4t-bootloader-config.sh"
+
+sha1sum_verify()
+{
+	local image_file="${1}"
+	local sha1sum_file="${2}"
+
+	ota_log "Verifying image ${image_file} with sha1 chksum file ${sha1sum_file}"
+	if [ ! -f "${image_file}" ]; then
+		ota_log "${image_file} is not found"
+		return 1
+	elif [ ! -f "${sha1sum_file}" ]; then
+		ota_log "${sha1sum_file} is not found"
+		return 1
+	fi
+
+	local sha1_chksum_gen=
+	local sha1_chksum=
+	sha1_chksum_gen="$(sha1sum "${image_file}" | cut -d\  -f 1)"
+	sha1_chksum="$(cat "${sha1sum_file}")"
+	if [ "${sha1_chksum_gen}" = "${sha1_chksum}" ];then
+		ota_log "Sha1 checksum for ${image_file} (${sha1_chksum_gen}) matches"
+		return 0
+	else
+		ota_log "Sha1 checksum for ${image_file} (${sha1_chksum_gen} != ${sha1_chksum}) does not match"
+		return 1
+	fi
+}
+
+set_active_boot_path()
+{
+	local active="${1}"
+
+	if [ "${active}" = "A" ];then
+		ota_log "Enable boot path A"
+		if ! nvbootctrl set-active-boot-slot 0; then
+			ota_log "Failed to run \"nvbootctrl set-active-boot-slot 0\""
+			return 1
+		fi
+	elif [ "${active}" = "B" ];then
+		ota_log "Enable boot path B"
+		if ! nvbootctrl set-active-boot-slot 1; then
+			ota_log "Failed to run \"nvbootctrl set-active-boot-slot 1\""
+			return 1
+		fi
+	else
+		ota_log "Invalid boot path, keep default"
+		return 1
+	fi
+	return 0
+}
+
+read_part_opt()
+{
+	local infile="${1}"
+	local outfile="${2}"
+	local size="${3}"
+
+	if [ ! -e "${infile}" ]; then
+		ota_log "Input file ${infile} is not found"
+		return 1
+	fi
+
+	if [ "${size}" -eq 0 ];then
+		ota_log "The size of bytes to be read is ${size}"
+		return 1
+	fi
+
+	local block=$((size / _K_BYTES))
+	local remainder=$((size % _K_BYTES))
+	local offset=$((block * _K_BYTES))
+
+	ota_log "Reading ${size} bytes from ${infile}: 1KB block=${block} remainder=${remainder} offset=${offset}"
+
+	if [ "${block}" -gt 0 ];then
+		dd if="${infile}" of="${outfile}" bs=1K count=${block} >/dev/null 2>&1
+		sync
+	fi
+	if [ ${remainder} -gt 0 ];then
+		dd if="${infile}" of="${outfile}" bs=1 skip=${offset} seek=${offset} count=${remainder} >/dev/null 2>&1
+		sync
+	fi
+	return 0
+}
+
+enable_a_b_redundancy()
+{
+	# Enable A/B redundancy
+	# Usage:
+	#        enable_a_b_redundancy
+	local _nv_update_engine=
+	local _nvbootctrl=
+	_nv_update_engine="$(which nv_update_engine)"
+	_nvbootctrl="$(which nvbootctrl)"
+
+	if [ "${_nv_update_engine}" = "" ]; then
+		ota_log "nv_update_engine is not found"
+		return 1
+	fi
+
+	if [ "${_nvbootctrl}" = "" ]; then
+		ota_log "nvbootctrl is not found"
+		return 1
+	fi
+
+	# check bootable slots
+	local slots=
+	slots=$(nvbootctrl get-number-slots)
+	if [ "${slots}" -le 1 ]; then
+		# enable a/b boot
+		if ! nv_update_engine -e; then
+			ota_log "Failed to enable A/B slots"
+			return 1
+		fi
+		slots=$(nvbootctrl get-number-slots)
+		if [ "${slots}" -le 1 ]; then
+			ota_log "Only ${slots} slots exist, device is not ready for OTA. Please do RCM flash to recover it"
+			return 1
+		fi
+	fi
+	return 0
+}
+
+get_update_slot()
+{
+	# Get the slot to be updated
+	# Usage:
+	#        get_update_slot {_ret_slot}
+	local _ret_slot="${1}"
+	local current_slot=
+	current_slot=$(nvbootctrl get-current-slot)
+
+	# If current slot is A, set "UPDATE_SLOT" to "B",
+	# if current slot is B, set "UPDATE_SLOT" to "A".
+	if [ "${current_slot}" == "0" ]; then
+		eval "${_ret_slot}=B"
+	elif [ "${current_slot}" == "1" ]; then
+		eval "${_ret_slot}=A"
+	else
+		ota_log "Failed to get current slot"
+		return 1
+	fi
+	return 0
+}
+
+write_base_recovery()
+{
+	# Write recovery image and recovery dtb into recovery partition and
+	# recovery-dtb partition respectively.
+	# Usage:
+	#        write_base_recovery {work_dir} {device}
+	local work_dir="${1}"
+	local device="${2}"
+	local recovery_image=${work_dir}/${_BASE_RECOVERY_IMAGE}
+	local recovery_dtb=${work_dir}/${_BASE_RECOVERY_DTB}
+	local recovery_image_sha1sum=${work_dir}/${_BASE_RECOVERY_IMAGE}.sha1sum
+	local recovery_dtb_sha1sum=${work_dir}/${_BASE_RECOVERY_DTB}.sha1sum
+	local target_partition=
+	local target_dtb_partition=
+
+	# Verifying base recovery image and dtb
+	if ! sha1sum_verify "${recovery_image}" "${recovery_image_sha1sum}"; then
+		ota_log "Failed to run \"sha1sum_verify ${recovery_image} ${recovery_image_sha1sum}\""
+		return 1
+	fi
+	if ! sha1sum_verify "${recovery_dtb}" "${recovery_dtb_sha1sum}"; then
+		ota_log "Failed to run \"sha1sum_verify ${recovery_dtb} ${recovery_dtb_sha1sum}\""
+		return 1
+	fi
+
+	# Check whether recovery and recovery-dtb partitions exist
+	local storage_device="${device##*/}"
+	get_devnode_from_name "recovery" "${storage_device}" "target_partition"
+	get_devnode_from_name "recovery-dtb" "${storage_device}" "target_dtb_partition"
+	if [ ! -e "${target_partition}" ] || [ ! -e "${target_dtb_partition}" ]; then
+		ota_log "Recovery partition or recovery-dtb partition is not found"
+		return 1
+	fi
+
+	# Backup target and target-dtb partition
+	dd if="${target_partition}" of="${work_dir}/target.backup" >/dev/null 2>&1
+	dd if="${target_dtb_partition}" of="${work_dir}/target-dtb.backup" >/dev/null 2>&1
+	sync
+	ota_log "Backed up recovery and recovery-dtb partition under ${work_dir} before writing them"
+
+	# Write recovery image and do read-back verification
+	ota_log "Writing base recovery image into ${target_partition}"
+	local image_size=
+	# shellcheck disable=SC2012
+	image_size=$(ls -al "${recovery_image}" | cut -d\  -f 5)
+	local tmp_image="${work_dir}/image.tmp"
+	dd if="${recovery_image}" of="${target_partition}" >/dev/null 2>&1
+	sync
+	ota_log "Read back base recovery image into ${tmp_image} and verify it"
+	if ! read_part_opt "${target_partition}" "${tmp_image}" "${image_size}"; then
+		ota_log "Failed to read ${image_size} bytes from ${target_partition} to ${tmp_image}"
+		return 1
+	fi
+	if ! sha1sum_verify "${tmp_image}" "${recovery_image_sha1sum}"; then
+		ota_log "Failed to run \"sha1sum_verify ${tmp_image} ${recovery_image_sha1sum}\""
+		return 1
+	fi
+
+	# Write recovery dtb and do read-back verification
+	ota_log "Writing base recovery dtb into ${target_dtb_partition}"
+	# shellcheck disable=SC2012
+	image_size=$(ls -al "${recovery_dtb}" | cut -d\  -f 5)
+	dd if="${recovery_dtb}" of="${target_dtb_partition}" >/dev/null 2>&1
+	sync
+	ota_log "Read back base recovery dtb into ${tmp_image} and verify it"
+	if ! read_part_opt "${target_dtb_partition}" "${tmp_image}" "${image_size}"; then
+		ota_log "Failed to read ${image_size} bytes from ${target_dtb_partition} to ${tmp_image}"
+		return 1
+	fi
+	if ! sha1sum_verify "${tmp_image}" "${recovery_dtb_sha1sum}"; then
+		ota_log "Failed to run \"sha1sum_verify ${tmp_image} ${recovery_dtb_sha1sum}\""
+		return 1
+	fi
+	return 0
+}
+
+write_kernel_bootctrl()
+{
+	# Write kernel-bootctrl partition on emmc
+	# Return error if the kernel-bootctrl partition does not exist
+	# Usage:
+	#        write_kernel_bootctrl ${work_dir}
+	local work_dir="${1}"
+	local bootctrl_update_file="${work_dir}/kernel_bootctrl.bin.update"
+	local bootctrl_normal_file="${work_dir}/kernel_bootctrl.bin.normal"
+	local bootctrl_partition=
+
+	if [ ! -f "${bootctrl_update_file}" ]; then
+		ota_log "${bootctrl_update_file} is not found"
+		return 1
+	fi
+	if [ ! -f "${bootctrl_normal_file}" ]; then
+		ota_log "${bootctrl_normal_file} is not found"
+		return 1
+	fi
+
+	# Get the kernel-bootctrl partition
+	get_devnode_from_name "kernel-bootctrl" "${_SDMMC_USER_DEVICE}" "bootctrl_partition"
+	if [ ! -e "${bootctrl_partition}" ]; then
+		ota_log "Error: kernel-bootctrl partition is not found"
+		return 1
+	fi
+
+	# Backup the bootctrl partition
+	sudo dd if="${bootctrl_partition}" of="${work_dir}/bootctrl.backup"
+	ota_log "Backed up kernel-bootctrl partition under ${work_dir} before writing them"
+
+	# Write bootctrl update file into bootctrl partition
+	ota_log "Writing bootctrl update file into ${bootctrl_partition}"
+	local image_size=
+	# shellcheck disable=SC2012
+	image_size=$(ls -al "${bootctrl_update_file}" | cut -d\  -f 5)
+	local tmp_image=${work_dir}/image.tmp
+	dd if="${bootctrl_update_file}" of="${bootctrl_partition}" >/dev/null 2>&1
+	sync
+	ota_log "Read back bootctrl update file into ${tmp_image} and verify it"
+	if ! read_part_opt "${bootctrl_partition}" "${tmp_image}" "${image_size}"; then
+		ota_log "Failed to read ${image_size} bytes from ${bootctrl_partition} to ${tmp_image}"
+		return 1
+	fi
+	if ! diff -up "${tmp_image}" "${bootctrl_update_file}" >/dev/null 2>&1; then
+		ota_log "The ${tmp_image} read back does not match ${bootctrl_update_file}"
+		# Write bootctrl normal file into bootctrl partition
+		dd if="${bootctrl_normal_file}" of="${bootctrl_partition}" >/dev/null 2>&1
+		return 1
+	fi
+	return 0
+}
+
+get_specified_partition_image()
+{
+	# Get the image path of the specified partition
+	# Usage:
+	#        get_image_for_specified_partition {target_dir} {partition} {_ret_image}
+	local target_dir="${1}"
+	local partition="${2}"
+	local _ret_image="${3}"
+	local idx_file="${target_dir}/flash.idx"
+	local image_name=
+	local image_path=
+
+	# Get image for specified partition
+	image_name="$(grep ":${partition}," "${idx_file}" | cut -d, -f 5 | sed 's/^ //' -)"
+	if [ "${image_name}" == "" ]; then
+		ota_log "No image is specified for partition ${partition}"
+		return 1
+	fi
+	image_path="${target_dir}/${image_name}"
+	if [ ! -f "${image_path}" ]; then
+		ota_log "The ${image_path} for partition ${partition} is not found"
+		return 1
+	fi
+
+	# Verify the image integrity
+	local sha1sum_pre_gen=
+	local sha1sum_file_tmp=/tmp/sha1sum.tmp
+	sha1sum_pre_gen="$(grep ":${partition}," "${idx_file}" | cut -d, -f 8 | sed 's/^ //' -)"
+	echo -n "${sha1sum_pre_gen}" > "${sha1sum_file_tmp}"
+	if ! sha1sum_verify "${image_path}" "${sha1sum_file_tmp}"; then
+		ota_log "Failed to run \"sha1sum_verify ${image_path} ${sha1sum_file_tmp}\""
+		return 1
+	fi
+	rm -f "${sha1sum_file_tmp}"
+
+	eval "${_ret_image}=${image_path}"
+}
+
+install_partition_with_ab_with_layout_change()
+{
+	# Update partition with A/B redundancy and layout change
+	# in user storage device.
+	# Usage:
+	#        install_partition_with_ab_with_layout_change \
+	# 		{image_file} {target_dir} {partition} {device} {read_back_image}
+
+	# No layout change in user storage device currently
+	ota_log "No layout change in user storage in this release, should not run to here."
+	return 0
+}
+
+install_partition_with_ab_without_layout_change()
+{
+	# Update partition with A/B redundancy but without layout change
+	# in user storage device.
+	# Usage:
+	#        install_partition_with_ab_without_layout_change \
+	# 		{image_file} {target_dir} {partition} {device} ${read_back_image}
+	local image_file="${1}"
+	local target_dir="${2}"
+	local partition="${3}"
+	local device="${4}"
+	local read_back_image="${5}"
+
+	# Write the image into the specified offset and do read-back verification
+	local image_size=
+	local idx_file="${target_dir}/flash.idx"
+	local start_offset=
+	start_offset="$(grep "${partition}," "${idx_file}" | cut -d, -f 3 | sed 's/^ //g' -)"
+	ota_log "Writing ${image_file} into ${device}(offset=${start_offset})"
+	if ! dd if="${image_file}" of="${device}" bs=1 seek="${start_offset}" >/dev/null 2>&1; then
+		ota_log "Failed to write ${image_file} into ${device}:${start_offset}"
+		return 1
+	fi
+	image_size="$(grep "${partition}," "${idx_file}" | cut -d, -f 6 | sed 's/^ //g' -)"
+	ota_log "Read back ${image_size} bytes from ${device}:${start_offset} into ${read_back_image} and verify it"
+	if ! dd if="${device}" of="${read_back_image}" bs=1 skip="${start_offset}" count="${image_size}"; then
+		ota_log "Failed to read ${image_size} bytes from ${device}:${start_offset} to ${read_back_image}"
+		return 1
+	fi
+	return 0
+}
+
+install_partition_with_ab()
+{
+	# Update partition directly with specified image.
+	# This function is used to update the partition with A/B redundancy.
+	# Usage:
+	#        install_partition_with_ab {target_dir} {partition} {device}
+	local target_dir="${1}"
+	local partition="${2}"
+	local device="${3}"
+	local image_file=
+
+	# Get specified partition image
+	if ! get_specified_partition_image "${target_dir}" "${partition}" image_file; then
+		ota_log "Failed to run \"get_specified_partition_image_file ${target_dir} ${partition} image_file\""
+		return 1
+	fi
+
+	# Check whether there is layout change in user storage device
+	local layout_change=
+	if is_layout_changed_in_user_storage_device; then
+		layout_change=1
+	else
+		layout_change=0
+	fi
+
+	# Write image according to whether layout change exists
+	local tmp_image=/tmp/image.tmp
+	if [ "${layout_change}" == 1 ]; then
+		ota_log "install_partition_with_ab_with_layout_change \
+			${image_file} ${target_dir} ${partition} ${device} ${tmp_image}"
+		if ! install_partition_with_ab_with_layout_change \
+			"${image_file}" "${target_dir}" "${partition}" "${device}" "${tmp_image}"; then
+			ota_log "Failed to install ${partition} on the ${device} with layout change"
+			return 1
+		fi
+	else
+		ota_log "install_partition_with_ab_without_layout_change \
+			${image_file} ${target_dir} ${partition} ${device} ${tmp_image}"
+		if ! install_partition_with_ab_without_layout_change \
+			"${image_file}" "${target_dir}" "${partition}" "${device}" "${tmp_image}"; then
+			ota_log "Failed to install ${partition} on the ${device} without layout change"
+			return 1
+		fi
+	fi
+
+	# Verify the image integrity
+	local sha1sum_gen=
+	local sha1sum_file_tmp=/tmp/sha1sum.tmp
+	sha1sum_gen="$(sha1sum "${image_file}" | cut -d\  -f 1)"
+	echo -n "${sha1sum_gen}" > "${sha1sum_file_tmp}"
+	if ! sha1sum_verify "${tmp_image}" "${sha1sum_file_tmp}"; then
+		ota_log "Failed to run \"sha1sum_verify ${tmp_image} ${sha1sum_file_tmp}\""
+		return 1
+	fi
+	rm -f "${sha1sum_file_tmp}" "${tmp_image}"
+
+	ota_log "Updating ${partition} partition done"
+	return 0
+}
+
+install_partition_with_alt()
+{
+	# Update partition safely with specified image.
+	# This function is used to update the partition with corresponding
+	# alt partition, such as recovery partition.
+	# If specified image does not exist, skip updating the partition
+	# Usage:
+	#        install_partition_with_alt {target_dir} {partition}
+
+	local target_dir="${1}"
+	local partition="${2}"
+	local image_file=
+
+	# Check whether updating the specified partition is supported
+	ota_log "prerequisite_check ${partition}"
+	prerequisite_check_alt "${partition}"
+
+	# Get specified partition image
+	if ! get_specified_partition_image "${target_dir}" "${partition}" image_file; then
+		# Skip updating the specified partition if no valid image is found
+		ota_log "Skip updating ${partition} partition as no valid image is found"
+		return 0
+	fi
+
+	# Unmount esp if it is mounted
+	local esp_node=
+	local esp_mnt=
+	if [ "${partition}" == "esp" ]; then
+		get_devnode_from_name "esp" "" esp_node
+		if findmnt -n --source "${esp_node}" >/dev/null 2>&1; then
+			esp_mnt="$(findmnt -n -o TARGET --source "${esp_node}")"
+			if ! umount "${esp_mnt}"; then
+				ota_log "Failed to umount esp partition mounted on ${esp_mnt}"
+				return 1
+			fi
+			sync
+		fi
+	fi
+
+	# In recovery kernel, root partition is not mounted on "/".
+	local tmp_dir=
+	if is_recovery_kernel; then
+		tmp_dir="${target_dir}"
+	fi
+
+	# Update the specified partition
+	local sha1sum_gen=
+	local sha1sum_file_tmp=/tmp/sha1sum.tmp
+	sha1sum_gen="$(sha1sum "${image_file}" | cut -d\  -f 1)"
+	echo -n "${sha1sum_gen}" > "${sha1sum_file_tmp}"
+	ota_log "update_specified_partitions_alt ${partition} ${image_file} ${sha1sum_file_tmp} ${tmp_dir}"
+	if ! update_specified_partitions_alt "${partition}" "${image_file}" \
+		"${sha1sum_file_tmp}" "${tmp_dir}"; then
+		ota_log "Failed to run \"update_specified_partitions_alt ${partition} ${image_file} ${sha1sum_file_tmp} ${tmp_dir}\""
+		return 1
+	fi
+	rm -f "${sha1sum_file_tmp}"
+
+	ota_log "Updating ${partition} and ${partition}_alt partitions done"
+	return 0
+}
+
+get_base_version()
+{
+	# Get the version of currently running system
+	# Usage:
+	#        get_base_version {_ret_base_version}
+	local _ret_base_version="${1}"
+	local nv_tegra_rel_file="/etc/nv_tegra_release"
+	local nv_tegra_rel_bsp=""
+	local nv_tegra_rel_rev_major=""
+	local nv_tegra_rel_ver=""
+
+	if [ ! -f "${nv_tegra_rel_file}" ]; then
+		ota_log "${nv_tegra_rel_file} is not found"
+		return 1
+	fi
+	nv_tegra_rel_bsp="$(grep -oE "[R0-9]+ \(release\)" <"${nv_tegra_rel_file}" | cut -d\  -f 1)"
+	if [ "${nv_tegra_rel_bsp}" == "" ]; then
+		ota_log "Failed to get BSP release version from ${nv_tegra_rel_file}"
+		return 1
+	fi
+	nv_tegra_rel_rev_major="$(grep -oE "REVISION: [0-9]" <"${nv_tegra_rel_file}" | cut -d\  -f 2)"
+	if [ "${nv_tegra_rel_rev_major}" == "" ]; then
+		ota_log "Failed to get BSP revision from ${nv_tegra_rel_file}"
+		return 1
+	fi
+	nv_tegra_rel_ver="${nv_tegra_rel_bsp}-${nv_tegra_rel_rev_major}"
+
+	eval "${_ret_base_version}=${nv_tegra_rel_ver}"
+}
+
+get_board_name_from_compatible_spec()
+{
+	# Get the board name by parsing the compatible spec
+	# Usage:
+	#        get_board_name_from_compatible_spec {spec} {_ret_board_name}
+
+	local spec="${1}"
+	local _ret_board_name="${2}"
+	local board_id=
+	local board_ver=
+	local board_sku=
+	local board_rev=
+	local board_fuselevel=
+	local chip_rev=
+
+	board_id=$( echo "${spec}" | awk -F"-" '{print $1}' )
+	board_ver=$( echo "${spec}" | awk -F"-" '{print $2}' )
+	board_sku=$( echo "${spec}" | awk -F"-" '{print $3}' )
+	board_rev=$( echo "${spec}" | awk -F"-" '{print $4}' )
+	board_fuselevel=$( echo "${spec}" | awk -F"-" '{print $5}' )
+	chip_rev=$( echo "${spec}" | awk -F"-" '{print $6}' )
+
+	local tmp_spec=
+	tmp_spec="${board_id}-${board_ver}-${board_sku}-${board_rev}-${board_fuselevel}-${chip_rev}"
+	local boot_info=
+	boot_info=${spec//"${tmp_spec}-"/}
+	local count=
+	count=$(echo "${boot_info}" | awk '{print split($0,a,"-");}')
+	local rootdev=
+	rootdev=$(echo "${boot_info}" | awk '{split($0,a,"-"); print a['"${count}"']}')
+	eval "${_ret_board_name}=${boot_info%"-${rootdev}"}"
+}
+
+get_target_board()
+{
+	# Get the name of target board from /etc/nv_boot_control.conf
+	# Usage:
+	#        get_target_board {_ret_target_board}
+	local _ret_target_board="${1}"
+	local nv_boot_control_conf="/etc/${_NV_BOOT_CONTROL_CONF}"
+	local compatible_spec=
+	local nv_bootctrl_board_name=
+
+	# Get COMPATIBLE_SPEC from /etc/nv_boot_control.conf
+	compatible_spec="$(awk '/COMPATIBLE_SPEC/ {print $2}' "${nv_boot_control_conf}")"
+	if [ "${compatible_spec}" == "" ]; then
+		ota_log "Error: invalid COMPATIBLE_SPEC(${compatible_spec}) in the ${nv_boot_control_conf}"
+		return 1
+	fi
+
+	# Parse the COMPATIBLE_SPEC to get the name of the targe board
+	get_board_name_from_compatible_spec "${compatible_spec}" "nv_bootctrl_board_name"
+	eval "${_ret_target_board}=${nv_bootctrl_board_name}"
+}
+
+get_ota_version()
+{
+	# Get the version that is OTAed to.
+	# Usage:
+	#        get_ota_version {work_dir} {_ret_ota_version}
+
+	local work_dir="${1}"
+	local _ret_ota_version="${2}"
+	local version_file=
+	local bsp_branch=
+	local bsp_rev=
+	local bsp_major=
+
+	version_file="${work_dir}/version.txt"
+	if [ ! -f "${version_file}" ];then
+		ota_log "Version file ${version_file} is not found"
+		return 1
+	fi
+
+	bsp_branch="$(grep -o -E "# R[0-9]+" < "${version_file}" | cut -dR -f 2)"
+	bsp_rev="$(grep -o -E "REVISION: [0-9]\.[0-9]" < "${version_file}" | cut -d\  -f 2)"
+	bsp_major="$(echo "${bsp_rev}" | cut -d\.  -f 1)"
+	eval "${_ret_ota_version}=R${bsp_branch}-${bsp_major}"
+}
+
+compare_version()
+{
+	# Compare the passed-in two versions that are formatted
+	# as "<major number>.<minor number>"
+	# If ${version_a} = ${version_b}, return 0
+	# If ${version_a} < ${version_b}, return 1
+	# If ${version_a} > ${version_b}, return 2
+	# Usage:
+	#        compare_version {version_a} {version_b} {_ret_value}
+
+	local version_a="${1}"
+	local version_b="${2}"
+	local _ret_value="${3}"
+	local major_num=
+	local minor_num=
+	local version_a_num=
+	local version_b_num=
+	local ret=
+
+	# Convert the formmatted version to number and then compare them
+	major_num="$(echo "${version_a}" | cut -d\. -f 1)"
+	minor_num="$(echo "${version_a}" | cut -d\. -f 2)"
+	version_a_num=$((major_num * 1000 + minor_num))
+	major_num="$(echo "${version_b}" | cut -d\. -f 1)"
+	minor_num="$(echo "${version_b}" | cut -d\. -f 2)"
+	version_b_num=$((major_num * 1000 + minor_num))
+	if [ "${version_a_num}" -eq "${version_b_num}" ]; then
+		ret=0
+	elif [ "${version_a_num}" -lt "${version_b_num}" ]; then
+		ret=1
+	else
+		ret=2
+	fi
+	eval "${_ret_value}=${ret}"
+}
+
+check_bootloader_version()
+{
+	# Check whether bootloader version to avoid version rollback.
+	# Usage:
+	#        check_bootloader_version {work_dir}
+
+	local work_dir="${1}"
+	local bl_base_version=
+	local ota_version=
+	local ota_version_str=
+	local result=
+
+	# Compare bootloader version on target device and in OTA package
+	bl_base_version="$(nvbootctrl dump-slots-info | grep "Current version" | cut -d: -f 2 | sed 's/^ //g' | cut -d\. -f 1-2)"
+	ota_version="$(cat "${work_dir}/base_version")"
+	ota_version_str="$(echo "${ota_version}" | sed -r 's/R([0-9]+)-([0-9]+)/\1.\2/')"
+	compare_version "${bl_base_version}" "${ota_version_str}" result
+	if [ "${result}" -eq 2 ]; then
+		# ${bl_base_version} > ${ota_version}
+		ota_log "OTA from current version ${bl_base_version} to the OTA version ${ota_version_str} is not allowed"
+		return 1
+	fi
+	return 0
+}
+
+check_user_version()
+{
+	# Check whether the current user version is not newer than the
+	# user version that is OTAed to.
+	# Return 0 if no user version rollback. Else, return 1.
+	# Usage:
+	#        check_user_version {work_dir}
+
+	local work_dir="${1}"
+	local user_version_file=
+	local sys_user_version=
+	local ota_user_version=
+	local major_num=
+	local minor_num=
+
+	# Get the user version from /etc/user_release_version.
+	user_version_file="/etc/user_release_version"
+	if [ ! -f "${user_version_file}" ]; then
+		ota_log "Error: the user version file is not found at ${user_version_file}"
+		return 1
+	fi
+	sys_user_version="$(grep -m 1 "User release" < "${user_version_file}" | cut -d: -f 2 | sed 's/^ //')"
+	ota_log "User release version in system: ${sys_user_version}"
+
+	# Get the user version in OTA payload package
+	user_version_file="${work_dir}/user_release_version"
+	if [ ! -f "${user_version_file}" ]; then
+		ota_log "Error: the user version file is not found at ${user_version_file}"
+		return 1
+	fi
+	ota_user_version="$(grep -m 1 "User release" < "${user_version_file}" | cut -d: -f 2 | sed 's/^ //')"
+	ota_log "User release version in OTA package: ${ota_user_version}"
+
+	# Compare user release version in system and in OTA package
+	local result=
+	compare_version "${sys_user_version}" "${ota_user_version}" result
+	if [ "${result}" -eq 2 ]; then
+		# ${sys_user_version} > ${ota_user_version}
+		ota_log "Error: user version rollback is not allowed (current user version(${sys_user_version}) > OTA user version(${ota_user_version}))"
+		return 1
+	else
+		# ${sys_user_version} <= ${ota_user_version}
+		ota_log "User version is to be upgrade from ${sys_user_version} to ${ota_user_version}"
+		return 0
+	fi
+}
+
+check_bsp_version()
+{
+	# Check whether the version of the OTA payload package matches
+	# the base version.
+	# Usage:
+	#        check_bsp_version {work_dir} {_ret_base_version}
+	local work_dir="${1}"
+	local _ret_base_version="${2}"
+	local sys_base_version=
+	local ota_base_version=
+
+	if ! get_base_version "sys_base_version"; then
+		ota_log "Failed to run \"get_base_version sys_base_version\""
+		return 1
+	fi
+	if [ ! -f "${work_dir}/base_version" ]; then
+		ota_log "BSP base version file is not found at ${work_dir}/base_version"
+		return 1
+	fi
+	ota_base_version="$(cat "${work_dir}/base_version")"
+
+	if [ "${ota_base_version}" != "${sys_base_version}" ]; then
+		ota_log "The version of OTA package(${ota_base_version}) does not match the version of current system(${sys_base_version}), please check whether the OTA package is correct"
+		return 1
+	fi
+
+	# Generate a version string that is used as suffix for recovery image/dtb
+	local version_suffix=
+	case "${sys_base_version}" in
+	R35-2|R35-3|R35-4|R35-5|R35-6) version_suffix="R35x"; ;;
+	R36-3|R36-4) version_suffix="R36x"; ;;
+	R38-2|R38-3|R38-4) version_suffix="R38x"; ;;
+	*)
+		echo "Invalid base version ${sys_base_version}"
+		return 1
+	esac
+
+	# Get the OTA version
+	local ota_version=
+	if ! get_ota_version "${work_dir}" "ota_version"; then
+		ota_log "Failed to run \"get_ota_version ${work_dir} ota_version\""
+		return 1
+	fi
+
+	# Compare the system base version with the OTA version
+	# If system base version is newer than OTA version, exit
+	# If system base version equals OTA version, then check the user version
+	# to avoid rollback
+	local ota_version_str=
+	local sys_base_version_str=
+	local result=
+	# Convert version format. For example, convert "R35-2" to "35.2"
+	ota_version_str="$(echo "${ota_version}" | sed -r 's/R([0-9]+)-([0-9]+)/\1.\2/')"
+	sys_base_version_str="$(echo "${sys_base_version}" | sed -r 's/R([0-9]+)-([0-9]+)/\1.\2/')"
+	compare_version "${sys_base_version_str}" "${ota_version_str}" result
+	if [ "${result}" -eq 2 ]; then
+		# ${sys_base_version} > ${ota_version}
+		ota_log "OTA from current version ${sys_base_version_str} to the OTA version ${ota_version_str} is not allowed"
+		return 1
+	elif [ "${result}" -eq 0 ]; then
+		# ${sys_base_version} = ${ota_version}
+		if ! check_user_version "${work_dir}"; then
+			ota_log "Failed to run \"check_user_version ${work_dir}\""
+			return 1
+		fi
+	fi
+
+	_BASE_RECOVERY_IMAGE=recovery.img.${version_suffix}
+	_BASE_RECOVERY_DTB=recovery.dtb.${version_suffix}
+
+	if [ "${_ret_base_version}" != "" ]; then
+		eval "${_ret_base_version}=${sys_base_version}"
+	fi
+	return 0
+}
+
+check_target_board()
+{
+	# Check whether the board name of the OTA payload package matches
+	# the target board.
+	# Usage:
+	#        check_target_board {work_dir} {_ret_target_board}
+	local work_dir="${1}"
+	local _ret_target_board="${2}"
+	local sys_target_board=
+	local ota_target_board=
+
+	if ! get_target_board "sys_target_board"; then
+		ota_log "Failed to run \"get_target_board sys_target_board\""
+		return 1
+	fi
+
+	if [ ! -f "${work_dir}/board_name" ]; then
+		ota_log "Target board name file is not found at ${work_dir}/board_name"
+		return 1
+	fi
+	ota_target_board="$(cat "${OTA_WORK_DIR}/board_name")"
+
+	if [ "${ota_target_board}" != "${sys_target_board}" ]; then
+		ota_log "The board name in OTA package(${ota_target_board}) does not match current board(${sys_target_board})"
+		return 1
+	fi
+	if [ "${_ret_target_board}" != "" ]; then
+		eval "${_ret_target_board}=${sys_target_board}"
+	fi
+
+	return 0
+}
+
+update_nv_boot_control()
+{
+	# Update the TNSPEC and COMPATIBLE_SPEC in the specified boot
+	# control file ${nv_boot_control_conf} according to the board
+	# specification of target board
+	# Usage:
+	#        update_nv_boot_control ${work_dir} {nv_boot_control_conf}
+	local work_dir="${1}"
+	local nv_boot_control_conf="${2}"
+	local update_script="${work_dir}/${_UPDATE_SPEC_SCRIPT}"
+
+	if [ ! -f "${nv_boot_control_conf}" ]; then
+		ota_log "The file ${nv_boot_control_conf} is not found"
+		exit 1
+	fi
+	# Execute the "nv-l4t-bootloader-config.sh" to update TNSPEC and COMPATIBLE_SPEC
+	# For OTA from R35, corresponding UEFI variables are updated, too
+	local cmd="${update_script} -f ${nv_boot_control_conf} "
+	if ! eval "${cmd}"; then
+		ota_log "Failed to run \"${cmd}\""
+		exit 1
+	fi
+	return 0
+}
+
+get_chip_id()
+{
+	# Get chip id from the /etc/nv_boot_control.conf
+	# Usage:
+	#        get_chip_id {_ret_chip_id}
+	local _ret_chip_id="${1}"
+	local nv_boot_control_conf="/etc/${_NV_BOOT_CONTROL_CONF}"
+	local _chip_id=
+	_chip_id=$(awk '/TEGRA_CHIPID/ {print $2}' "${nv_boot_control_conf}")
+	if [ "${_chip_id}" == "" ]; then
+		ota_log "Failed get TEGRA_CHIPID from ${nv_boot_control_conf}"
+		return 1
+	fi
+	eval "${_ret_chip_id}=${_chip_id}"
+	return 0
+}
+
+update_nv_boot_control_in_rootfs()
+{
+	# Update the /etc/nv_boot_control.conf in rootfs
+	# Usage:
+	#        update_nv_boot_control_in_rootfs {work_dir}
+	local work_dir="${1}"
+	local sys_base_version=
+	if ! get_base_version "sys_base_version"; then
+		ota_log "Failed to run \"get_base_version sys_base_version\""
+		return 1
+	fi
+
+	# Ensure nv_boot_control.conf is up to date.
+	local tmp_boot_control_conf="/etc/${_NV_BOOT_CONTROL_CONF}"
+	update_nv_boot_control "${work_dir}" "${tmp_boot_control_conf}"
+	# Copy the updated nv_boot_control.conf to OTA work directory
+	# shellcheck disable=SC2140
+	cp "${tmp_boot_control_conf}" "${work_dir}"/"ota_${_NV_BOOT_CONTROL_CONF}"
+	return 0
+}
+
+check_prerequisites()
+{
+	# Check prerequisistes for applying image-based OTA:
+	# 1) The extlinux.conf file exists
+	# 2) The INITRD entry is set in extlinux.conf
+	# 3) The root device is set in APPEND entry
+	# Usage:
+	#        check_prerequisites {work_dir}
+	local extlinux_conf="/boot/extlinux/extlinux.conf"
+
+	# Check whether exlinux.conf exists
+	if [ ! -f "${extlinux_conf}" ]; then
+		ota_log "ERROR. ${extlinux_conf} does not exist"
+		exit 1
+	fi
+
+	# Check whether INITRD is set in extlinut.conf
+	# shellcheck disable=SC2155
+	local initrd="$(grep -E "^[ \t]*INITRD.*[ \t]/boot/initrd" ${extlinux_conf})"
+	if [ "${initrd}" == "" ]; then
+		ota_log "ERROR: INITRD is not set in the extlinux.conf."
+		ota_log "Please set it by your case, for example, /boot/initrd."
+		exit 1
+	fi
+
+	# Check whether root= is set in extlinut.conf
+	# shellcheck disable=SC2155
+	local root_dev="$(grep -E "^[ \t]*APPEND.*[ \t]root=" ${extlinux_conf})"
+	if [ "${root_dev}" == "" ]; then
+		ota_log "ERROR: root device is not set in the extlinux.conf."
+		ota_log "Please set it by your root device, for example, root=/dev/mmcblk0p1 rw rootwait rootfstype=ext4."
+		exit 1
+	fi
+}
+
+set_rootfs_updater()
+{
+	# Set rootfs updater
+	# Usage:
+	#        set_rootfs_updater {work_dir} ${_ret_rootfs_updater}
+	local work_dir="${1}"
+	local _ret_rootfs_updater="${2}"
+	local _rootfs_updater=
+
+	# Retrieve ${ROOTFS_UPDATER} settings from nv_ota_customer.conf
+	_rootfs_updater="${work_dir}"/"${ROOTFS_UPDATER}"
+	if [ ! -f "${_rootfs_updater}" ]; then
+		ota_log "The rootfs updater ${_rootfs_updater} is not found"
+		return 1
+	fi
+	ota_log "Use rootfs updater: ${_rootfs_updater}"
+	eval "${_ret_rootfs_updater}=${_rootfs_updater}"
+}
+
+get_devnode_from_name()
+{
+	# Get the devnode under /dev/ according to the partition name
+	# Usage:
+	#        get_devnode_from_name {name} {storage_device} {_ret_devnode}
+	local part_name="${1}"
+	local storage_device="${2}"
+	local _ret_devnode="${3}"
+
+	# Check whether there is any partition with specified name
+	# If no such partition is found, set "${_ret_devnode}" to "" and
+	# and directly return;
+	# If only one partition with the name specified, set "${_ret_devnode}"
+	# to this partition;
+	# If more than one partition with the same name are found, set
+	# "${_ret_devnode}" to the matched partition located on the same
+	# storage device as current rootfs partition.
+
+	local num_partition=
+	num_partition="$(blkid | grep -c "PARTLABEL=\"${part_name}\"")"
+	if [ "${num_partition}" -eq 0 ]; then
+		eval "${_ret_devnode}="
+		return
+	fi
+	local matched_partition=
+	matched_partition="$(blkid | grep "PARTLABEL=\"${part_name}\"" | cut -d: -f 1)"
+	if [ "${num_partition}" -eq 1 ]; then
+		eval "${_ret_devnode}=${matched_partition}"
+		return
+	fi
+
+	# Get storage_device if it is not passed-in
+	if [ "${storage_device}" == "" ]; then
+		storage_device="$(df / | tail -n 1 | cut -d\  -f 1 | sed 's/[0-9][0-9]*$//g')"
+	fi
+	matched_partition="$(echo "${matched_partition}" | grep "${storage_device}")"
+	eval "${_ret_devnode}=${matched_partition}"
+}
+
+get_ota_device()
+{
+	# Get the storage device where the rootfs is located.
+	# Usage:
+	#     get_ota_device {device}
+	local device="${1}"
+	local rootfs_part=
+	local rootfs_disk=
+
+	rootfs_part=$(df / | tail -n 1 | awk '{print $1}')
+	rootfs_disk=$(lsblk -sl "${rootfs_part}" -o NAME,TYPE | grep "disk" | cut -d\  -f 1)
+	if [ "${rootfs_disk}" != "" ]; then
+		eval "${device}=/dev/${rootfs_disk}"
+	fi
+}
+
+write_uefi_variable()
+{
+	# Write UEFI variable.
+	# The {value} must be formatted as a string that is composed
+	# of multiple "\x[0-9][a-f]". For example, it can be
+	# "\x07\x00\x00\x00\x01\x00\x00\x00"
+	# Usage:
+	#        write_uefi_variable {var} {value}
+	local var="${1}"
+	local value="${2}"
+	local var_tmp=/tmp/var_tmp.bin
+	local efivars_dir="${_EFIVARFS_DIR}"
+	local var_size=
+	local chattr_set=0
+
+	# Write value into the UEFI variable
+	# shellcheck disable=SC2164
+	pushd "${efivars_dir}" > /dev/null 2>&1
+	# shellcheck disable=SC2059
+	printf "${value}" > "${var_tmp}"
+	if [ -e "${var}" ]; then
+		chattr -i "${var}"
+		chattr_set=1
+	fi
+	var_size=$((${#value} / 4))
+	ota_log "dd if=${var_tmp} of=${var} bs=${var_size}"
+	if ! dd if="${var_tmp}" of="${var}" bs="${var_size}"; then
+		ota_log "Failed to write ${var_tmp} to ${var}"
+		# shellcheck disable=SC2164
+		popd > /dev/null 2>&1
+		return 1
+	fi
+	sync
+	if [ "${chattr_set}" == 1 ]; then
+		chattr +i "${var}"
+	fi
+	# shellcheck disable=SC2164
+	popd > /dev/null 2>&1
+}
+
+mount_uefi_variables()
+{
+	# Mount efivarfs
+	# Usage:
+	#        mount_uefi_variables
+	if [ ! -d "${_EFIVARFS_DIR}" ] \
+		|| [ "$(ls -A "${_EFIVARFS_DIR}")" == "" ]; then
+		ota_log "Mount efivarfs on ${_EFIVARFS_DIR}"
+		mount -t efivarfs none "${_EFIVARFS_DIR}"
+	fi
+}
+
+set_boot_mode()
+{
+	# Set default boot mode by writing the UEFI variable.
+	# {boot_mode} can be "normal" or "recovery"
+	# Usage:
+	#        set_boot_mode {boot_mode}
+	local boot_mode="${1}"
+	local uefi_var="L4TDefaultBootMode-781e084c-a330-417c-b678-38e696380cb9"
+	local value=
+
+	case "${boot_mode}" in
+	recovery) value="\x07\x00\x00\x00\x03\x00\x00\x00"; ;;
+	normal) value="\x07\x00\x00\x00\x01\x00\x00\x00"; ;;
+	*)
+		echo "Unsupported boot mode: ${boot_mode}"
+		return 1
+	esac
+
+	# Mount efivarfs
+	mount_uefi_variables
+
+	ota_log "Force booting to ${boot_mode} by writing ${value} to UEFI variable ${uefi_var}"
+	if ! write_uefi_variable "${uefi_var}" "${value}"; then
+		ota_log "Failed to write ${value} to ${uefi_var}"
+		return 1
+	fi
+
+	return 0
+}
+
+force_booting_to_recovery()
+{
+	# Force booting to recovery kernel after reboot
+	# Usage:
+	#        force_booting_to_recovery
+	if ! set_boot_mode "recovery"; then
+		ota_log "Failed to force booting to recovery kernel"
+		return 1
+	fi
+	return 0
+}
+
+force_booting_to_normal()
+{
+	# Force booting to normal kernel after reboot
+	# Usage:
+	#        force_booting_to_normal
+	if ! set_boot_mode "normal"; then
+		ota_log "Failed to force booting to normal kernel"
+		return 1
+	fi
+	return 0
+}
+
+trigger_uefi_capsule_update()
+{
+	# Trigger UEFI capsule update
+	# Usage:
+	#        trigger_uefi_capsule_update {work_dir} {storage_device}
+	local work_dir="${1}"
+	local storage_device="${2}"
+	local uefi_capsule="${work_dir}/${_UEFI_CAPSULE_FILE}"
+	local uefi_capsule_dir="${_UEFI_CAPSULE_DIR}"
+	local esp_partition=
+
+	if [ ! -f "${uefi_capsule}" ]; then
+		ota_log "The UEFI capsule file ${uefi_capsule} is not found"
+		return 1
+	fi
+
+	# Mount esp partition if it is not mounted
+	if [ ! -d "${uefi_capsule_dir}" ]; then
+		# Get the devnode for esp partition
+		get_devnode_from_name "esp" "${storage_device}" "esp_partition"
+		if [ ! -e "${esp_partition}" ]; then
+			ota_log "The esp partition is not found"
+			return 1
+		fi
+
+		# Mount esp partition
+		mkdir -p "${_ESP_MNT}"
+		ota_log "Mount esp partition on ${_ESP_MNT}"
+		mount "${esp_partition}" "${_ESP_MNT}"
+		mkdir -p "${uefi_capsule_dir}"
+	fi
+
+	# Copy UEFI capsule file into esp
+	ota_log "Copying ${uefi_capsule} into ${uefi_capsule_dir}"
+	cp -f "${uefi_capsule}" "${uefi_capsule_dir}"/
+	sync
+
+	# Mount efivarfs
+	mount_uefi_variables
+
+	# Set UEFI variable "OsIndications" to trigger UEFI Capsule update
+	local uefi_var="OsIndications-8be4df61-93ca-11d2-aa0d-00e098032b8c"
+	local value="\x07\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00"
+	ota_log "Triggering UEFI capsule update by writing ${value} to UEFI variable ${uefi_var}"
+	if ! write_uefi_variable "${uefi_var}" "${value}"; then
+		ota_log "Failed to trigger UEFI capsule update"
+		return 1
+	fi
+	return 0
+
+}
+
+reset_rootfs_chain_status()
+{
+	local chain="${1}"
+	local uefi_var="RootfsStatusSlot${chain}-781e084c-a330-417c-b678-38e696380cb9"
+	local value="\x07\x00\x00\x00\x00\x00\x00\x00"
+
+	# Mount efivarfs
+	mount_uefi_variables
+
+	ota_log "Clean chain status for rootfs(${chain}) by writing ${value} to UEFI variable ${uefi_var}"
+	if ! write_uefi_variable "${uefi_var}" "${value}"; then
+		ota_log "Failed to clean rootfs chain status"
+		return 1
+	fi
+	return 0
+}
+
+update_l4t_launcher()
+{
+	# Update L4T launcher
+	# Usage:
+	#        update_l4t_launcher {work_dir} {storage_device}
+	local work_dir="${1}"
+	local storage_device="${2}"
+	local l4t_launcher="${work_dir}/${_L4T_LAUNCHER}"
+	local esp_partition=
+	local esp_mnt="/tmp/esp_mnt"
+	local esp_l4t_launcher="${esp_mnt}/EFI/BOOT/${_L4T_LAUNCHER}"
+
+	# Skip updating L4T Launcher if "USE_L4T_LAUNCHER" is
+	# set to "false"
+	source "${work_dir}/nv_ota_customer.conf"
+	if [ "${USE_L4T_LAUNCHER}" == "false" ]; then
+		ota_log "L4T Launcher is not used"
+		return 0
+	fi
+
+	# Check whether L4T launcher exist in OTA work directory
+	if [ ! -f "${l4t_launcher}" ]; then
+		ota_log "L4T Launcher(${l4t_launcher}) is not found"
+		return 1
+	fi
+
+	# Mount esp partition and replace the L4T launcher if it exists
+	esp_partition="$(blkid | grep "${storage_device}" | grep -m 1 "PARTLABEL=\"esp\"" | cut -d: -f 1)"
+	if [ "${esp_partition}" == "" ] || [ ! -e "${esp_partition}" ]; then
+		ota_log "ESP is not found on the ${storage_device}"
+		return 1
+	fi
+	mkdir "${esp_mnt}"
+	mount "${esp_partition}" "${esp_mnt}"
+	if [ -f "${esp_l4t_launcher}" ]; then
+		ota_log "Updating L4T Launcher at ${esp_l4t_launcher}"
+		cp "${l4t_launcher}" "${esp_l4t_launcher}"
+	fi
+	umount "${esp_mnt}"
+	rm -rf "${esp_mnt}"
+	return 0
+}
+
+is_rootfs_a_b_enabled()
+{
+	# Check whether ROOTFS A/B is enabled
+	# Usage:
+	#        is_rootfs_a_b_enabled {_ret_rootfs_ab_enabled} {_ret_rootfs_current_slot}
+	local _ret_rootfs_ab_enabled="${1}"
+	local _ret_rootfs_current_slot="${2}"
+	local rootfs_ab_enabled=
+	local rootfs_current_slot=
+	local _nvbootctrl=
+	_nvbootctrl="$(which nvbootctrl)"
+
+	# Use the return code to determine whether rootfs A/B is enabled
+	# 0: Rootfs A/B is disabled
+	# 1: Rootfs A/B is enabled and current slot is A
+	# 2: Rootfs A/B is enabled and current slotis B
+	local ret_code=
+	"${_nvbootctrl}" -t rootfs is-rootfs-ab-enabled >/dev/null 2>&1
+	ret_code=$?
+	if [ "${ret_code}" == 0 ]; then
+		rootfs_ab_enabled=0
+		rootfs_current_slot=0
+	elif [ "${ret_code}" == 1 ]; then
+		rootfs_ab_enabled=1
+		rootfs_current_slot=0
+	elif [ "${ret_code}" == 2 ]; then
+		rootfs_ab_enabled=1
+		rootfs_current_slot=1
+	else
+		ota_log "Failed to run \"${_nvbootctrl} -t rootfs is-rootfs-ab-enabled\""
+		return 1
+	fi
+	eval "${_ret_rootfs_ab_enabled}=${rootfs_ab_enabled}"
+	eval "${_ret_rootfs_current_slot}=${rootfs_current_slot}"
+	return 0
+}
+
+is_rootfs_encryption_enabled()
+{
+	# Check whetehr disk encryption is enabled
+	# Usage:
+	#        is_rootfs_encryption_enabled {_ret_rootfs_enc_enabled}
+	local _ret_rootfs_enc_enabled="${1}"
+	local rootfs_dev=
+	rootfs_dev="$(findmnt -o SOURCE / | tail -1)"
+	if [[ "${rootfs_dev}" =~ ${_CRYPT_ROOT_NAME} ]]; then
+		eval "${_ret_rootfs_enc_enabled}=1"
+	else
+		eval "${_ret_rootfs_enc_enabled}=0"
+	fi
+}
+
+is_bsp_version_upgraded()
+{
+	# Check whether the BSP version is to be upgraded
+	# If OTA across version branches returns 0, eg: R35.x -> R36.x
+	# If OTA within version branches returns 1, eg: R35.x -> R35.x
+	# Usage:
+	#        is_bsp_version_upgraded {work_dir}
+	local work_dir="${1}"
+	local base_version=
+	local ota_version=
+	base_version="$(cut -d- -f 1 < "${work_dir}/base_version")"
+	ota_version="$(grep -o "R[0-9][0-9]" "${work_dir}/version.txt")"
+	echo "base_version=${base_version} ota_version=${ota_version}"
+	if [ "${base_version}" != "${ota_version}" ] ; then
+		return 0
+	else
+		return 1
+	fi
+}
+
+is_recovery_kernel()
+{
+	# Check whether in recovery kernel
+	# Usage:
+	#        is_recovery_kernel
+	if grep "root=/dev/initrd" </proc/cmdline >/dev/null 2>&1; then
+		return 0
+	else
+		return 1
+	fi
+}
+
+is_layout_changed_in_user_storage_device()
+{
+	# Check whether there is layout change in user storage device
+	# Usage:
+	#        is_layout_changed_in_user_storage_device
+
+	# No layout change in user storage device currently
+	return 1
+}
+
+is_uefi_sb_enabled_in_ota()
+{
+	# Check whether UEFI secureboot is enabled in OTA payload
+	# package
+	# Usage:
+	#        is_uefi_sb_enabled_in_ota {work_dir}
+	local work_dir="${1}"
+
+	# Return true if UEFI secureboot overlay package exists in
+	# the OTA payload package.
+	local uefi_sec_package="${work_dir}/${_UEFI_SECUREBOOT_OVERLAY_PACKAGE}"
+	if [ -f "${uefi_sec_package}" ]; then
+		return 0
+	else
+		return 1
+	fi
+}
+
+is_updating_misc_in_recovery()
+{
+
+	# Check whether need to update misc partitions in recovery
+	# kernel.
+	# If rootfs A/B is enabled, do misc update in normal kernel.
+	# If rootfs A/B is not enabled, either of the following
+	# conditions matches, do misc update in recovery kernel:
+	# 1. BSP version is upgraded, for example, R35-5 to R36-4
+	# 2. UEFI secureboot is enabled in the OTA payload package.
+	# Then echo "true" to "update_misc_in_recovery" file in the OTA
+	# work directory and return true.
+	# Usage:
+	#        is_updating_misc_in_recovery {work_dir}
+
+	# Return false if rootfs A/B is enabled
+	# shellcheck disable=SC2153
+	if [ "${ROOTFS_AB_ENABLED}" == 1 ]; then
+		ota_log "Rootfs A/B is enabled, update misc partitions directly"
+		return 1
+	fi
+
+	# Return true if BSP version is upgraded
+	if is_bsp_version_upgraded "${OTA_WORK_DIR}"; then
+		ota_log "BSP version is to be upgraded, update misc partitions in the recovery kernel"
+		echo "true" > "${OTA_WORK_DIR}/update_misc_in_recovery"
+		return 0
+	fi
+
+	# Return true if UEFI secureboot is enabled in OTA payload package
+	if is_uefi_sb_enabled_in_ota "${OTA_WORK_DIR}"; then
+		ota_log "UEFI secureboot is enabled in OTA payload package, update misc partition in the recovery kernel"
+		echo "true" > "${OTA_WORK_DIR}/update_misc_in_recovery"
+		return 0
+	fi
+
+	echo "false" > "${OTA_WORK_DIR}/update_misc_in_recovery"
+	return 1
+}
+
+update_misc_partitions()
+{
+	# Update misc partitions without layout change on
+	# the user storage device
+	# Usage:
+	#        update_misc_partitions \
+	#		{work_dir} {target_dir}
+	local work_dir="${1}"
+	local target_dir="${2}"
+	ota_log "Updating misc partitions without layout change"
+
+	# Export the functions used to update alt partitions which are
+	# defined in the "nv_ota_update_alt_part.func"
+	source "${work_dir}"/nv_ota_update_alt_part.func
+
+	# Update misc partitions, including recovery, recovery-dtb and esp
+	ota_log "install_partition_with_alt ${target_dir} recovery"
+	if ! install_partition_with_alt "${target_dir}" "recovery"; then
+		ota_log "Failed to run \"install_partition_with_alt ${target_dir} recovery\""
+		return 1
+	fi
+	ota_log "install_partition_with_alt ${target_dir} recovery-dtb"
+	if ! install_partition_with_alt "${target_dir}" "recovery-dtb"; then
+		ota_log "Failed to run \"install_partition_with_alt ${target_dir} recovery-dtb\""
+		return 1
+	fi
+	ota_log "install_partition_with_alt ${target_dir} esp"
+	if ! install_partition_with_alt "${target_dir}" "esp"; then
+		ota_log "Failed to run \"install_partition_with_alt ${target_dir} esp\""
+		return 1
+	fi
+	return 0
+}
+
+check_required_utilities()
+{
+	# Check whether the required utilities for OTA are installed
+	# Usage:
+	#        check_required_utilities
+
+	# Check efibootmgr and efibootdump
+	if ! which efibootmgr; then
+		echo "The efibootmgr is not found, please use \"sudo apt-get install efibootmgr\" to install it first."
+		return 1
+	fi
+	if ! which efibootdump; then
+		echo "The efibootdump is not found, please use \"sudo apt-get install efibootmgr\" to install it first."
+		return 1
+	fi
+
+	# Check nvme
+	if ! which nvme; then
+		echo "The nvme is not found, please use \"sudo apt-get install nvme-cli\" to install it first."
+		return 1
+	fi
+
+	return 0
+}
+
+find_uefi_sb_overlay()
+{
+	# Find "uefi_secureboot_overlay_multi_specs.tar.gz"
+	# in the same directory of the OTA payload package.
+	# If it exists, copy it to OTA work directory.
+	local ota_package="${1}"
+	local work_dir="${2}"
+	local ota_package_path=
+	local ota_package_dir=
+	local uefi_sb_multi_specs=
+
+	# Get the directory storing OTA payload package
+	ota_package_path="$(readlink -f "${ota_package}")"
+	ota_package_dir="$(dirname "${ota_package_path}")"
+
+	# If "uefi_secureboot_overlay_multi_specs.tar.gz" exists,
+	# copy it into OTA work directory
+	uefi_sb_multi_specs="${ota_package_dir}/${_UEFI_SECUREBOOT_OVERLAY_PACKAGE_MULTI_SPECS}"
+	if [ -f "${uefi_sb_multi_specs}" ]; then
+		ota_log "Copying ${uefi_sb_multi_specs} into ${work_dir}"
+		cp -vf "${uefi_sb_multi_specs}" "${work_dir}"/
+	fi
+}
+
+is_t264_device()
+{
+	# Check whether it is t264 device
+	# Usage:
+	#        is_t264_device
+	local soc_id_path="/sys/devices/soc0/soc_id"
+	local soc_id=
+	if [ -e "${soc_id_path}" ]; then
+		soc_id="$(tr -d '\0' < "${soc_id_path}")"
+		# t264: soc_id=38
+		if [ "${soc_id}" == "38" ]; then
+			return 0
+		fi
+	fi
+	return 1
+}
