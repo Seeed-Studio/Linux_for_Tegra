@@ -19,10 +19,10 @@ stages:
   - reserver-industrial-orin-nano-8g-j401
   - reserver-industrial-orin-nx-16g-j401
   - reserver-industrial-orin-nx-8g-j401
-  - recomputer-industrial-orin-nano-4g-j201
-  - recomputer-industrial-orin-nano-8g-j201
-  - recomputer-industrial-orin-nx-16g-j201
-  - recomputer-industrial-orin-nx-8g-j201
+  - recomputer-industrial-orin-nano-4g-j401
+  - recomputer-industrial-orin-nano-8g-j401
+  - recomputer-industrial-orin-nx-16g-j401
+  - recomputer-industrial-orin-nx-8g-j401
   - recomputer-orin-nano-4g-j401
   - recomputer-orin-nano-8g-j401
   - recomputer-orin-nx-16g-j401
@@ -270,8 +270,8 @@ build-reserver-industrial-orin-nx-8g-j401:
     - echo "Building for $CONFIG"
     - *build_image_script
 
-build-recomputer-industrial-orin-nano-4g-j201:
-  stage: recomputer-industrial-orin-nano-4g-j201 
+build-recomputer-industrial-orin-nano-4g-j401:
+  stage: recomputer-industrial-orin-nano-4g-j401 
   rules:
     - if: '$CI_COMMIT_TAG' 
       when: on_success
@@ -284,7 +284,7 @@ build-recomputer-industrial-orin-nano-4g-j201:
   tags:
     - x86-shell
   variables:
-    CONFIG: "recomputer-industrial-orin-j201"
+    CONFIG: "recomputer-industrial-orin-j401"
     BOARDID: "3767"
     BOARDSKU: "0004"
     FAB: "300"
@@ -295,8 +295,8 @@ build-recomputer-industrial-orin-nano-4g-j201:
     - echo "Building for $CONFIG"
     - *build_image_script
 
-build-recomputer-industrial-orin-nano-8g-j201:
-  stage: recomputer-industrial-orin-nano-8g-j201 
+build-recomputer-industrial-orin-nano-8g-j401:
+  stage: recomputer-industrial-orin-nano-8g-j401 
   rules:
     - if: '$CI_COMMIT_TAG' 
       when: on_success
@@ -309,7 +309,7 @@ build-recomputer-industrial-orin-nano-8g-j201:
   tags:
     - x86-shell
   variables:
-    CONFIG: "recomputer-industrial-orin-j201"
+    CONFIG: "recomputer-industrial-orin-j401"
     BOARDID: "3767"
     BOARDSKU: "0003"
     FAB: "300"
@@ -320,8 +320,8 @@ build-recomputer-industrial-orin-nano-8g-j201:
     - echo "Building for $CONFIG"
     - *build_image_script
 
-build-recomputer-industrial-orin-nx-16g-j201:
-  stage: recomputer-industrial-orin-nx-16g-j201 
+build-recomputer-industrial-orin-nx-16g-j401:
+  stage: recomputer-industrial-orin-nx-16g-j401 
   rules:
     - if: '$CI_COMMIT_TAG' 
       when: on_success
@@ -334,7 +334,7 @@ build-recomputer-industrial-orin-nx-16g-j201:
   tags:
     - x86-shell
   variables:
-    CONFIG: "recomputer-industrial-orin-j201"
+    CONFIG: "recomputer-industrial-orin-j401"
     BOARDID: "3767"
     BOARDSKU: "0000"
     FAB: "300"
@@ -345,8 +345,8 @@ build-recomputer-industrial-orin-nx-16g-j201:
     - echo "Building for $CONFIG"
     - *build_image_script
 
-build-recomputer-industrial-orin-nx-8g-j201:
-  stage: recomputer-industrial-orin-nx-8g-j201 
+build-recomputer-industrial-orin-nx-8g-j401:
+  stage: recomputer-industrial-orin-nx-8g-j401 
   rules:
     - if: '$CI_COMMIT_TAG' 
       when: on_success
@@ -359,7 +359,7 @@ build-recomputer-industrial-orin-nx-8g-j201:
   tags:
     - x86-shell
   variables:
-    CONFIG: "recomputer-industrial-orin-j201"
+    CONFIG: "recomputer-industrial-orin-j401"
     BOARDID: "3767"
     BOARDSKU: "0001"
     FAB: "300"

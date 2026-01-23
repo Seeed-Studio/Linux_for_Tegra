@@ -114,7 +114,7 @@ Compared to the original Linux_for_Tegra, we have added the following folders an
 
 Although Seeed has many products based on Jetson, only the following five configuration files are used. For detailed correspondence, see .[gitlab-ci.yml](./.gitlab-ci.yml)..
 
-- recomputer-industrial-orin-j201.conf
+- recomputer-industrial-orin-j401.conf
 - recomputer-orin-j401.conf
 - reserver-agx-orin-j501x.conf
 - reserver-agx-orin-j501x-gmsl.conf
