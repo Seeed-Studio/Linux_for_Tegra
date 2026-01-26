@@ -40,7 +40,7 @@ stages:
   - id 
   - export DATE_STR=$(TZ='Asia/Hong_Kong' date +%Y-%m-%d)
   # clean the rootfs for every image
-  - ls rootfs/ -l
+  - mkdir -p rootfs
   - rm -rf rootfs/*
   - wget  http://192.168.1.77/jetson/$ROOTFS_NAME -q
   - tar xpf $ROOTFS_NAME -C rootfs
@@ -145,7 +145,7 @@ jetson-agx-thor-devkit:
   tags:
     - x86-shell
   variables:
-     CONFIG: "jetson-agx-thor-devkit"
+    CONFIG: "jetson-agx-thor-devkit"
     BOARDID: "3834"
     BOARDSKU: "0008"
     FAB: "400"
