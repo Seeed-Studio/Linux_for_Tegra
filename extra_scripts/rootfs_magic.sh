@@ -27,6 +27,5 @@ APT::Periodic::Download-Upgradeable-Packages "0";
 APT::Periodic::AutocleanInterval "0";
 APT::Periodic::Unattended-Upgrade "0";
 EOF
-chattr +i /etc/apt/apt.conf.d/99disable-auto-updates
-apt-get remove --purge update-manager update-notifier
+sudo apt-get remove --purge -y update-manager update-notifier
 sudo apt-mark hold nvidia-l4t-display-kernel nvidia-l4t-kernel nvidia-l4t-kernel-dtbs nvidia-l4t-kernel-headers nvidia-l4t-kernel-oot-headers nvidia-l4t-kernel-oot-modules nvidia-l4t-initrd
