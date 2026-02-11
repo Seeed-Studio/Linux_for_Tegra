@@ -1,0 +1,258 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+/dts-v1/;
+
+#include "tegra264-p3834-0008.dtsi"
+#include "tegra264-p4071-0000.dtsi"
+
+/ {
+	model = "Seeed reComputer Carrier j601 board";
+	compatible = "nvidia,p4071-0000+p3834-0008", "nvidia,p3834-0008", "nvidia,tegra264";
+	
+	bus@0 {
+		mttcan@81102f0000 {
+			status = "okay";
+		};
+		
+		mttcan@8110300000 {
+			status = "okay";
+		};
+		
+		mttcan@8110330000 {
+			status = "okay";
+		};
+		
+		mttcan@8110340000 {
+			status = "okay";
+		};
+		
+		mgbe0: ethernet@a808a10000 {
+			status = "okay";
+		};
+		
+		mgbe1: ethernet@a808b10000 {
+			status = "okay";
+		};
+		
+		mgbe2: ethernet@a808d10000 {
+			status = "okay";
+		};
+		
+		mgbe3: ethernet@a808e10000 {
+			status = "okay";
+		};
+		
+		i2c@810c630000 {
+			status = "okay";
+			
+			pcf8563@51 {
+				compatible = "nxp,pcf8563";
+				reg = <0x51>;
+			};
+			
+			gpio_xten: gpio_xten@21 {
+				compatible = "nxp,pca9535";
+				reg = <0x21>;
+				gpio-controller;
+				#gpio-cells = <2>;
+				ngpios = <16>;
+				interrupt-parent = <&gpio_main>;
+				interrupts = <TEGRA264_MAIN_GPIO(L, 4) IRQ_TYPE_EDGE_FALLING>;
+				
+				line-names =
+				"CAN0_120R", "CAN1_120R",
+				"CAN2_120R_EN", "CAN3_120R_EN",
+				"RS485_120R_EN", "UART2_EN",
+				"UART1_EN", "",
+				"", "",
+				"USB_HUB_RSTn", "AUDIO_RSTn",
+				"M2B_RSTn", "",
+				"", "";
+				
+				can0_120r {
+					gpio-hog;
+					gpios = <0 GPIO_ACTIVE_HIGH>;
+					output-high;
+					line-name = "CAN0_120R";
+				};
+				
+				can1_120r {
+					gpio-hog;
+					gpios = <1 GPIO_ACTIVE_HIGH>;
+					output-high;
+					line-name = "CAN1_120R";
+				};
+				
+				can2_120r_en {
+					gpio-hog;
+					gpios = <2 GPIO_ACTIVE_HIGH>;
+					output-high;
+					line-name = "CAN2_120R_EN";
+				};
+				
+				can3_120r_en {
+					gpio-hog;
+					gpios = <3 GPIO_ACTIVE_HIGH>;
+					output-high;
+					line-name = "CAN3_120R_EN";
+				};
+				
+				rs485_120r_en {
+					gpio-hog;
+					gpios = <4 GPIO_ACTIVE_HIGH>;
+					output-high;
+					line-name = "RS485_120R_EN";
+				};
+				
+				uart2_en {
+					gpio-hog;
+					gpios = <5 GPIO_ACTIVE_HIGH>;
+					output-high;
+					line-name = "UART2_EN";
+				};
+				
+				uart1_en {
+					gpio-hog;
+					gpios = <6 GPIO_ACTIVE_HIGH>;
+					output-high;
+					line-name = "UART1_EN";
+				};
+				
+				usb_hub_rstn {
+					gpio-hog;
+					gpios = <10 GPIO_ACTIVE_HIGH>;
+					output-high;
+					line-name = "USB_HUB_RSTn";
+				};
+				
+				audio_rstn {
+					gpio-hog;
+					gpios = <11 GPIO_ACTIVE_HIGH>;
+					output-high;
+					line-name = "AUDIO_RSTn";
+				};
+				
+				m2b_rstn {
+					gpio-hog;
+					gpios = <12 GPIO_ACTIVE_HIGH>;
+					output-high;
+					line-name = "M2B_RSTn";
+				};
+			};
+		};
+		
+		i2c@810c680000 {
+			status = "okay";
+			
+			rt5640: audio-codec@1c {
+				status = "disabled";
+			};
+			
+			tlv320aic3104: audio-codec@18 {
+				compatible = "ti,tlv320aic3104";
+				reg = <0x18>;
+				
+				clocks = <&bpmp TEGRA264_CLK_AUD_MCLK>;
+				clock-names = "mclk";
+				
+				sound-name-prefix = "CVB-AIC";
+				status = "okay";
+				
+				port {
+					aic3104_ep: endpoint {
+						link-name = "aic3104-playback";
+						remote-endpoint = <&i2s4_dap>;
+						mclk-fs = <256>;
+					};
+				};
+			};
+			
+		};
+	};
+	
+	pwm-fan {
+		cooling-levels = <77 102 140 192 255>;
+	};
+	
+	thermal-shutdown-alert {
+		status = "disabled";
+	};
+	
+	thermal-zones {
+		tj-thermal {
+			trips {
+				tj_trip_active0: active-0 {
+					temperature = <80000>;
+					hysteresis = <0>;
+					type = "active";
+				};
+				
+				tj_trip_active1: active-1 {
+					temperature = <86000>;
+					hysteresis = <0>;
+					type = "active";
+				};
+				
+				tj_trip_active2: active-2 {
+					temperature = <91000>;
+					hysteresis = <0>;
+					type = "active";
+				};
+				
+				tj_trip_active3: active-3 {
+					temperature = <100000>;
+					hysteresis = <0>;
+					type = "active";
+				};
+			};
+			
+			cooling-maps {
+				map-active-0 {
+					cooling-device = <&soc_fan 0 1>;
+					trip = <&tj_trip_active0>;
+				};
+				
+				map-active-1 {
+					cooling-device = <&soc_fan 1 2>;
+					trip = <&tj_trip_active1>;
+				};
+				
+				map-active-2 {
+					cooling-device = <&soc_fan 2 3>;
+					trip = <&tj_trip_active2>;
+				};
+				
+				map-active-3 {
+					cooling-device = <&soc_fan 3 4>;
+					trip = <&tj_trip_active3>;
+				};
+			};
+		};
+	};
+
+	leds {
+		compatible = "gpio-leds";
+
+		blue_led: blue {
+			label = "blue";
+			gpios = <&gpio_main TEGRA264_MAIN_GPIO(L, 1) GPIO_ACTIVE_HIGH>;
+			default-state = "off";
+		};
+
+		green_led: green {
+			label = "green";
+			gpios = <&gpio_main TEGRA264_MAIN_GPIO(F, 7) GPIO_ACTIVE_HIGH>;
+			default-state = "off";
+		};
+
+		red_led: red {
+			label = "red";
+			gpios = <&gpio_main TEGRA264_MAIN_GPIO(G, 0) GPIO_ACTIVE_HIGH>;
+			default-state = "off";
+		};
+	};
+};
+
+&i2s4_dap {
+	remote-endpoint = <&aic3104_ep>;
+};
