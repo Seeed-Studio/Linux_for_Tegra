@@ -75,6 +75,7 @@ stages:
   - export CROSS_COMPILE=`realpath .`/l4t-gcc/aarch64--glibc--stable-2022.08-1/bin/aarch64-buildroot-linux-gnu-
   # build the kernel
   - cd source/
+  - ln -sf ../../../../../../nvethernetrm nvidia-oot/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm
   - ./nvbuild.sh
   # deploy new kernel and dtb
   - ./do_copy.sh
