@@ -1,5 +1,5 @@
 variables:
-  CONFIG: "" 
+  CONFIG: ""
   BOARDID: ""
   BOARDSKU: ""
   FAB: ""
@@ -17,7 +17,7 @@ variables:
 
 stages:
   - jetson-agx-thor-devkit
-
+  - recomputer-thor-carrier-j601
   - custom-firmware
 
 # common code of building target image
@@ -50,7 +50,13 @@ stages:
       cp -v extra_scripts/chip_info.bin_bak bootloader/chip_info.bin_bak
     fi
   # apply necessary changes to rootfs
-  - ./apply_binaries.sh
+  # if BOARDID is 3834, then apply openrm
+  - >
+    if [[ $BOARDID == "3834" ]]; then
+      ./apply_binaries.sh --openrm
+    else
+      ./apply_binaries.sh
+    fi
   # record the system image name and commit info of seeed to target rootfs.
   - echo "# Seeed Image Name mfi_$CI_JOB_STAGE-$JETPACKVER-$JETSONVER-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
   - echo "# branch $CI_COMMIT_REF_NAME" >> ./rootfs/etc/nv_tegra_release
@@ -146,6 +152,29 @@ jetson-agx-thor-devkit:
     - x86-shell
   variables:
     CONFIG: "jetson-agx-thor-devkit"
+    BOARDID: "3834"
+    BOARDSKU: "0008"
+    FAB: "400"
+    BOARDREV: "G.5"
+    CHIP_SKU: "00:00:00:A0"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+recomputer-thor-carrier-j601:
+  stage: recomputer-thor-carrier-j601
+  rules:
+    - if: '$CI_COMMIT_TAG'
+      when: on_success
+    - if: '$START_TASK == "recomputer-thor-carrier-j601"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "recomputer-thor-carrier-j601"
     BOARDID: "3834"
     BOARDSKU: "0008"
     FAB: "400"
