@@ -51,7 +51,7 @@ pinmux@ac281000 {
 			batt_oc_paa3 {
 				nvidia,pins = "batt_oc_paa3";
 				nvidia,function = "soc_therm_oc2";
-				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+				nvidia,pull = <TEGRA_PIN_PULL_UP>;
 				nvidia,tristate = <TEGRA_PIN_ENABLE>;
 				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
 				nvidia,drv-type = <TEGRA_PIN_1X_DRIVER>;
