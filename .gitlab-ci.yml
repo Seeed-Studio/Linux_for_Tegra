@@ -137,6 +137,7 @@ stages:
 
 jetson-agx-thor-devkit:
   stage: jetson-agx-thor-devkit
+  timeout: 3h
   rules:
     - if: '$CI_COMMIT_TAG'
       when: on_success
@@ -160,6 +161,7 @@ jetson-agx-thor-devkit:
 
 recomputer-thor-carrier-j601:
   stage: recomputer-thor-carrier-j601
+  timeout: 3h
   rules:
     - if: '$CI_COMMIT_TAG'
       when: on_success
