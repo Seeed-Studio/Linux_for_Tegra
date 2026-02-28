@@ -169,7 +169,19 @@
 			
 		};
 	};
+
+	pwm@810c5e0000 {
+		status = "disabled";
+	};
 	
+	pwm@810c5f0000 {
+		status = "disabled";
+	};
+	
+	pwm@810c600000 {
+		status = "disabled";
+	};
+
 	pwm-fan {
 		cooling-levels = <77 102 140 192 255>;
 	};
