@@ -81,25 +81,25 @@
 				
 				can0_120r {
 					gpios = <0 GPIO_ACTIVE_HIGH>;
-					output-high;
+					output-low;
 					line-name = "CAN0_120R";
 				};
 				
 				can1_120r {
 					gpios = <1 GPIO_ACTIVE_HIGH>;
-					output-high;
+					output-low;
 					line-name = "CAN1_120R";
 				};
 				
 				can2_120r_en {
 					gpios = <2 GPIO_ACTIVE_HIGH>;
-					output-high;
+					output-low;
 					line-name = "CAN2_120R_EN";
 				};
 				
 				can3_120r_en {
 					gpios = <3 GPIO_ACTIVE_HIGH>;
-					output-high;
+					output-low;
 					line-name = "CAN3_120R_EN";
 				};
 				
