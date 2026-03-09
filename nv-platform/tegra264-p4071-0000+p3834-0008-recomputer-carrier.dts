@@ -42,6 +42,16 @@
 			status = "okay";
 		};
 		
+		serial@810c530000 {
+			rs485-rts-active-low;
+			rs485-rts-delay = <0 0>;
+		};
+
+		serial@810c540000 {
+			rs485-rts-active-low;
+			rs485-rts-delay = <0 0>;
+		};
+		
 		i2c@810c630000 {
 			status = "okay";
 			
@@ -70,70 +80,60 @@
 				"", "";
 				
 				can0_120r {
-					gpio-hog;
 					gpios = <0 GPIO_ACTIVE_HIGH>;
 					output-high;
 					line-name = "CAN0_120R";
 				};
 				
 				can1_120r {
-					gpio-hog;
 					gpios = <1 GPIO_ACTIVE_HIGH>;
 					output-high;
 					line-name = "CAN1_120R";
 				};
 				
 				can2_120r_en {
-					gpio-hog;
 					gpios = <2 GPIO_ACTIVE_HIGH>;
 					output-high;
 					line-name = "CAN2_120R_EN";
 				};
 				
 				can3_120r_en {
-					gpio-hog;
 					gpios = <3 GPIO_ACTIVE_HIGH>;
 					output-high;
 					line-name = "CAN3_120R_EN";
 				};
 				
 				rs485_120r_en {
-					gpio-hog;
 					gpios = <4 GPIO_ACTIVE_HIGH>;
 					output-high;
 					line-name = "RS485_120R_EN";
 				};
 				
 				uart2_en {
-					gpio-hog;
 					gpios = <5 GPIO_ACTIVE_HIGH>;
-					output-high;
+					output-low;
 					line-name = "UART2_EN";
 				};
 				
 				uart1_en {
-					gpio-hog;
 					gpios = <6 GPIO_ACTIVE_HIGH>;
-					output-high;
+					output-low;
 					line-name = "UART1_EN";
 				};
 				
 				usb_hub_rstn {
-					gpio-hog;
 					gpios = <10 GPIO_ACTIVE_HIGH>;
 					output-high;
 					line-name = "USB_HUB_RSTn";
 				};
 				
 				audio_rstn {
-					gpio-hog;
 					gpios = <11 GPIO_ACTIVE_HIGH>;
 					output-high;
 					line-name = "AUDIO_RSTn";
 				};
 				
 				m2b_rstn {
-					gpio-hog;
 					gpios = <12 GPIO_ACTIVE_HIGH>;
 					output-high;
 					line-name = "M2B_RSTn";
