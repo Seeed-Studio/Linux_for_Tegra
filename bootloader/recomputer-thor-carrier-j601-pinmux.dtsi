@@ -1889,7 +1889,7 @@ pinmux@ac281000 {
 				nvidia,pins = "soc_gpio171_pu1";
 				nvidia,function = "rsvd0";
 				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
-				nvidia,tristate = <TEGRA_PIN_ENABLE>;
+				nvidia,tristate = <TEGRA_PIN_DISABLE>;
 				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
 				nvidia,drv-type = <TEGRA_PIN_1X_DRIVER>;
 				nvidia,e-io-od = <TEGRA_PIN_DISABLE>;
@@ -2142,7 +2142,7 @@ pinmux@ac281000 {
 				nvidia,pins = "soc_gpio285_pz7";
 				nvidia,function = "rsvd0";
 				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
-				nvidia,tristate = <TEGRA_PIN_ENABLE>;
+				nvidia,tristate = <TEGRA_PIN_DISABLE>;
 				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
 				nvidia,drv-type = <TEGRA_PIN_1X_DRIVER>;
 				nvidia,e-io-od = <TEGRA_PIN_DISABLE>;
@@ -2153,7 +2153,7 @@ pinmux@ac281000 {
 				nvidia,pins = "soc_gpio286_pal0";
 				nvidia,function = "rsvd0";
 				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
-				nvidia,tristate = <TEGRA_PIN_ENABLE>;
+				nvidia,tristate = <TEGRA_PIN_DISABLE>;
 				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
 				nvidia,drv-type = <TEGRA_PIN_1X_DRIVER>;
 				nvidia,e-io-od = <TEGRA_PIN_DISABLE>;
