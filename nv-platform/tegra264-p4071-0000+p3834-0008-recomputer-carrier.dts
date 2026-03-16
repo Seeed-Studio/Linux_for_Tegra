@@ -43,6 +43,7 @@
 		};
 		
 		serial@810c530000 {
+			linux,rs485-enabled-at-boot-time;
 			rs485-rts-active-low;
 			rs485-rts-delay = <0 0>;
 		};
