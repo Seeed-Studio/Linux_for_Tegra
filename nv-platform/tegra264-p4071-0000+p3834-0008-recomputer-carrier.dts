@@ -47,7 +47,7 @@
 			rs485-rts-active-low;
 			rs485-rts-delay = <0 0>;
 		};
-
+		
 		serial@810c540000 {
 			rs485-rts-active-low;
 			rs485-rts-delay = <0 0>;
@@ -160,6 +160,9 @@
 				clocks = <&bpmp TEGRA264_CLK_AUD_MCLK>;
 				clock-names = "mclk";
 				
+				/* Enable MICBIAS for headset microphone */
+				ai3x-micbias-vg = <3>; /* MICBIAS_AVDD = connected to AVDD (3.3V) */
+				
 				sound-name-prefix = "TLV320";
 				#sound-dai-cells = <1>;
 				status = "okay";
@@ -168,13 +171,14 @@
 					aic3104_ep: endpoint {
 						link-name = "tlv320-playback";
 						remote-endpoint = <&i2s4_dap>;
-						mclk-fs = <256>;
+						// mclk-fs = <256>;
+						system-clock-frequency = <24576000>;
 					};
 				};
 			};
 		};
 	};
-
+	
 	sound {
 		status = "okay";
 		
@@ -249,7 +253,10 @@
 		widgets =
 		"Headphone", "TLV320 Headphone Jack",
 		"Line", "TLV320 Line In";
-		
+
+		assigned-clocks = <&bpmp TEGRA264_CLK_PLLA_OUT0>, <&bpmp TEGRA264_CLK_AUD_MCLK>;
+		assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLA>, <&bpmp TEGRA264_CLK_PLLA_OUT0>;
+		assigned-clock-rates = <0>, <24576000>;
 		routing =
 		"TLV320 Playback",         "I2S4 DAP-Playback",
 		"I2S4 DAP-Capture",        "TLV320 Capture",
