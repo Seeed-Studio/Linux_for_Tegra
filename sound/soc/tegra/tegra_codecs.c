@@ -177,6 +177,21 @@ static int tegra_machine_respeaker_init(struct snd_soc_pcm_runtime *rtd)
 	return simple_util_dai_init(rtd);
 }
 
+static int tegra_machine_tlv320_init(struct snd_soc_pcm_runtime *rtd)
+{
+	struct device *dev = rtd->card->dev	;
+	int err;
+	
+	err = snd_soc_dai_set_sysclk(rtd->dais[rtd->dai_link->num_cpus],
+				     0, 24576000, SND_SOC_CLOCK_IN);
+	if (err) {
+		dev_err(dev, "failed to set tlv320 sysclk!\n");
+		return err;
+	}
+
+	return simple_util_dai_init(rtd);
+}
+
 static int set_pll_sysclk(struct snd_soc_pcm_runtime *rtd, int pll_src,
 			  int clk_id, unsigned int srate,
 			  unsigned int channels, unsigned int width,
@@ -324,6 +339,10 @@ int tegra_codecs_init(struct snd_soc_card *card)
 			dai_links[i].init = tegra_machine_fepi_init;
 		else if (strstr(dai_links[i].name, "respeaker-4-mic-array"))
 			dai_links[i].init = tegra_machine_respeaker_init;
+		else if (strstr(dai_links[i].name, "tlv320-playback"))
+			dai_links[i].init = tegra_machine_tlv320_init;
+		else
+			continue;
 	}
 
 	return 0;
