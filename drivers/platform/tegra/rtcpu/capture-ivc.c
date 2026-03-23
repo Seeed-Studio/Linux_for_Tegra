@@ -22,6 +22,10 @@
 #include <trace/events/tegra_capture.h>
 
 #include "capture-ivc-priv.h"
+#include <linux/semaphore.h>
+
+/* Timeout for acquiring channel-id */
+#define TIMEOUT_ACQUIRE_CHANNEL_ID 120
 
 /**
  * @brief Transmit a message over IVC channel with mutex protection
@@ -348,6 +352,10 @@ int tegra_capture_ivc_notify_chan_id(uint32_t chan_id, uint32_t trans_id)
 
 	civc = __scivc_control;
 
+    if (down_timeout(&civc->cb_ctx[chan_id].sem_ch, TIMEOUT_ACQUIRE_CHANNEL_ID)) {
+        return -EBUSY;
+    }
+
 	mutex_lock(&civc->cb_ctx_lock);
 
 	if (civc->cb_ctx[trans_id].cb_func == NULL) {
@@ -500,6 +508,8 @@ int tegra_capture_ivc_unregister_control_cb(uint32_t id)
 	civc = __scivc_control;
 
 	mutex_lock(&civc->cb_ctx_lock);
+
+	up(&civc->cb_ctx[id].sem_ch);
 
 	if (civc->cb_ctx[id].cb_func == NULL) {
 		pr_warn("%s: control channel %u is idle\n", __func__, id);
@@ -798,6 +808,8 @@ static int tegra_capture_ivc_probe(struct tegra_ivc_channel *chan)
 
 	mutex_init(&civc->cb_ctx_lock);
 	mutex_init(&civc->ivc_wr_lock);
+
+	for (i = 0; i < TOTAL_CHANNELS; i++) sema_init(&civc->cb_ctx[i].sem_ch, 1);
 
 	/* Initialize kworker */
 	kthread_init_work(&civc->work, tegra_capture_ivc_worker);
