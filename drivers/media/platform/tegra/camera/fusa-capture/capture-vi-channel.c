@@ -417,7 +417,8 @@ static int vi_channel_release(
 	struct tegra_vi_channel *chan = file->private_data;
 	unsigned int channel = iminor(inode);
 
-	vi_channel_close_ex(channel, chan);
+	if(chan != NULL)
+		vi_channel_close_ex(channel, chan);
 
 	return 0;
 }
@@ -652,8 +653,10 @@ static long vi_channel_ioctl(
 		if (err < 0) {
 			dev_err(chan->dev,
 				"%s: memory setup failed\n", __func__);
-			destroy_buffer_table(buffer_ctx);
-			buffer_ctx = NULL;
+			if (buffer_ctx != NULL) {
+				destroy_buffer_table(buffer_ctx);
+				buffer_ctx = NULL;
+			}
 			return -EFAULT;
 		}
 
@@ -664,8 +667,10 @@ static long vi_channel_ioctl(
 				"%s: descriptor buffer is too small for given queue depth\n",
 				__func__);
 			capture_common_unpin_memory(&capture->requests);
-			destroy_buffer_table(buffer_ctx);
-			buffer_ctx = NULL;
+			if (buffer_ctx != NULL) {
+				destroy_buffer_table(buffer_ctx);
+				buffer_ctx = NULL;
+			}
 			return -ENOMEM;
 		}
 
@@ -674,8 +679,10 @@ static long vi_channel_ioctl(
 		if (err < 0) {
 			vi_chan_err(chan, "vi capture setup failed\n");
 			capture_common_unpin_memory(&capture->requests);
-			destroy_buffer_table(buffer_ctx);
-			buffer_ctx = NULL;
+			if (buffer_ctx != NULL) {
+				destroy_buffer_table(buffer_ctx);
+				buffer_ctx = NULL;
+			}
 			return err;
 		}
 

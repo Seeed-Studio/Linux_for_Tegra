@@ -30,7 +30,7 @@
 /* Width alignment */
 #define TEGRA_WIDTH_ALIGNMENT	1
 /* Stride alignment */
-#define TEGRA_STRIDE_ALIGNMENT	1
+#define TEGRA_STRIDE_ALIGNMENT	64 //1, orbbec modify
 /* Height alignment */
 #define TEGRA_HEIGHT_ALIGNMENT	1
 /* Size alignment */
@@ -44,6 +44,8 @@
 #define TEGRA_IMAGE_FORMAT_DEF	32
 
 enum tegra_image_dt {
+	TEGRA_IMAGE_DT_EMBEDDED_8 = 18,
+
 	TEGRA_IMAGE_DT_YUV420_8 = 24,
 	TEGRA_IMAGE_DT_YUV420_10,
 
@@ -64,6 +66,11 @@ enum tegra_image_dt {
 	TEGRA_IMAGE_DT_RAW12,
 	TEGRA_IMAGE_DT_RAW14,
 	TEGRA_IMAGE_DT_RAW16,
+
+	TEGRA_IMAGE_DT_USER_1 = 48,
+	TEGRA_IMAGE_DT_USER_2,
+	TEGRA_IMAGE_DT_USER_3,
+	TEGRA_IMAGE_DT_USER_4,
 };
 
 /* Supported CSI to VI Data Formats */

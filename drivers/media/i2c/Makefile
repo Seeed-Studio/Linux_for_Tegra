@@ -17,6 +17,12 @@ subdir-ccflags-y += -Werror
 ifneq ($(NV_BUILD_SYSTEM_TYPE),embedded-linux)
 obj-m += max9295.o
 obj-m += max9296.o
+## orbbec max9296/max96712+ max9295d + G300
+obj-m += obc_max9296.o
+obj-m += obc_max96712.o
+subdir-ccflags-y += -DCONFIG_TEGRA_CAMERA_PLATFORM
+obj-m += g300.o
+g300-objs := obc_g300_seri.o obc_g300_ctrl.o obc_g300.o
 ifndef CONFIG_TEGRA_SYSTEM_TYPE_ACK
 obj-m += max96712.o
 

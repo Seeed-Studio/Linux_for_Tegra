@@ -23,4 +23,5 @@ ifdef CONFIG_TEGRA_HOST1X
 obj-m += nvscic2c-pcie/
 endif
 obj-m += ioctl_example.o
+obj-m += obc_cam_sync.o
 obj-m += tegra-cec/

@@ -467,6 +467,39 @@ static void vi5_setup_surface(struct tegra_channel *chan,
 		chan->capture_descr_sequence += 1;
 }
 
+static void vi5_release_metadata_buffer(struct tegra_channel *chan,
+	struct vb2_v4l2_buffer *vbuf)
+{
+	struct vb2_buffer *evb = NULL;
+	struct vb2_v4l2_buffer *evbuf;
+	void* frm_buffer;
+
+	spin_lock(&chan->embedded.spin_lock);
+	if (0 < chan->embedded.num_buffers) {
+		evb = chan->embedded.buffers[chan->embedded.tail];
+		chan->embedded.buffers[chan->embedded.tail] = NULL;
+		chan->embedded.tail++;
+		if (chan->embedded.tail > 15)
+			chan->embedded.tail = chan->embedded.tail - 16;
+		chan->embedded.num_buffers--;
+	}
+	spin_unlock(&chan->embedded.spin_lock);
+
+	if (!evb)
+		return;
+
+	frm_buffer = vb2_plane_vaddr(evb, 0);
+	if (!frm_buffer)
+		return;
+
+	memcpy(frm_buffer, chan->emb_buf_addr, 96); //255, orbbec modify
+	evbuf = to_vb2_v4l2_buffer(evb);
+	evbuf->sequence = vbuf->sequence;
+	vb2_set_plane_payload(evb, 0, 96); //68, orbbec modify
+	evb->timestamp = vbuf->vb2_buf.timestamp;
+	vb2_buffer_done(evb, VB2_BUF_STATE_DONE);
+}
+
 static void vi5_release_buffer(struct tegra_channel *chan,
 	struct tegra_channel_buffer *buf)
 {
@@ -482,6 +515,9 @@ static void vi5_release_buffer(struct tegra_channel *chan,
 	vb2_set_plane_payload(&vbuf->vb2_buf, 0, chan->format.sizeimage);
 
 	vb2_buffer_done(&vbuf->vb2_buf, buf->vb2_state);
+
+	if (chan->embedded_data_height == 1 && buf->vb2_state == VB2_BUF_STATE_DONE)
+		vi5_release_metadata_buffer(chan, vbuf);
 }
 
 static void vi5_capture_enqueue(struct tegra_channel *chan,
@@ -582,9 +618,16 @@ static void vi5_capture_dequeue(struct tegra_channel *chan,
 			} else {
 				dev_warn(vi->dev,
 					"corr_err: discarding frame %d, flags: %d, "
-					"err_data %d\n",
+					"err_data %d, vc: %d\n",
 					descr->status.frame_id, descr->status.flags,
-					descr->status.err_data);
+					descr->status.err_data, chan->virtual_channel);
+
+				/* G335Lg: err_data 131072 (20000h) | 64 (40h) | 4194400 (400060h) |262144(40000) | 256 (100h)leading to channel
+				* timeout. This happens when first frame is corrupted - no md
+				* and less lines than requested. Channel reset time is 6ms */
+				if (descr->status.err_data & 0x460160) {
+					goto uncorr_err;
+				}
 				frame_err = true;
 			}
 		} else if (!vi_port) {
