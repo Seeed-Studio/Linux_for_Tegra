@@ -1028,17 +1028,11 @@ int max9296a_power_on(struct device *dev)
 
 		gpio_direction_output(priv->reset_gpio, 1);
 
-		if(gpio_cansleep(priv->reset_gpio))
-			gpio_set_value_cansleep(priv->reset_gpio, 0);
-		else
-			gpio_set_value(priv->reset_gpio, 0);
+		gpio_set_value_cansleep(priv->reset_gpio, 0);
 	
 		usleep_range(30, 50);
 
-		if(gpio_cansleep(priv->reset_gpio))
-			gpio_set_value_cansleep(priv->reset_gpio, 1);
-		else
-			gpio_set_value(priv->reset_gpio, 1);
+		gpio_set_value_cansleep(priv->reset_gpio, 1);
 
 		msleep(100);
 		dev_info(dev, "%s\n", __func__);
@@ -1053,10 +1047,7 @@ void max9296a_power_off(struct device *dev)
 	struct max9296a *priv = dev_get_drvdata(dev);
 
 	if (priv->reset_gpio > 0) {
-		if(gpio_cansleep(priv->reset_gpio))
-			gpio_set_value_cansleep(priv->reset_gpio, 0);
-		else
-			gpio_set_value(priv->reset_gpio, 0);
+		gpio_set_value_cansleep(priv->reset_gpio, 0);
 		dev_info(dev, "%s\n", __func__);
 	}
 }

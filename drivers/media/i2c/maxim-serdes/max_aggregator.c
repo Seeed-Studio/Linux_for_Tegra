@@ -82,7 +82,7 @@ static int max_aggregator_probe(struct platform_device *pdev)
 	subdev = &max_aggregator->subdev;
 	v4l2_subdev_init(subdev, &max_aggregator_ops);
 	subdev->dev = &pdev->dev;
-	strlcpy(subdev->name, dev_name(&pdev->dev), sizeof(subdev->name));
+	strscpy(subdev->name, dev_name(&pdev->dev), sizeof(subdev->name));
 	subdev->flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;
 	subdev->entity.function = MEDIA_ENT_F_VID_IF_BRIDGE;
 

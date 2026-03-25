@@ -204,13 +204,13 @@ enum max96717_pinctrl_params {
 };
 
 static const struct pinconf_generic_params max96717_cfg_params[] = {
-	{ "maxim,pull-strength-weak", MAX96717_PINCTRL_PULL_STRENGTH_WEAK, 0 },
-	{ "maxim,jitter-compensation", MAX96717_PINCTRL_JITTER_COMPENSATION_EN, 0 },
-	{ "maxim,gmsl-tx", MAX96717_PINCTRL_GMSL_TX_EN, 0 },
-	{ "maxim,gmsl-rx", MAX96717_PINCTRL_GMSL_RX_EN, 0 },
-	{ "maxim,gmsl-tx-id", MAX96717_PINCTRL_GMSL_TX_ID, 0 },
-	{ "maxim,gmsl-rx-id", MAX96717_PINCTRL_GMSL_RX_ID, 0 },
-	{ "maxim,rclkout-clock", MAX96717_PINCTRL_RCLKOUT_CLK, 0 },
+	{ "maxim,pull-strength-weak", (enum pin_config_param)MAX96717_PINCTRL_PULL_STRENGTH_WEAK, 0 },
+	{ "maxim,jitter-compensation", (enum pin_config_param)MAX96717_PINCTRL_JITTER_COMPENSATION_EN, 0 },
+	{ "maxim,gmsl-tx", (enum pin_config_param)MAX96717_PINCTRL_GMSL_TX_EN, 0 },
+	{ "maxim,gmsl-rx", (enum pin_config_param)MAX96717_PINCTRL_GMSL_RX_EN, 0 },
+	{ "maxim,gmsl-tx-id", (enum pin_config_param)MAX96717_PINCTRL_GMSL_TX_ID, 0 },
+	{ "maxim,gmsl-rx-id", (enum pin_config_param)MAX96717_PINCTRL_GMSL_RX_ID, 0 },
+	{ "maxim,rclkout-clock", (enum pin_config_param)MAX96717_PINCTRL_RCLKOUT_CLK, 0 },
 };
 
 static int max96717_ctrl_get_groups_count(struct pinctrl_dev *pctldev)
@@ -449,7 +449,7 @@ static int max96717_conf_pin_config_set_one(struct max96717_priv *priv,
 		config = pinconf_to_config_packed(PIN_CONFIG_OUTPUT_ENABLE, 1);
 		return max96717_conf_pin_config_set_one(priv, offset, config);
 	case PIN_CONFIG_OUTPUT_ENABLE:
-		config = pinconf_to_config_packed(MAX96717_PINCTRL_GMSL_RX_EN, 0);
+		config = pinconf_to_config_packed((enum pin_config_param)MAX96717_PINCTRL_GMSL_RX_EN, 0);
 		return max96717_conf_pin_config_set_one(priv, offset, config);
 	default:
 		break;
@@ -586,7 +586,7 @@ static int max96717_gpio_direction_output(struct gpio_chip *gc, unsigned int off
 
 static int max96717_gpio_get(struct gpio_chip *gc, unsigned int offset)
 {
-	unsigned long config = pinconf_to_config_packed(MAX96717_PINCTRL_INPUT_VALUE, 0);
+	unsigned long config = pinconf_to_config_packed((enum pin_config_param)MAX96717_PINCTRL_INPUT_VALUE, 0);
 	struct max96717_priv *priv = gpiochip_get_data(gc);
 	int ret;
 
@@ -1281,11 +1281,11 @@ static int max96717_probe(struct i2c_client *client)
 	return max_ser_probe(&priv->ser_priv);
 }
 
-static int max96717_remove(struct i2c_client *client)
+static void max96717_remove(struct i2c_client *client)
 {
 	struct max96717_priv *priv = i2c_get_clientdata(client);
 
-	return max_ser_remove(&priv->ser_priv);
+	max_ser_remove(&priv->ser_priv);
 }
 
 static const struct max96717_chip_info max96717_info = {
@@ -1337,7 +1337,7 @@ static struct i2c_driver max96717_i2c_driver = {
 		.name = MAX96717_NAME,
 		.of_match_table = max96717_of_ids,
 	},
-	.probe_new = max96717_probe,
+	.probe = max96717_probe,
 	.remove = max96717_remove,
 };
 
