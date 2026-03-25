@@ -285,7 +285,11 @@
 	thermal-shutdown-alert {
 		status = "disabled";
 	};
-	
+
+	regulator-vdd-3v3-dp {
+		status = "disabled";
+	};
+
 	thermal-zones {
 		tj-thermal {
 			trips {
