@@ -423,10 +423,7 @@ static int nv_cam_power_on(struct camera_common_data *s_data)
 
 	
 	if (pw->pwdn_gpio) {
-		if (gpio_cansleep(pw->pwdn_gpio))
-			gpio_set_value_cansleep(pw->pwdn_gpio, 1);
-		else
-			gpio_set_value(pw->pwdn_gpio, 1);
+		gpio_set_value_cansleep(pw->pwdn_gpio, 1);
 		if (priv->pwdn_sleep_us)
 			fsleep(priv->pwdn_sleep_us);
 	}
@@ -436,10 +433,7 @@ static int nv_cam_power_on(struct camera_common_data *s_data)
 
 	
 	if (pw->reset_gpio) {
-		if (gpio_cansleep(pw->reset_gpio))
-			gpio_set_value_cansleep(pw->reset_gpio, 0);
-		else
-			gpio_set_value(pw->reset_gpio, 0);
+		gpio_set_value_cansleep(pw->reset_gpio, 0);
 	}
 
 	usleep_range(10, 20);
@@ -466,10 +460,7 @@ static int nv_cam_power_on(struct camera_common_data *s_data)
 
 skip_power_seqn:
 	if (pw->reset_gpio) {
-		if (gpio_cansleep(pw->reset_gpio))
-			gpio_set_value_cansleep(pw->reset_gpio, 1);
-		else
-			gpio_set_value(pw->reset_gpio, 1);
+		gpio_set_value_cansleep(pw->reset_gpio, 1);
 	}
 
 	usleep_range(10000, 10100);
@@ -507,17 +498,11 @@ static int nv_cam_power_off(struct camera_common_data *s_data)
 		}
 	} else {
 		if (pw->reset_gpio) {
-			if (gpio_cansleep(pw->reset_gpio))
-				gpio_set_value_cansleep(pw->reset_gpio, 0);
-			else
-				gpio_set_value(pw->reset_gpio, 0);
+			gpio_set_value_cansleep(pw->reset_gpio, 0);
 		}
 
 		if (pw->pwdn_gpio) {
-			if (gpio_cansleep(pw->pwdn_gpio))
-				gpio_set_value_cansleep(pw->pwdn_gpio, 0);
-			else
-				gpio_set_value(pw->pwdn_gpio, 0);
+			gpio_set_value_cansleep(pw->pwdn_gpio, 0);
 			if (priv->pwdn_sleep_us)
 				fsleep(priv->pwdn_sleep_us);
 		}
@@ -1321,8 +1306,7 @@ static int nv_cam_parse_dt_extra(struct nv_cam *priv)
 	return 0;
 }
 
-static int nv_cam_probe(struct i2c_client *client,
-			const struct i2c_device_id *id)
+static int nv_cam_probe(struct i2c_client *client)
 {
 	struct regmap_config regmap_config;
 	struct device *dev = &client->dev;
@@ -1378,15 +1362,13 @@ static int nv_cam_probe(struct i2c_client *client,
 	return tegracam_v4l2subdev_register(tc_dev, true);
 }
 
-static int nv_cam_remove(struct i2c_client *client)
+static void nv_cam_remove(struct i2c_client *client)
 {
 	struct camera_common_data *s_data = to_camera_common_data(&client->dev);
 	struct nv_cam *priv = (struct nv_cam *)s_data->priv;
 
 	tegracam_v4l2subdev_unregister(priv->tc_dev);
 	tegracam_device_unregister(priv->tc_dev);
-
-	return 0;
 }
 
 static const struct of_device_id nv_cam_of_match[] = {

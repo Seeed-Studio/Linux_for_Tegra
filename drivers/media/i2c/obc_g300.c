@@ -581,7 +581,7 @@ static int orb_sensor_get_fmt(struct v4l2_subdev *sd,
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 15, 10)
         fmt->format = *v4l2_subdev_get_try_format(sd, cfg, fmt->pad);
 #else
-        fmt->format = *v4l2_subdev_get_try_format(sd, v4l2_state, fmt->pad);
+    fmt->format = *v4l2_subdev_state_get_format(v4l2_state, fmt->pad);
 #endif
     else
         fmt->format = sensor->format;
@@ -672,7 +672,7 @@ static int orb_sensor_set_fmt(struct v4l2_subdev *sd,
         *v4l2_subdev_get_try_format(&sensor->sd.subdev, cfg, fmt->pad) = *mf;
 #else
     if (v4l2_state && fmt->which == V4L2_SUBDEV_FORMAT_TRY)
-        *v4l2_subdev_get_try_format(&sensor->sd.subdev, v4l2_state, fmt->pad) = *mf;
+        *v4l2_subdev_state_get_format(v4l2_state, fmt->pad) = *mf;
 #endif
 
     else
@@ -825,10 +825,17 @@ int orbbec_reset_device_link(struct orb *state, s32 value)
 
 /* Video ops */
 static int orb_mux_g_frame_interval(struct v4l2_subdev *sd,
-        struct v4l2_subdev_frame_interval *fi)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 10)
+    struct v4l2_subdev_state *v4l2_state,
+#endif
+    struct v4l2_subdev_frame_interval *fi)
 {
     struct orb *state = container_of(sd, struct orb, sensor.sd.subdev);
     struct orb_sensor *sensor = &state->sensor;
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 10)
+    (void)v4l2_state;
+#endif
 
     if (NULL == sd || NULL == fi)
         return -EINVAL;
@@ -857,11 +864,18 @@ static u16 __orb_probe_framerate(const struct orb_resolution *res, u16 target)
 }
 
 static int orb_mux_s_frame_interval(struct v4l2_subdev *sd,
-        struct v4l2_subdev_frame_interval *fi)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 10)
+    struct v4l2_subdev_state *v4l2_state,
+#endif
+    struct v4l2_subdev_frame_interval *fi)
 {
     struct orb *state = container_of(sd, struct orb, sensor.sd.subdev);
     struct orb_sensor *sensor = &state->sensor;
     u16 framerate = 1;
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 10)
+    (void)v4l2_state;
+#endif
 
     if (NULL == sd || NULL == fi || fi->interval.numerator == 0) {
         dev_err(sd->dev, "%s(): %p, %p %d\n", __func__, sd, fi, fi ? fi->interval.numerator : -1);
@@ -1031,6 +1045,10 @@ static const struct v4l2_subdev_pad_ops orb_mux_pad_ops = {
     .enum_frame_interval	= orb_sensor_enum_frame_interval,
     .get_fmt		= orb_sensor_get_fmt,
     .set_fmt		= orb_sensor_set_fmt,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 10)
+    .get_frame_interval    = orb_mux_g_frame_interval,
+    .set_frame_interval    = orb_mux_s_frame_interval,
+#endif
 };
 
 static const struct v4l2_subdev_core_ops orb_mux_core_ops = {
@@ -1039,8 +1057,10 @@ static const struct v4l2_subdev_core_ops orb_mux_core_ops = {
 };
 
 static const struct v4l2_subdev_video_ops orb_mux_video_ops = {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 15, 10)
     .g_frame_interval	= orb_mux_g_frame_interval,
     .s_frame_interval	= orb_mux_s_frame_interval,
+#endif
     .s_stream		= orb_mux_s_stream,
 };
 
@@ -1322,7 +1342,7 @@ error:
     return err;
 }
 
-static int orb_probe(struct i2c_client *c, const struct i2c_device_id *id)
+static int orb_probe(struct i2c_client *c)
 {
     struct orb *state = devm_kzalloc(&c->dev, sizeof(*state), GFP_KERNEL);
     int ret = 0;
@@ -1428,7 +1448,7 @@ e_regulator:
     return ret;
 }
 
-static int orb_remove(struct i2c_client *c)
+static void orb_remove(struct i2c_client *c)
 {	
     struct orb *state = NULL;
     if (c != NULL) {
@@ -1466,7 +1486,7 @@ static int orb_remove(struct i2c_client *c)
     
     }
     
-    return 0;
+    return;
 }
 
 static const struct i2c_device_id orb_id[] = {

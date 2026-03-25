@@ -2690,8 +2690,8 @@ static int tegra_metadata_querycap(struct file *file, void *fh,
 	cap->capabilities = cap->device_caps | V4L2_CAP_DEVICE_CAPS |
 			V4L2_CAP_EXT_PIX_FORMAT | V4L2_CAP_VIDEO_CAPTURE;
 
-	strlcpy(cap->driver, "tegra-embedded", sizeof(cap->driver));
-	strlcpy(cap->card, vfh->vdev->name, sizeof(cap->card));
+	strscpy(cap->driver, "tegra-embedded", sizeof(cap->driver));
+	strscpy(cap->card, vfh->vdev->name, sizeof(cap->card));
 	snprintf(cap->bus_info, sizeof(cap->bus_info), "platform:%s:%u",
 			dev_name(chan->vi->dev), chan->port[0]);
 
@@ -2705,7 +2705,7 @@ static int tegra_metadata_enum_format(struct file *file, void *fh,
 		return -EINVAL;
 
 	f->pixelformat = V4L2_META_FMT_G300;
-	strlcpy(f->description, "G300 metadata format", sizeof(f->description));
+	strscpy(f->description, "G300 metadata format", sizeof(f->description));
 
 	return 0;
 }
