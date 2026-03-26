@@ -118,7 +118,7 @@
 				
 				uart1_en {
 					gpios = <6 GPIO_ACTIVE_HIGH>;
-					output-low;
+					output-high;
 					line-name = "UART1_EN";
 				};
 				
@@ -142,6 +142,20 @@
 			};
 		};
 		
+		i2c@810c640000 {
+			status = "okay";
+			/* CVB EEPROM */
+			eeprom@56 {
+				compatible = "atmel,24c256";
+				reg = <0x56>;
+				address-width = <16>;
+				pagesize = <64>;
+				size = <32768>;
+				/delete-property/ read-only;
+
+			};
+		};
+
 		i2c@810c680000 {
 			status = "okay";
 			
