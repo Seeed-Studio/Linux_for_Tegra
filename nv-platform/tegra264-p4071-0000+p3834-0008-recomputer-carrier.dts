@@ -173,10 +173,13 @@
 				
 				clocks = <&bpmp TEGRA264_CLK_AUD_MCLK>;
 				clock-names = "mclk";
+
+				/* reset gpio */
+				reset-gpios = <&gpio_main TEGRA264_MAIN_GPIO(H, 6) GPIO_ACTIVE_LOW>;
 				
-				/* Enable MICBIAS for headset microphone */
-				ai3x-micbias-vg = <3>; /* MICBIAS_AVDD = connected to AVDD (3.3V) */
-				
+				/* Enable MICBIAS for headset microphone (required for mic to work) */
+				ai3x-micbias-vg = <3>; /* 1=2.0V, 2=2.5V, 3=AVDD (3.3V) */
+
 				sound-name-prefix = "TLV320";
 				#sound-dai-cells = <1>;
 				status = "okay";
@@ -185,8 +188,8 @@
 					aic3104_ep: endpoint {
 						link-name = "tlv320-playback";
 						remote-endpoint = <&i2s4_dap>;
-						// mclk-fs = <256>;
-						system-clock-frequency = <24576000>;
+						clocks = <&bpmp TEGRA264_CLK_AUD_MCLK>;
+						clock-names = "mclk";
 					};
 				};
 			};
