@@ -204,7 +204,7 @@
 		<&admaif24_port>, <&admaif25_port>, <&admaif26_port>, <&admaif27_port>,
 		<&admaif28_port>, <&admaif29_port>, <&admaif30_port>, <&admaif31_port>,
 		/* XBAR Ports */
-		<&xbar_i2s1_port>, <&xbar_i2s4_port>,
+		<&xbar_i2s1_port>, <&xbar_i2s2_port>, <&xbar_i2s4_port>,
 		<&xbar_sfc1_in_port>, <&xbar_sfc2_in_port>,
 		<&xbar_sfc3_in_port>, <&xbar_sfc4_in_port>,
 		<&xbar_mvc1_in_port>, <&xbar_mvc2_in_port>,
@@ -258,7 +258,7 @@
 		<&asrc_out4_port>, <&asrc_out5_port>, <&asrc_out6_port>,
 		<&ope1_out_port>,
 		/* BE I/O Ports */
-		<&i2s1_port>, <&i2s4_port>;
+		<&i2s1_port>, <&i2s2_port>, <&i2s4_port>;
 		
 		label = "NVIDIA Jetson Thor AGX APE";
 		
@@ -397,6 +397,10 @@
 			default-state = "off";
 		};
 	};
+};
+
+&tegra_i2s2 {
+        status = "okay";
 };
 
 &i2s4_dap {
