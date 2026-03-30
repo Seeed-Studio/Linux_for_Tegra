@@ -39,6 +39,7 @@ dtbo-y += tegra264-p3971-0000+p3834-xxxx-audio-respeaker-4-mic-lin-array.dtbo
 dtbo-y += tegra264-p3971-0000+p3834-xxxx-dynamic.dtbo
 dtbo-y += tegra264-p4071-0000+p3834-xxxx-dynamic.dtbo
 dtbo-y += tegra264-ufs-provision.dtbo
+dtbo-y += tegra264-p4071-camera-orbbec-overlay.dtbo
 
 ifneq ($(dtb-y),)
 dtb-y := $(addprefix $(makefile-path)/,$(dtb-y))
