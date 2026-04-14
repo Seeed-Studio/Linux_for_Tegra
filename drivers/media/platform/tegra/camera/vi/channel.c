@@ -349,7 +349,7 @@ static void tegra_channel_fmts_bitmap_init(struct tegra_channel *chan)
 	};
 
 	struct v4l2_subdev_pad_config pad_cfg;
-	struct v4l2_subdev_state cfg = {.pads = &pad_cfg};
+	struct v4l2_subdev_state cfg = {.pads = &pad_cfg, .sd = subdev};
 	bitmap_zero(chan->fmts_bitmap, MAX_FORMAT_NUM);
 
 	/*
@@ -1154,7 +1154,7 @@ tegra_channel_enum_framesizes(struct file *file, void *fh,
 	struct v4l2_subdev *sd = chan->subdev_on_csi;
 	struct v4l2_subdev_frame_size_enum fse;
 	struct v4l2_subdev_pad_config pad_cfg;
-	struct v4l2_subdev_state cfg = {.pads = &pad_cfg};
+	struct v4l2_subdev_state cfg = {.pads = &pad_cfg, .sd = sd};
 	int ret = 0;
 
 	/* Convert v4l2 pixel format (fourcc) into media bus format code */
@@ -1184,7 +1184,7 @@ tegra_channel_enum_frameintervals(struct file *file, void *fh,
 	struct v4l2_subdev *sd = chan->subdev_on_csi;
 	struct v4l2_subdev_frame_interval_enum fie;
 	struct v4l2_subdev_pad_config pad_cfg;
-	struct v4l2_subdev_state cfg = {.pads = &pad_cfg};
+	struct v4l2_subdev_state cfg = {.pads = &pad_cfg, .sd = sd};
 	int ret = 0;
 
 	/* Convert v4l2 pixel format (fourcc) into media bus format code */
@@ -2177,10 +2177,10 @@ __tegra_channel_try_format(struct tegra_channel *chan,
 			struct v4l2_pix_format *pix)
 {
 	const struct tegra_video_format *vfmt;
-	struct v4l2_subdev_format fmt;
+	struct v4l2_subdev_format fmt = {};
 	struct v4l2_subdev *sd = chan->subdev_on_csi;
 	struct v4l2_subdev_pad_config pad_cfg;
-	struct v4l2_subdev_state cfg = {.pads = &pad_cfg};
+	struct v4l2_subdev_state cfg = {.pads = &pad_cfg, .sd = sd};
 	int ret = 0;
 
 	/* Use the channel format if pixformat is not supported */
@@ -2231,10 +2231,10 @@ __tegra_channel_set_format(struct tegra_channel *chan,
 			struct v4l2_pix_format *pix)
 {
 	const struct tegra_video_format *vfmt;
-	struct v4l2_subdev_format fmt;
+	struct v4l2_subdev_format fmt = {};
 	struct v4l2_subdev *sd = chan->subdev_on_csi;
 	struct v4l2_subdev_pad_config pad_cfg;
-	struct v4l2_subdev_state cfg = {.pads = &pad_cfg};
+	struct v4l2_subdev_state cfg = {.pads = &pad_cfg, .sd = sd};
 	int ret = 0;
 
 	vfmt = tegra_core_get_format_by_fourcc(chan, pix->pixelformat);
