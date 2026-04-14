@@ -25,17 +25,13 @@
 #define JETSON_COMPATIBLE	"nvidia,p4071-0000+p3834-0008"
 
 / {
-	overlay-name = "Seeed GMSL 3g for recomputer";
+	overlay-name = "Seeed GMSL 6g for recomputer";
 	jetson-header-name = "Jetson AGX CSI Connector";
 	compatible = JETSON_COMPATIBLE;
 	
 	fragment@0 {
 		target-path = "/";
 		__overlay__ {
-			
-			regulator-vdd-3v3-dp {
-				status = "disabled";
-			};
 
 			obc_cam_sync {
 				compatible = "orbbec,obc_cam_sync";
@@ -72,7 +68,7 @@
 					regulator-name = "cam0-vdd";
 					gpio = <&gpio_main CAM0_VDD GPIO_ACTIVE_HIGH>;
 					enable-active-high;
-					regulator-boot-on;
+					// regulator-boot-on;
 					regulator-always-on;
 				};
 
@@ -81,7 +77,7 @@
 					regulator-name = "cam1-vdd";
 					gpio = <&gpio_main CAM1_VDD GPIO_ACTIVE_HIGH>;
 					enable-active-high;
-					regulator-boot-on;
+					// regulator-boot-on;
 					regulator-always-on;
 				};
 				
@@ -324,10 +320,10 @@
 						#size-cells = <0>;
 						i2c-alias-pool = <0x41 0x42 0x43 0x44>;
 						compatible = "maxim,max96712";
-						reset-gpios = <&gpio_main CAM0_RST_L GPIO_ACTIVE_HIGH>;
+						// reset-gpios = <&gpio_main CAM0_RST_L GPIO_ACTIVE_HIGH>;
 						reg = <0x29>;
 						status = "okay";
-						maxim,speed-mode = <0x00>;
+						maxim,speed-mode = <0x01>;// 6G
 						fsync_mfp_in = <2>;
 						
 						phy@1 {
@@ -494,7 +490,7 @@
 								ser_0: gmsl-serializer@0x40 {
 									#address-cells = <1>;
 									#size-cells = <0>;
-									compatible = "maxim,max96717";
+									compatible = "maxim,max9295a";
 									reg = <0x40>;
 									gpio-controller;
 									#gpio-cells = <2>;
@@ -792,7 +788,7 @@
 								ser_1: gmsl-serializer@0x40 {
 									#address-cells = <1>;
 									#size-cells = <0>;
-									compatible = "maxim,max96717";
+									compatible = "maxim,max9295a";
 									reg = <0x40>;
 									gpio-controller;
 									#gpio-cells = <2>;
@@ -1089,7 +1085,7 @@
 								ser_2: gmsl-serializer@0x40 {
 									#address-cells = <1>;
 									#size-cells = <0>;
-									compatible = "maxim,max96717";
+									compatible = "maxim,max9295a";
 									reg = <0x40>;
 									gpio-controller;
 									#gpio-cells = <2>;
@@ -1386,7 +1382,7 @@
 								ser_3: gmsl-serializer@0x40 {
 									#address-cells = <1>;
 									#size-cells = <0>;
-									compatible = "maxim,max96717";
+									compatible = "maxim,max9295a";
 									reg = <0x40>;
 									gpio-controller;
 									#gpio-cells = <2>;
@@ -1690,7 +1686,7 @@
 						reset-gpios = <&gpio_main CAM1_RST_L GPIO_ACTIVE_HIGH>;
 						reg = <0x29>;
 						status = "okay";
-						maxim,speed-mode = <0x00>;
+						maxim,speed-mode = <0x01>;// 6G
 						fsync_mfp_in = <2>;
 						phy@1 {
 							reg = <0x01>;
@@ -1848,7 +1844,7 @@
 								ser_4: gmsl-serializer@0x40 {
 									#address-cells = <1>;
 									#size-cells = <0>;
-									compatible = "maxim,max96717";
+									compatible = "maxim,max9295a";
 									reg = <0x40>;
 									gpio-controller;
 									#gpio-cells = <2>;
@@ -2146,7 +2142,7 @@
 								ser_5: gmsl-serializer@0x40 {
 									#address-cells = <1>;
 									#size-cells = <0>;
-									compatible = "maxim,max96717";
+									compatible = "maxim,max9295a";
 									reg = <0x40>;
 									gpio-controller;
 									#gpio-cells = <2>;
@@ -2443,7 +2439,7 @@
 								ser_6: gmsl-serializer@0x40 {
 									#address-cells = <1>;
 									#size-cells = <0>;
-									compatible = "maxim,max96717";
+									compatible = "maxim,max9295a";
 									reg = <0x40>;
 									gpio-controller;
 									#gpio-cells = <2>;
@@ -2740,7 +2736,7 @@
 								ser_7: gmsl-serializer@0x40 {
 									#address-cells = <1>;
 									#size-cells = <0>;
-									compatible = "maxim,max96717";
+									compatible = "maxim,max9295a";
 									reg = <0x40>;
 									gpio-controller;
 									#gpio-cells = <2>;
