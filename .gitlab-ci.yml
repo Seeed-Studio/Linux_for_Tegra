@@ -79,6 +79,8 @@ stages:
   - ./nvbuild.sh
   # deploy new kernel and dtb
   - ./do_copy.sh
+  # deploy camera overlay dtbo to rootfs
+  - cp ../kernel/dtb/tegra264-p4071-camera-* ../rootfs/boot/
   # deploy new kernel drviers
   - export INSTALL_MOD_PATH=`realpath ../rootfs/`
   - ./nvbuild.sh -i
