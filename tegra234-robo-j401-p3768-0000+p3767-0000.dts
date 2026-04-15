@@ -5,7 +5,7 @@
 #include <dt-bindings/input/gpio-keys.h>
 
 #include "tegra234-p3767.dtsi"
-#include "tegra234-p3768-0000.dtsi"
+#include "tegra234-p3768-0000+p3767.dtsi"
 
 / {
 	compatible = "nvidia,p3768-0000+p3767-0000", "nvidia,p3767-0000", "nvidia,tegra234";

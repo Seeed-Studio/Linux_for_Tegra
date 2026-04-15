@@ -3,7 +3,7 @@
 
 #include "nv-soc/tegra234-overlay.dtsi"
 #include "nv-soc/tegra234-soc-audio-dai-links.dtsi"
-#include "tegra234-p3768-0000.dtsi"
+#include "tegra234-p3768-0000+p3767.dtsi"
 #include "tegra234-p3767-0000.dtsi"
 #include "nv-soc/tegra234-soc-camera.dtsi"
 #include "tegra234-dcb-p3737-0000-p3701-0000.dtsi"
@@ -319,13 +319,9 @@
 			};
 		};
 
-		pcie@14100000 {
-<<<<<<< HEAD
-			nvidia,pex-wake-gpios = <&gpio TEGRA234_MAIN_GPIO(L, 2) GPIO_ACTIVE_LOW>;
-=======
-			nvidia,pex-wake-gpios = <&gpio TEGRA234_MAIN_GPIO(L, 2) IRQ_TYPE_LEVEL_LOW>;
->>>>>>> internal/mybranch_2025-02-08-1738981709
-		};
+			pcie@14100000 {
+				nvidia,pex-wake-gpios = <&gpio TEGRA234_MAIN_GPIO(L, 2) GPIO_ACTIVE_LOW>;
+			};
 	};
 
 	cpus {
@@ -358,5 +354,3 @@
 		status = "okay";
 	};
 };
-
-/delete-node/ &{/gpio-keys/key-suspend};
