@@ -21,7 +21,7 @@
 
 / {
 	overlay-name = "Camera IMX219 Quad Seeed";
-	jetson-header-name = "Jetson 24pin CSI Connector";
+	jetson-header-name = "Jetson 22pin CSI Connector";
 	compatible = JETSON_COMPATIBLE_P3768;
 
 	fragment-camera@0 {

@@ -16,7 +16,7 @@
 
 / {
 	overlay-name = "Seeed GMSL 1X4 6G";
-	jetson-header-name = "Jetson 24pin CSI Connector";
+	jetson-header-name = "Jetson 22pin CSI Connector";
 	compatible = JETSON_COMPATIBLE_P3768;
 
 	fragment@0 {
