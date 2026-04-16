@@ -45,7 +45,7 @@ ROOTFS_OVERLAY_FILES=( "/boot/extlinux" )
 
 # Do not use underscore "_" in these dir name
 TOT_IMAGES_DIR="images-R36-ToT"
-TARGET_VERSION="R36-4"
+TARGET_VERSION="R36-5"
 
 COMMON_TAR_OPTIONS=( --warning=none --checkpoint=10000 --one-file-system --xattrs --xattrs-include=* )
 PKC_KEY_FILE=""
@@ -78,6 +78,15 @@ SUPPORTED_EXTERNAL_DEVICES=(
 	'jetson-agx-orin-devkit:nvme0n1'
 	'jetson-agx-orin-devkit-industrial:nvme0n1'
 	'jetson-orin-nano-devkit:nvme0n1'
+	'recomputer-orin-j40mini:nvme0n1'
+	'recomputer-orin-j401:nvme0n1'
+	'recomputer-industrial-orin-j401:nvme0n1'
+	'reserver-industrial-orin-j401:nvme0n1'
+	'reserver-agx-orin-j501x:nvme0n1'
+	'reserver-agx-orin-j501x-gmsl:nvme0n1'
+	'recomputer-orin:nvme0n1'
+	'recomputer-orin-industrial:nvme0n1'
+	'reserver-orin-industrial:nvme0n1'
 	'jetson-orin-nano-devkit-super:nvme0n1'
 	'jetson-orin-nano-devkit-super-maxn:nvme0n1'
 )
@@ -129,8 +138,8 @@ function usage()
 {
 	echo -ne "Usage: sudo $0 [options] <target board> <bsp version>\n"
 	echo -ne "\tWhere,\n"
-	echo -ne "\t\t<target board>: target board. Supported boards: jetson-agx-orin-devkit, jetson-agx-orin-devkit-industrial, jetson-orin-nano-devkit, jetson-orin-nano-devkit-super, jetson-orin-nano-devkit-super-maxn.\n"
-	echo -ne "\t\t<bsp version>: the version of the base BSP. Supported versions: R35-5, R35-6, R36-3, R36-4.\n"
+	echo -ne "\t\t<target board>: target board. Supported boards: jetson-agx-orin-devkit, jetson-agx-orin-devkit-industrial, jetson-orin-nano-devkit, jetson-orin-nano-devkit-super, jetson-orin-nano-devkit-super-maxn, recomputer-orin-j40mini, recomputer-orin-j401, recomputer-industrial-orin-j401, reserver-industrial-orin-j401, reserver-agx-orin-j501x, reserver-agx-orin-j501x-gmsl.\n"
+	echo -ne "\t\t<bsp version>: the version of the base BSP. Supported versions: R35-5, R35-6, R36-3, R36-4, R36-5.\n"
 	echo -ne "\toptions:\n"
 	echo -ne "\t\t-u <PKC key file>: PKC key used for odm fused board\n"
 	echo -ne "\t\t-v <SBK key file>: Secure Boot Key (SBK) key used for ODM fused board\n"
@@ -142,7 +151,7 @@ function usage()
 	echo -ne "\t\t-f\tSpecify the rootfs image to be written to rootfs partition.\n"
 	echo -ne "\t\t-p\tSpecify the options directly passed into flash.sh when generating images.\n"
 	echo -ne "\t\t--external-device <external device>: Specify the external device to be OTAed. Supported devices: nvme0n1.\n"
-	echo -ne "\t\t  This option is only valid for jetson-orin-nano-devkit.\n"
+	echo -ne "\t\t  This option is valid for supported NVMe OTA boards.\n"
 	echo -ne "\t\t-S <size>: Specify the size of rootfs partition on external device. Only valid when --external-device option is set. KiB, MiB, GiB short hands are allowed\n"
 	echo -ne "\t\t  Ths size set through this option must be the same as the size of rootfs partition on the external device to be OTAed.\n"
 	echo -ne "\t\t-E <esp image>: Specify the image to update ESP.\n"
@@ -202,8 +211,9 @@ function construct_board_spec_name()
 
 	# For jetson-agx-orin-devkit, set the boardver to null if boardsku is 0004,
 	# or 0005.
-	# For jetson-orin-nano-devkit or jetson-orin-nano-devkit-super or
-	# jetson-orin-nano-devkit-super-maxn, set the boardver to null if boardsku
+	# For jetson-orin-nano-devkit, jetson-orin-nano-devkit-super,
+	# jetson-orin-nano-devkit-super-maxn, and the supported third-party
+	# Orin NX/Nano carrier boards, set the boardver to null if boardsku
 	# is 0001, 0003, 0004 or 0005.
 	# For jetson-agx-orin-devkit-industrial, set the boardver to null if boardsku
 	# is 0008.
@@ -215,6 +225,38 @@ function construct_board_spec_name()
 		'jetson-orin-nano-devkit:0004'
 		'jetson-orin-nano-devkit:0005'
 		'jetson-agx-orin-devkit-industrial:0008'
+		'recomputer-orin-j40mini:0001'
+		'recomputer-orin-j40mini:0003'
+		'recomputer-orin-j40mini:0004'
+		'recomputer-orin-j40mini:0005'
+		'recomputer-orin-j401:0001'
+		'recomputer-orin-j401:0003'
+		'recomputer-orin-j401:0004'
+		'recomputer-orin-j401:0005'
+		'recomputer-industrial-orin-j401:0001'
+		'recomputer-industrial-orin-j401:0003'
+		'recomputer-industrial-orin-j401:0004'
+		'recomputer-industrial-orin-j401:0005'
+		'reserver-industrial-orin-j401:0001'
+		'reserver-industrial-orin-j401:0003'
+		'reserver-industrial-orin-j401:0004'
+		'reserver-industrial-orin-j401:0005'
+		'reserver-agx-orin-j501x:0004'
+		'reserver-agx-orin-j501x:0005'
+		'reserver-agx-orin-j501x-gmsl:0004'
+		'reserver-agx-orin-j501x-gmsl:0005'
+		'recomputer-orin:0001'
+		'recomputer-orin:0003'
+		'recomputer-orin:0004'
+		'recomputer-orin:0005'
+		'recomputer-orin-industrial:0001'
+		'recomputer-orin-industrial:0003'
+		'recomputer-orin-industrial:0004'
+		'recomputer-orin-industrial:0005'
+		'reserver-orin-industrial:0001'
+		'reserver-orin-industrial:0003'
+		'reserver-orin-industrial:0004'
+		'reserver-orin-industrial:0005'
 		'jetson-orin-nano-devkit-super:0001'
 		'jetson-orin-nano-devkit-super:0003'
 		'jetson-orin-nano-devkit-super:0004'
@@ -1083,12 +1125,12 @@ function construct_board_spec_entry()
 	echo "${tmp_board_spec_entry}=(" >>"${tmp_board_spec_file}"
 	for item in "${entry[@]}"
 	do
-		# For jetson-orin-nano-devkit or jetson-orin-nano-devkit-super
-		# or jetson-orin-nano-devkit-super-maxn, keep all the board
-		# spec entries as it only includes entries for external device.
-		# For other devices, only keep the board spec entry for
-		# internal device.
+		# For Jetson Orin Nano variants and the supported third-party NVMe
+		# boards, keep all board spec entries as they only include entries
+		# for external device. For other devices, only keep the board spec
+		# entry for internal device.
 		if [[ "${item}" =~ jetson-orin-nano-devkit* ]] \
+			|| [[ "${item}" =~ board=re ]] \
 			|| [[ "${item}" =~ internal ]]; then
 			echo "'${item}'" >>"${tmp_board_spec_file}"
 		fi
@@ -1865,10 +1907,9 @@ fi
 if [ -n "${external_device}" ]; then
 	check_external_device
 else
-	# For Jetson Orin Nano SKU5, image-based OTA supports NVMe as the storage device only.
-	# Image-based OTA does not support SD card as the storage device because the SD image
-	# can be downloaded directly and it is not recommended for production.
-	if [[ "${TARGET_BOARD}" =~ jetson-orin-nano-devkit* ]]; then
+	# The supported NVMe OTA boards require the external device to be specified.
+	if [[ "${TARGET_BOARD}" =~ jetson-orin-nano-devkit* ]] \
+		|| [[ "${TARGET_BOARD}" =~ ^re ]]; then
 		echo "The External device must be specified for ${TARGET_BOARD}"
 		usage
 	fi
