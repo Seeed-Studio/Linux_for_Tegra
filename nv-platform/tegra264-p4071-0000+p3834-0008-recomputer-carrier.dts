@@ -264,7 +264,8 @@
 		
 		widgets =
 		"Headphone", "TLV320 Headphone Jack",
-		"Line", "TLV320 Line In";
+		"Line", "TLV320 Line In",
+		"Microphone", "TLV320 Mic Jack";
 
 		assigned-clocks = <&bpmp TEGRA264_CLK_PLLA_OUT0>, <&bpmp TEGRA264_CLK_AUD_MCLK>;
 		assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLA>, <&bpmp TEGRA264_CLK_PLLA_OUT0>;
@@ -275,7 +276,10 @@
 		"TLV320 Headphone Jack",	"TLV320 HPLOUT",
 		"TLV320 Headphone Jack",	"TLV320 HPROUT",
 		"TLV320 LINE1L",			"TLV320 Line In",
-		"TLV320 LINE1R",			"TLV320 Line In";
+		"TLV320 LINE1R",			"TLV320 Line In",
+		"TLV320 LINE1L",			"TLV320 Mic Jack",
+		"TLV320 LINE1R",			"TLV320 Mic Jack",
+		"TLV320 Mic Jack",			"TLV320 Mic Bias";
 	};
 	
 	pwm@810c5e0000 {
