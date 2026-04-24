@@ -1,19 +1,7 @@
-[submodule "source/kernel/kernel-jammy-src"]
-	path = source/kernel/kernel-jammy-src
-	url = http://192.168.1.77:1080/awesome-se/jetson/jetpack/kernel-jammy-src
-	branch = mybranch_2026-04-13-1776072626
-[submodule "source/nvidia-oot"]
-	path = source/nvidia-oot
-	url = http://192.168.1.77:1080/awesome-se/jetson/jetpack/nvidia-oot
-	branch = mybranch_2026-04-13-1776072640
 [submodule "source/hardware/nvidia/tegra/nv-public"]
 	path = source/hardware/nvidia/tegra/nv-public
 	url = http://192.168.1.77:1080/awesome-se/jetson/jetpack/hardware/tegra
 	branch = mybranch_2025-02-08-1738981711
-[submodule "source/hardware/nvidia/t23x/nv-public"]
-	path = source/hardware/nvidia/t23x/nv-public
-	url = http://192.168.1.77:1080/awesome-se/jetson/jetpack/hardware/t23x
-	branch = mybranch_2026-04-13-1776072655
 [submodule "source/nvdisplay"]
 	path = source/nvdisplay
 	url = http://192.168.1.77:1080/awesome-se/jetson/jetpack/nvdisplay
