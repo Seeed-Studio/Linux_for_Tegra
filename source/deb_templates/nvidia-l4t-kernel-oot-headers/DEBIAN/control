@@ -1,0 +1,11 @@
+Package: nvidia-l4t-kernel-oot-headers
+Version: @VERSION@
+Architecture: arm64
+Maintainer: Seeed Studio <support@seeed.cc>
+Section: kernel
+Priority: optional
+Installed-Size: @SIZE@
+Provides: nvidia-l4t-kernel-oot-headers
+Replaces: nvidia-l4t-kernel-oot-headers
+Description: NVIDIA L4T OOT module headers (custom)
+ Header files for building against NVIDIA OOT modules.

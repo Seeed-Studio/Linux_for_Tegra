@@ -1,0 +1,12 @@
+#!/bin/bash
+set -e
+KERNEL_VERSION="@KERNEL_VERSION@"
+depmod -a "${KERNEL_VERSION}"
+if [ -x /usr/sbin/nv-update-initrd ]; then
+	nv-update-initrd
+fi
+# Update L4T version in nv_tegra_release
+if [ -f /etc/nv_tegra_release ]; then
+	sed -i "s/REVISION: [0-9]\+\.[0-9]\+/REVISION: @L4T_REVISION@/" /etc/nv_tegra_release
+	sed -i "s/# branch R[0-9]\+\.[0-9]\+/# branch R@L4T_VERSION@/" /etc/nv_tegra_release
+fi

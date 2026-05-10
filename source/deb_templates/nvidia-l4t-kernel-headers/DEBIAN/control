@@ -1,0 +1,11 @@
+Package: nvidia-l4t-kernel-headers
+Version: @VERSION@
+Architecture: arm64
+Maintainer: Seeed Studio <support@seeed.cc>
+Section: kernel
+Priority: optional
+Installed-Size: @SIZE@
+Provides: nvidia-l4t-kernel-headers
+Replaces: nvidia-l4t-kernel-headers
+Description: NVIDIA L4T kernel headers (custom)
+ Kernel headers for building out-of-tree modules on the target device.

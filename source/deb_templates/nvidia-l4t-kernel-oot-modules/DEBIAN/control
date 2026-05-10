@@ -1,0 +1,13 @@
+Package: nvidia-l4t-kernel-oot-modules
+Version: @VERSION@
+Architecture: arm64
+Maintainer: Seeed Studio <support@seeed.cc>
+Section: kernel
+Priority: optional
+Installed-Size: @SIZE@
+Depends: nvidia-l4t-kernel (= @VERSION@)
+Provides: nvidia-l4t-kernel-oot-modules
+Replaces: nvidia-l4t-kernel-oot-modules
+Description: NVIDIA L4T OOT kernel modules (custom)
+ Out-of-tree kernel modules (nvgpu, nvidia-oot, hwpm, nvethernetrm)
+ for custom Jetson carrier boards.
