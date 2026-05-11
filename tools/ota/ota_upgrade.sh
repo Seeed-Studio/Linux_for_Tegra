@@ -143,14 +143,25 @@ apt-mark hold ${PACKAGES_TO_HOLD}
 # ---- Step 10: Cleanup old kernel modules ----
 
 step 10 "Cleaning up old kernel modules"
-# Remove previous kernel module directories that are no longer needed
-for mod_dir in /lib/modules/*; do
-	kver="$(basename "${mod_dir}")"
-	if [ "${kver}" != "$(uname -r)" ] && [ -d "${mod_dir}" ] && echo "${kver}" | grep -q 'tegra'; then
-		echo "  Removing old kernel modules: ${kver} ($(du -sh "${mod_dir}" 2>/dev/null | cut -f1))"
-		rm -rf "${mod_dir}"
+# Determine the NEW kernel version from installed modules (uname -r is still old before reboot)
+NEW_KV=""
+for d in /lib/modules/*tegra*; do
+	kv="$(basename "${d}")"
+	if [ "${kv}" != "$(uname -r)" ] && [ -d "${d}" ]; then
+		NEW_KV="${kv}"
 	fi
 done
+if [ -n "${NEW_KV}" ]; then
+	for mod_dir in /lib/modules/*; do
+		kver="$(basename "${mod_dir}")"
+		if [ "${kver}" != "${NEW_KV}" ] && [ -d "${mod_dir}" ] && echo "${kver}" | grep -q 'tegra'; then
+			echo "  Removing old kernel modules: ${kver} ($(du -sh "${mod_dir}" 2>/dev/null | cut -f1))"
+			rm -rf "${mod_dir}"
+		fi
+	done
+else
+	echo "  No old kernel modules to clean up"
+fi
 
 # ---- Step 11: Summary ----
 
