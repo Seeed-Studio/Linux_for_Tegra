@@ -162,7 +162,6 @@ build_package() {
 populate_nvidia_l4t_kernel() {
 	local staging="$1"
 	local kernel_dir="${KERNEL_OUT_DIR}/kernel/${KERNEL_SRC_DIR}"
-	local mod_dir="${KERNEL_OUT_DIR}/kernel"
 
 	echo "  Installing kernel Image..."
 	mkdir -p "${staging}/boot"
@@ -173,12 +172,12 @@ populate_nvidia_l4t_kernel() {
 	# Install modules to a temporary root, then copy to staging
 	local tmp_mod_root
 	tmp_mod_root="$(mktemp -d)"
-	make -C "${mod_dir}" \
+	make -C "${kernel_dir}" \
 		ARCH=arm64 \
 		CROSS_COMPILE="${CROSS_COMPILE}" \
 		INSTALL_MOD_PATH="${tmp_mod_root}" \
 		INSTALL_MOD_STRIP=1 \
-		modules_install 2>/dev/null || true
+		modules_install
 	# Copy only the kernel/ subdirectory (in-tree modules), skip updates/
 	if [ -d "${tmp_mod_root}/lib/modules/${KERNEL_VERSION}" ]; then
 		cp -a "${tmp_mod_root}/lib/modules/${KERNEL_VERSION}/kernel" \
