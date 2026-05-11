@@ -184,7 +184,7 @@ populate_nvidia_l4t_kernel() {
 		cp -a "${tmp_mod_root}/lib/modules/${KERNEL_VERSION}/kernel" \
 			"${staging}/lib/modules/${KERNEL_VERSION}/"
 		# Copy modules.dep and friends
-		for f in modules.builtin modules.builtin.modinfo modules.dep modules.dep.bin \
+		for f in modules.builtin modules.builtin.modinfo modules.order modules.dep modules.dep.bin \
 			modules.alias modules.alias.bin modules.softdep modules.symbols modules.symbols.bin; do
 			if [ -f "${tmp_mod_root}/lib/modules/${KERNEL_VERSION}/${f}" ]; then
 				cp "${tmp_mod_root}/lib/modules/${KERNEL_VERSION}/${f}" \

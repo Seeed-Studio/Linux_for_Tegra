@@ -28,7 +28,7 @@ fatal() {
 step() {
 	echo ""
 	echo "========================================="
-	echo "[STEP $1/10] $2"
+	echo "[STEP $1/11] $2"
 	echo "========================================="
 }
 
@@ -140,9 +140,21 @@ apt-get install -y --allow-change-held-packages nvidia-jetpack || \
 step 9 "Re-locking packages"
 apt-mark hold ${PACKAGES_TO_HOLD}
 
-# ---- Step 10: Summary ----
+# ---- Step 10: Cleanup old kernel modules ----
 
-step 10 "Upgrade complete"
+step 10 "Cleaning up old kernel modules"
+# Remove previous kernel module directories that are no longer needed
+for mod_dir in /lib/modules/*; do
+	kver="$(basename "${mod_dir}")"
+	if [ "${kver}" != "$(uname -r)" ] && [ -d "${mod_dir}" ] && echo "${kver}" | grep -q 'tegra'; then
+		echo "  Removing old kernel modules: ${kver} ($(du -sh "${mod_dir}" 2>/dev/null | cut -f1))"
+		rm -rf "${mod_dir}"
+	fi
+done
+
+# ---- Step 11: Summary ----
+
+step 11 "Upgrade complete"
 echo ""
 echo "Kernel:  $(uname -r)"
 echo "L4T:     $(awk '/REVISION/ {print $2}' /etc/nv_tegra_release 2>/dev/null || echo 'check after reboot')"

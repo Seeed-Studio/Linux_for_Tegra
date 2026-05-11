@@ -46,6 +46,7 @@ The script handles all steps automatically:
 - Upgrade userspace and JetPack
 - Update UEFI firmware
 - Re-lock packages
+- Cleanup old kernel modules
 - Prompt for reboot
 
 ## Step 4: Verify
