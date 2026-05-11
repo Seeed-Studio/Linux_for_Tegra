@@ -1,0 +1,12 @@
+Package: nvidia-l4t-initrd
+Version: @VERSION@
+Architecture: arm64
+Maintainer: Seeed Studio <support@seeed.cc>
+Section: kernel
+Priority: optional
+Installed-Size: @SIZE@
+Depends: nvidia-l4t-core (>= 36.4.0)
+Provides: nvidia-l4t-initrd
+Replaces: nvidia-l4t-initrd
+Description: NVIDIA L4T initrd (custom)
+ Initial RAM disk for custom Jetson carrier boards.

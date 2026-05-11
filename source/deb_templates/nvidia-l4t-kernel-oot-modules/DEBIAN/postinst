@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+KERNEL_VERSION="@KERNEL_VERSION@"
+depmod -a "${KERNEL_VERSION}"

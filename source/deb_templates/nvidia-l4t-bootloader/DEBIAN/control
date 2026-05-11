@@ -1,0 +1,13 @@
+Package: nvidia-l4t-bootloader
+Version: @VERSION@
+Architecture: arm64
+Maintainer: Seeed Studio <support@seeed.cc>
+Section: kernel
+Priority: optional
+Installed-Size: @SIZE@
+Depends: nvidia-l4t-core (>= 36.4.0)
+Provides: nvidia-l4t-bootloader
+Replaces: nvidia-l4t-bootloader
+Description: NVIDIA L4T bootloader (custom)
+ UEFI bootloader capsule update for custom Jetson carrier boards.
+ Triggers capsule update on next reboot.

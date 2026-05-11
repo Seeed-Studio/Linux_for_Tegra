@@ -1,0 +1,84 @@
+#!/bin/bash
+set -e
+
+# bootloader postinst
+# Temporarily changes TNSPEC/COMPATIBLE_SPEC to devkit values so the official
+# NVIDIA bootloader postinst can match the board and apply the UEFI capsule.
+# After the capsule is queued, restores the original board identity.
+
+BOOT_CTRL_CONF="/etc/nv_boot_control.conf"
+DISABLE_FLAG="/opt/nvidia/l4t-packages/.nv-l4t-disable-boot-fw-update-in-preinstall"
+
+# Map Seeed board names to NVIDIA devkit names for capsule matching
+map_to_devkit() {
+    case "${1}" in
+        *recomputer-orin-j401-*|*recomputer-orin-nano-*|*recomputer-orin-j101-*)
+            echo "jetson-orin-nano-devkit"
+            ;;
+        *recomputer-industrial-*|*reserver-*|*recomputer-a30*)
+            echo "jetson-agx-orin-devkit"
+            ;;
+        *)
+            echo ""
+            ;;
+    esac
+}
+
+if [ -e "${DISABLE_FLAG}" ]; then
+    echo "Boot-fw update disabled, skipping capsule update"
+    exit 0
+fi
+
+# Read current board identity
+ORIG_TNSPEC=$(awk '/^TNSPEC/ {print $2}' "${BOOT_CTRL_CONF}" 2>/dev/null || true)
+BOARD_NAME=$(echo "${ORIG_TNSPEC}" | awk -F'-' '{for(i=1;i<=NF;i++) if($(i) ~ /^[0-9]+$/) continue; else {print $(i); break}}' || true)
+
+# Extract the board suffix from TNSPEC (everything after the numeric fields)
+SEEED_BOARD=$(echo "${ORIG_TNSPEC}" | sed 's/[0-9]*-[A-Za-z0-9.]*-[0-9]*-[A-Za-z0-9.]*-[0-9]*-[0-9]*-//' | sed 's/-$//')
+
+DEVKIT=$(map_to_devkit "${ORIG_TNSPEC}")
+if [ -z "${DEVKIT}" ]; then
+    echo "WARNING: Unknown board ${ORIG_TNSPEC}, cannot map to devkit for capsule update"
+    exit 0
+fi
+
+# Derive devkit TNSPEC by replacing the board name portion
+# Original: 3767-300-0003-S.1-1-0-recomputer-orin-j401-
+# Devkit:   3767-300-0003-S.1-1-0-jetson-orin-nano-devkit-
+DEVKIT_TNSPEC=$(echo "${ORIG_TNSPEC}" | sed "s/${SEEED_BOARD}/${DEVKIT}/")
+# Derive COMPATIBLE_SPEC from TNSPEC (strip SKU and FAB fields)
+# 3767-300-0003-S.1-1-0-jetson-orin-nano-devkit- -> 3767--0003--1--jetson-orin-nano-devkit-
+DEVKIT_COMPAT=$(echo "${DEVKIT_TNSPEC}" | awk -F'-' '{
+    printf "%s--%s--%s--%s-", $1, $3, $5, $6
+    for(i=7;i<=NF;i++) printf "%s-", $i
+    printf "\n"
+}' | sed 's/-$//')
+
+echo "Mapped ${SEEED_BOARD} -> ${DEVKIT} for capsule matching"
+
+# Backup original config
+cp "${BOOT_CTRL_CONF}" "${BOOT_CTRL_CONF}.bak"
+
+# Temporarily set devkit identity
+sed -i "s|^TNSPEC .*|TNSPEC ${DEVKIT_TNSPEC}-|" "${BOOT_CTRL_CONF}"
+sed -i "s|^COMPATIBLE_SPEC .*|COMPATIBLE_SPEC ${DEVKIT_COMPAT}-|" "${BOOT_CTRL_CONF}"
+
+echo "Temporary TNSPEC: ${DEVKIT_TNSPEC}-"
+
+# Run the official NVIDIA bootloader postinst which will now match the board
+OFFICIAL_POSTINST="/var/lib/dpkg/info/nvidia-l4t-bootloader.postinst"
+if [ -f "${OFFICIAL_POSTINST}" ]; then
+    echo "Triggering official NVIDIA bootloader postinst..."
+    bash "${OFFICIAL_POSTINST}" postinst || {
+        echo "WARNING: Official postinst failed, capsule may not have been queued"
+    }
+else
+    echo "WARNING: Official bootloader postinst not found, skipping capsule update"
+fi
+
+# Restore original board identity
+cp "${BOOT_CTRL_CONF}.bak" "${BOOT_CTRL_CONF}"
+rm -f "${BOOT_CTRL_CONF}.bak"
+
+echo "Restored original board identity: ${ORIG_TNSPEC}"
+echo "Reboot to apply UEFI firmware update."

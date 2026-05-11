@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+if [ -x /usr/sbin/nv-update-initrd ]; then
+	nv-update-initrd
+fi
