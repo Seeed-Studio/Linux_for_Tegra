@@ -84,6 +84,10 @@ rollback() {
 			/etc/apt/sources.list.d/nvidia-l4t-apt-source.list
 		log "  Restored apt source"
 	fi
+	if [ -f "${BACKUP_DIR}/nv_tegra_release" ]; then
+		cp "${BACKUP_DIR}/nv_tegra_release" /etc/nv_tegra_release
+		log "  Restored /etc/nv_tegra_release"
+	fi
 	if [ -f "${BACKUP_DIR}/hold.list" ]; then
 		xargs apt-mark hold < "${BACKUP_DIR}/hold.list" 2>/dev/null || true
 		log "  Restored package holds"
@@ -127,13 +131,14 @@ if [ "${AVAIL_MB}" -lt "${MIN_DISK_SPACE_MB}" ]; then
 fi
 step_ok "Disk space: ${AVAIL_MB}MB available"
 
-# Check current L4T version
+# Check current L4T version — strict gate
 CURRENT_L4T=$(awk '/^# branch R/ {print $3}' /etc/nv_tegra_release 2>/dev/null)
 if echo "${CURRENT_L4T}" | grep -qE '^R36\.4\.'; then
 	step_ok "Current L4T: ${CURRENT_L4T} (upgradable)"
+elif echo "${CURRENT_L4T}" | grep -qE '^R36\.5\.'; then
+	fatal "Already on ${CURRENT_L4T}. No upgrade needed."
 else
-	log "  WARNING: Current L4T is ${CURRENT_L4T}, expected R36.4.x"
-	log "  Continuing anyway..."
+	fatal "Unsupported source version: ${CURRENT_L4T}. This script upgrades R36.4.x only."
 fi
 
 # SHA256 integrity verification
@@ -195,6 +200,7 @@ cp /boot/initrd "${BACKUP_DIR}/initrd" 2>/dev/null || true
 cp "${BOOT_CTRL_CONF}" "${BACKUP_DIR}/nv_boot_control.conf"
 cp /etc/apt/sources.list.d/nvidia-l4t-apt-source.list \
 	"${BACKUP_DIR}/nvidia-l4t-apt-source.list" 2>/dev/null || true
+cp /etc/nv_tegra_release "${BACKUP_DIR}/nv_tegra_release" 2>/dev/null || true
 apt-mark showhold > "${BACKUP_DIR}/hold.list" 2>/dev/null || true
 step_ok "Backup saved to ${BACKUP_DIR}"
 
@@ -337,11 +343,19 @@ fi
 
 step 12 "Upgrade complete"
 
+# Update nv_tegra_release to reflect the upgrade
+if grep -q '^# Seeed Image Name' /etc/nv_tegra_release 2>/dev/null; then
+	UPGRADE_DATE=$(date '+%Y-%m-%d')
+	sed -i "s|^# Seeed Image Name .*|# Seeed Image Name OTA-upgraded-to-${TARGET_L4T}-on-${UPGRADE_DATE}|" \
+		/etc/nv_tegra_release
+	log "  Updated nv_tegra_release Seeed Image Name"
+fi
+
 # Add fallback boot entry using backed-up kernel
 if [ -f "${BACKUP_DIR}/Image" ]; then
 	cp "${BACKUP_DIR}/Image" /boot/Image.bak
 	# Add fallback entry if not already present
-	if ! grep -q "LABEL backup" /boot/extlinux/extlinux.conf; then
+	if ! grep -q "^LABEL backup" /boot/extlinux/extlinux.conf; then
 		cat >> /boot/extlinux/extlinux.conf << 'FALLBACK'
 
 LABEL backup
