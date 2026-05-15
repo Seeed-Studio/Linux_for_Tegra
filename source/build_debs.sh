@@ -388,3 +388,10 @@ fi
 echo ""
 echo "Output: ${OUTPUT_DIR}/"
 ls -lh "${OUTPUT_DIR}"/*.deb 2>/dev/null || echo "No deb files produced"
+
+if [ ${#BUILT[@]} -gt 0 ]; then
+	echo ""
+	echo "Generating checksums..."
+	(cd "${OUTPUT_DIR}" && sha256sum *.deb > sha256sum.txt)
+	echo "  ${OUTPUT_DIR}/sha256sum.txt"
+fi
