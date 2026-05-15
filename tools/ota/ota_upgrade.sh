@@ -19,7 +19,6 @@ DEB_DIR="${1:-$HOME/ota-debs}"
 BOOT_CTRL_CONF="/etc/nv_boot_control.conf"
 DISABLE_FLAG="/opt/nvidia/l4t-packages/.nv-l4t-disable-boot-fw-update-in-preinstall"
 BACKUP_DIR="/opt/nvidia/l4t-packages/ota_backup"
-APT_OPTS="-o Dpkg::Options::='--force-confold'"
 
 PACKAGES_TO_HOLD="nvidia-l4t-display-kernel nvidia-l4t-kernel nvidia-l4t-kernel-dtbs \
   nvidia-l4t-kernel-headers nvidia-l4t-kernel-oot-headers \
@@ -27,6 +26,8 @@ PACKAGES_TO_HOLD="nvidia-l4t-display-kernel nvidia-l4t-kernel nvidia-l4t-kernel-
 
 TARGET_L4T="36.5.0"
 MIN_DISK_SPACE_MB=2048
+DEBIAN_FRONTEND="noninteractive"
+export DEBIAN_FRONTEND
 
 # ---- Logging ----
 
@@ -178,7 +179,11 @@ log "Board:    ${ORIG_TNSPEC}"
 log "Devkit:   ${DEVKIT}"
 log "Log:      ${LOG_FILE}"
 log ""
-read -p "Press Enter to start upgrade, or Ctrl+C to cancel..."
+if [ -t 0 ]; then
+	read -p "Press Enter to start upgrade, or Ctrl+C to cancel..."
+else
+	log "Non-interactive mode, starting upgrade automatically..."
+fi
 
 # ---- Step 1: Backup critical files ----
 
@@ -232,7 +237,10 @@ fi
 # ---- Step 6: Fix dependencies and upgrade userspace ----
 
 step 6 "Upgrading userspace packages (this may take several minutes)"
-if apt-get ${APT_OPTS} --fix-broken install -y --allow-change-held-packages; then
+if DEBIAN_FRONTEND=noninteractive apt-get \
+	-o Dpkg::Options::="--force-confold" \
+	-o Dpkg::Options::="--force-confdef" \
+	--fix-broken install -y --allow-change-held-packages; then
 	step_ok "Userspace packages upgraded"
 else
 	step_fail "Userspace upgrade had errors"
@@ -245,7 +253,10 @@ fi
 # ---- Step 7: Dist-upgrade remaining packages ----
 
 step 7 "Dist-upgrading remaining packages"
-if apt-get ${APT_OPTS} dist-upgrade -y --allow-change-held-packages; then
+if DEBIAN_FRONTEND=noninteractive apt-get \
+	-o Dpkg::Options::="--force-confold" \
+	-o Dpkg::Options::="--force-confdef" \
+	dist-upgrade -y --allow-change-held-packages; then
 	step_ok "Dist-upgrade complete"
 else
 	step_fail "Dist-upgrade had errors"
@@ -358,7 +369,12 @@ log "If the system fails to boot after reboot,"
 log "select 'backup kernel' from the boot menu."
 log "========================================="
 echo ""
-read -p "Reboot now? [Y/n] " REPLY
+if [ -t 0 ]; then
+	read -p "Reboot now? [Y/n] " REPLY
+else
+	REPLY="Y"
+	log "Non-interactive mode, rebooting automatically"
+fi
 if [ -z "${REPLY}" ] || [ "${REPLY}" = "Y" ] || [ "${REPLY}" = "y" ]; then
 	reboot
 else
