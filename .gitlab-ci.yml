@@ -1256,8 +1256,8 @@ build-ota-packages:
     # build deb packages
     - ./build_debs.sh
     - cd ..
-    # package and upload to GitHub Release
-    - ./tools/ota/create_release.sh ${OTA_VERSION} --upload
+    # package and upload to GitLab Release
+    - ./tools/ota/create_release.sh ${OTA_VERSION} --upload gitlab
     # copy to SMB share as backup
     - mkdir -p deploy
     - mount -t cifs -o username=$SMB_USER,password=$SMB_PWD,vers=3.0,uid=`id -u`,gid=`id -g`,rw,file_mode=0664 //192.168.1.77/red_2t/jetson deploy

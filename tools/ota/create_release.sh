@@ -1,31 +1,39 @@
 #!/bin/bash
 
 # Package OTA deb files into a release tarball.
-# Optionally upload to GitHub Release.
+# Optionally upload to GitLab or GitHub Release.
 #
 # Usage: ./create_release.sh [VERSION] [OPTIONS]
-#   VERSION   Release version tag (e.g., r36.5.0)
-#   -u, --upload    Upload to GitHub Release via gh CLI
-#   -h, --help      Show help
+#   VERSION              Release version tag (e.g., r36.5.0)
+#   --upload gitlab      Upload to GitLab Release via API
+#   --upload github      Upload to GitHub Release via gh CLI
+#   -h, --help           Show help
 
 set -e
 
 REPO_DIR="$(cd "$(dirname "$(readlink -f "${0}")")/../.." && pwd)"
-UPLOAD=false
+UPLOAD_TARGET=""
 VERSION=""
 
 usage() {
 	echo "Usage: ./create_release.sh [VERSION] [OPTIONS]"
-	echo "  VERSION           Release version tag (e.g., r36.5.0)"
-	echo "  -u, --upload      Upload to GitHub Release via gh CLI"
-	echo "  -h, --help        Show help"
+	echo "  VERSION              Release version tag (e.g., r36.5.0)"
+	echo "  --upload gitlab      Upload to GitLab Release via API"
+	echo "  --upload github      Upload to GitHub Release via gh CLI"
+	echo "  -h, --help           Show help"
 	exit 0
 }
 
 parse_args() {
 	while [ $# -gt 0 ]; do
 		case "${1}" in
-			-u|--upload) UPLOAD=true; shift ;;
+			--upload)
+				case "${2}" in
+					gitlab) UPLOAD_TARGET="gitlab"; shift 2 ;;
+					github) UPLOAD_TARGET="github"; shift 2 ;;
+					*) UPLOAD_TARGET="github"; shift ;;
+				esac
+				;;
 			-h|--help) usage ;;
 			r36.*|v*) VERSION="${1}"; shift ;;
 			*) echo "Error: Invalid option ${1}"; usage ;;
@@ -48,8 +56,12 @@ check_prereqs() {
 	if [ ! -f "${REPO_DIR}/ota_packages/sha256sum.txt" ]; then
 		echo "Warning: sha256sum.txt not found. Run build_debs.sh to generate."
 	fi
-	if [ "${UPLOAD}" = true ] && ! command -v gh &>/dev/null; then
+	if [ "${UPLOAD_TARGET}" = "github" ] && ! command -v gh &>/dev/null; then
 		echo "Error: gh CLI not found. Install: https://cli.github.com/"
+		exit 1
+	fi
+	if [ "${UPLOAD_TARGET}" = "gitlab" ] && [ -z "${CI_JOB_TOKEN}" ]; then
+		echo "Error: CI_JOB_TOKEN not set. GitLab upload must run inside a CI pipeline."
 		exit 1
 	fi
 }
@@ -107,14 +119,113 @@ create_release() {
 	echo "========================================="
 }
 
-upload_release() {
+upload_gitlab() {
+	local pkg_dir="${REPO_DIR}/ota_packages"
+	local tarball="${pkg_dir}/ota-${VERSION}.tar.gz"
+	local sha_file="${tarball}.sha256"
+	local api="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}"
+	local pkg_base="${api}/packages/generic/ota-upgrade/${VERSION}"
+
+	echo ""
+	echo "Uploading to GitLab Package Registry..."
+
+	# Upload tarball
+	echo "  Uploading ota-${VERSION}.tar.gz..."
+	curl --fail --silent --show-error \
+		--header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
+		--upload-file "${tarball}" \
+		"${pkg_base}/ota-${VERSION}.tar.gz"
+
+	# Upload sha256
+	echo "  Uploading ota-${VERSION}.tar.gz.sha256..."
+	curl --fail --silent --show-error \
+		--header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
+		--upload-file "${sha_file}" \
+		"${pkg_base}/ota-${VERSION}.tar.gz.sha256"
+
+	echo ""
+	echo "Creating GitLab Release..."
+
+	# Write release description
+	local desc_file
+	desc_file="$(mktemp)"
+	cat > "${desc_file}" <<DESC
+## OTA Incremental Upgrade ${VERSION}
+
+### Supported boards
+- reComputer J401 / J40mini / J101
+- reComputer Industrial / Rugged / Super
+- reServer series
+- Jetson Orin Nano Developer Kit (J3011)
+- reComputer Mini AGX Orin (J501)
+
+### Quick start
+\`\`\`bash
+# Download from this release page
+# Verify integrity
+sha256sum -c ota-${VERSION}.tar.gz.sha256
+
+# Extract and upgrade
+tar xzf ota-${VERSION}.tar.gz
+sudo bash ota-${VERSION}/ota_upgrade.sh ota-${VERSION}
+\`\`\`
+
+### Safety features
+- SHA256 package integrity verification
+- Automatic backup and rollback on failure
+- Fallback boot entry for recovery
+- Full upgrade logging
+DESC
+
+	# Build JSON payload with python (available on CI runner)
+	local release_json
+	release_json="$(mktemp)"
+	python3 -c "
+import json, sys
+with open('${desc_file}') as f:
+    desc = f.read()
+data = {
+    'tag_name': '${VERSION}',
+    'name': 'OTA Upgrade ${VERSION}',
+    'description': desc,
+    'assets': {
+        'links': [
+            {
+                'name': 'ota-${VERSION}.tar.gz',
+                'url': '${pkg_base}/ota-${VERSION}.tar.gz',
+                'link_type': 'package'
+            },
+            {
+                'name': 'ota-${VERSION}.tar.gz.sha256',
+                'url': '${pkg_base}/ota-${VERSION}.tar.gz.sha256',
+                'link_type': 'other'
+            }
+        ]
+    }
+}
+json.dump(data, sys.stdout)
+" > "${release_json}"
+
+	curl --fail --silent --show-error \
+		--request POST \
+		--header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
+		--header "Content-Type: application/json" \
+		--data @"${release_json}" \
+		"${api}/releases"
+
+	rm -f "${desc_file}" "${release_json}"
+
+	echo ""
+	echo "GitLab Release published: ${CI_PROJECT_URL}/-/releases/${VERSION}"
+}
+
+upload_github() {
 	local pkg_dir="${REPO_DIR}/ota_packages"
 	local tarball="${pkg_dir}/ota-${VERSION}.tar.gz"
 
 	echo ""
 	echo "Uploading to GitHub Release..."
 
-	# Write header to temp file for --notes-header
 	local notes_header
 	notes_header="$(mktemp)"
 	cat > "${notes_header}" <<HEADER
@@ -168,6 +279,8 @@ HEADER
 parse_args "$@"
 check_prereqs
 create_release
-if [ "${UPLOAD}" = true ]; then
-	upload_release
+if [ "${UPLOAD_TARGET}" = "gitlab" ]; then
+	upload_gitlab
+elif [ "${UPLOAD_TARGET}" = "github" ]; then
+	upload_github
 fi
