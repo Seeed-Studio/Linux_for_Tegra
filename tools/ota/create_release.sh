@@ -103,7 +103,7 @@ create_release() {
 	echo "Size:     $(du -sh "${output}" | cut -f1)"
 	echo "SHA256:   $(cat "${output}.sha256")"
 	echo ""
-	ls -lh "${staging}"/*.deb 2>/dev/null || ls -lh "${output}"
+	ls -lh "${output}"
 	echo "========================================="
 }
 
@@ -114,26 +114,18 @@ upload_release() {
 	echo ""
 	echo "Uploading to GitHub Release..."
 
-	gh release create "${VERSION}" \
-		"${tarball}" \
-		"${tarball}.sha256" \
-		--repo Seeed-Studio/Linux_for_Tegra \
-		--title "OTA Upgrade ${VERSION}" \
-		--notes "$(cat <<EOF
+	# Write header to temp file for --notes-header
+	local notes_header
+	notes_header="$(mktemp)"
+	cat > "${notes_header}" <<HEADER
 ## OTA Incremental Upgrade ${VERSION}
-
-### What's included
-- Kernel deb packages (5.15.185-tegra)
-- Device tree blobs (all Seeed Jetson Orin boards)
-- Out-of-tree modules (nvgpu, display, camera, etc.)
-- Initrd for NVMe boot
-- One-shot upgrade script (\`ota_upgrade.sh\`)
 
 ### Supported boards
 - reComputer J401 / J40mini / J101
-- reComputer Industrial
+- reComputer Industrial / Rugged / Super
 - reServer series
 - Jetson Orin Nano Developer Kit (J3011)
+- reComputer Mini AGX Orin (J501)
 
 ### Quick start
 \`\`\`bash
@@ -154,8 +146,20 @@ sudo bash ota-${VERSION}/ota_upgrade.sh ota-${VERSION}
 - Automatic backup and rollback on failure
 - Fallback boot entry for recovery
 - Full upgrade logging
-EOF
-)"
+
+---
+
+HEADER
+
+	gh release create "${VERSION}" \
+		"${tarball}" \
+		"${tarball}.sha256" \
+		--repo Seeed-Studio/Linux_for_Tegra \
+		--title "OTA Upgrade ${VERSION}" \
+		--generate-notes \
+		--notes-file "${notes_header}"
+
+	rm -f "${notes_header}"
 
 	echo ""
 	echo "Release published: https://github.com/Seeed-Studio/Linux_for_Tegra/releases/tag/${VERSION}"

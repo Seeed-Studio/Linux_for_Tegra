@@ -61,6 +61,7 @@ stages:
   - recomputer-robo-agx-orin-64g-j501
 
   - custom-firmware
+  - ota-packages
 
 # common code of building target image
 .build_image: &build_image_script
@@ -1224,3 +1225,50 @@ build-custom-firmare:
     - echo "Building custom image for $CONFIG"
     - *build_image_script
 
+
+build-ota-packages:
+  stage: ota-packages
+  rules:
+    - if: '$START_TASK == "ota"'
+      when: manual
+    - if: '$CI_COMMIT_TAG'
+      when: manual
+    - when: never
+  tags:
+    - x86-shell
+  variables:
+    OTA_VERSION: "r36.5.0"
+
+  script:
+    - echo "Building OTA packages for ${OTA_VERSION}"
+    - git submodule sync
+    - git submodule update --init --recursive
+    # prepare cross toolchain
+    - wget http://192.168.1.77/jetson/aarch64--glibc--stable-2022.08-1.tar.bz2 -q
+    - mkdir -p l4t-gcc
+    - tar xf aarch64--glibc--stable-2022.08-1.tar.bz2 -C ./l4t-gcc
+    - export ARCH=arm64
+    - export CROSS_COMPILE=`realpath .`/l4t-gcc/aarch64--glibc--stable-2022.08-1/bin/aarch64-buildroot-linux-gnu-
+    # build kernel + OOT modules
+    - cd source/
+    - ./nvbuild.sh
+    - ./do_copy.sh
+    # build deb packages
+    - ./build_debs.sh
+    - cd ..
+    # package and upload to GitHub Release
+    - ./tools/ota/create_release.sh ${OTA_VERSION} --upload
+    # copy to SMB share as backup
+    - mkdir -p deploy
+    - mount -t cifs -o username=$SMB_USER,password=$SMB_PWD,vers=3.0,uid=`id -u`,gid=`id -g`,rw,file_mode=0664 //192.168.1.77/red_2t/jetson deploy
+    - cp ota_packages/ota-${OTA_VERSION}.tar.gz deploy/ || true
+    - cp ota_packages/ota-${OTA_VERSION}.tar.gz.sha256 deploy/ || true
+    - umount deploy
+
+  artifacts:
+    paths:
+      - ota_packages/*.deb
+      - ota_packages/sha256sum.txt
+      - "ota_packages/ota-${OTA_VERSION}.tar.gz"
+      - "ota_packages/ota-${OTA_VERSION}.tar.gz.sha256"
+    expire_in: 30 days
