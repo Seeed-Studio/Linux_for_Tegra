@@ -26,7 +26,7 @@ dtbo-y += tegra264-android.dtbo
 dtbo-y += tegra264-ufs-provision.dtbo
 
 dtb-y += tegra264-p4071-0000+p3834-0008-recomputer-carrier.dtb
-
+dtb-y += tegra264-p4071-0000+p3834-0000-recomputer-carrier.dtb
 ifneq ($(dtb-y),)
 dtb-y := $(addprefix $(makefile-path)/,$(dtb-y))
 endif

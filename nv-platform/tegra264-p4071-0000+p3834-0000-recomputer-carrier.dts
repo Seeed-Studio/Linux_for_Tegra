@@ -6,24 +6,24 @@
 #include "tegra264-p4071-0000.dtsi"
 
 / {
-	model = "Seeed reComputer Carrier j6015 board";
-	compatible = "nvidia,p4071-0000+p3834-0008", "nvidia,p3834-0008", "nvidia,tegra264";
+	model = "Seeed reComputer Carrier j6014 board";
+	compatible = "nvidia,p4071-0000+p3834-0000", "nvidia,p3834-0000", "nvidia,tegra264";
 	
 	bus@0 {
 		mttcan@81102f0000 {
-			status = "okay";
+			status = "disabled";
 		};
-		
+
 		mttcan@8110300000 {
-			status = "okay";
+			status = "disabled";
 		};
-		
+
 		mttcan@8110330000 {
-			status = "okay";
+			status = "disabled";
 		};
-		
+
 		mttcan@8110340000 {
-			status = "okay";
+			status = "disabled";
 		};
 		
 		mgbe0: ethernet@a808a10000 {
