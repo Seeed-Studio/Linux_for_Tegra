@@ -1,0 +1,35 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+/dts-v1/;
+
+#include "tegra264-p3834-0008.dtsi"
+#include "tegra264-p3971-0080.dtsi"
+#include "tegra264-p3971-xxxx-p3834-xxxx.dtsi"
+
+/ {
+	model = "NVIDIA Jetson Thor Developer Kit";
+	compatible = "nvidia,p3971-0080+p3834-0008", "nvidia,p3834-0008", "nvidia,tegra264";
+
+	bus@0 {
+		/* C3 M.2 Key M(J1) */
+		pcie@a808440000 {
+			status = "okay";
+		};
+
+		mttcan@81102f0000 {
+			status = "okay";
+		};
+
+		mttcan@8110300000 {
+			status = "okay";
+		};
+
+		mttcan@8110330000 {
+			status = "okay";
+		};
+
+		mttcan@8110340000 {
+			status = "okay";
+		};
+	};
+};

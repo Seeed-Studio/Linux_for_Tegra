@@ -1,0 +1,38 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+#include "tegra264-p3834-common.dtsi"
+#include "nv-soc/tegra264-soc-thermal-slowdown.dtsi"
+#include "nv-soc/tegra264-soc-thermal-shutdown.dtsi"
+#include "nv-soc/tegra264-soc-thermal-trip-event.dtsi"
+
+/ {
+	bpmp {
+		i2c {
+			thermal-sensor@4c {
+				interrupt-parent = <&gpio_main>;
+				interrupts = <TEGRA264_MAIN_GPIO(P, 1) IRQ_TYPE_LEVEL_LOW>;
+			};
+
+			vrs@3c {
+				// Format:
+				// <reg, val, ops>[, <reg, val, ops>];
+				//
+				// Description:
+				// - reg -> i2c register address
+				// - val -> value to write
+				// - ops -> AND/OR operation (0=OR, 1=AND)
+				//
+				// UEFI implementation:
+				// 1. var = read <reg> register
+				// 2. var = var <ops> <val>
+				// 3. write var into <reg> register
+				nvidia,uefi-vrs-pseq-init = <0x25 0xf7 0x1>;
+			};
+		};
+	};
+
+	nvtherm-oc-event {
+		status = "okay";
+	};
+};
