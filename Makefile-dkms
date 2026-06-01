@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: GPL-2.0
+# Copyright (c) 2022, NVIDIA CORPORATION.  All rights reserved.
+
+KDIR ?= /lib/modules/$(shell uname -r)/build
+
+%:
+	$(MAKE) -C $(KDIR) M=$$PWD/drivers/ srctree.nvidia-oot=$$PWD CONFIG_TEGRA_OOT_MODULE=m $@

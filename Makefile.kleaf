@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+ifeq ($(origin srctree.nvconftest), undefined)
+srctree.nvconftest := $(abspath $(NV_BUILD_KERNEL_NVCONFTEST_OUT))
+endif
+
+ifeq ($(origin srctree.nvidia-oot), undefined)
+export srctree.nvidia-oot := $(abspath $(shell dirname $(lastword $(MAKEFILE_LIST))))
+endif
+
+ifeq ($(origin srctree.hwpm), undefined)
+export srctree.hwpm := $(KERNEL_SRC)/../hwpm
+endif
+
+EXTRA_SYMBOLS += $(OUT_DIR)/../hwpm/drivers/tegra/hwpm/Module.symvers
+
+KERNEL_SRC ?= /lib/modules/$(shell uname -r)/build
+M ?= $(shell pwd)
+
+modules modules_install clean:
+	$(MAKE) -C $(KERNEL_SRC) M=$(M) \
+	srctree.nvidia-oot=$$PWD KBUILD_EXTRA_SYMBOLS="$(EXTRA_SYMBOLS)" $(@)

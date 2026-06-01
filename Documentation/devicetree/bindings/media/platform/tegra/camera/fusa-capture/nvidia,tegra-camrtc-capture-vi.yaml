@@ -1,0 +1,101 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/tegra-capture-vi/nvidia,tegra-camrtc-capture-vi.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Tegra Capture-ISP driver
+
+maintainers:
+  - Evgeny Kornev
+
+description: |
+     the compatability = nvidia,tegra-camrtc-capture-vi is mentioned in the following drivers
+        - <TOP>/kernel/nvidia-oot/drivers/media/platform/tegra/camera/fusa-capture/capture-vi.c
+
+     The following nodes use this compatibility
+        - /tegra-capture-vi
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra-camrtc-capture-vi
+
+  required:
+    - compatible
+
+properties:
+
+    nvidia,vi-devices:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+
+    nvidia,vi-mapping-size:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x6
+        maximum: 0x6
+
+    nvidia,vi-mapping:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x5
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x1
+
+    nvidia,vi-mapping-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - csi-stream-id
+                - vi-unit-id
+
+
+    nvidia,vi-max-channels:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x48
+        maximum: 0x48
+
+required:
+    - compatible
+
+examples:
+    - |
+        tegra-capture-vi {
+            compatible = "nvidia,tegra-camrtc-capture-vi";
+            nvidia,vi-devices = <&vi0 &vi1>;
+            nvidia,vi-mapping-size = <6>;
+            nvidia,vi-mapping = <0 0>,
+                                <1 0>,
+                                <2 1>,
+                                <3 1>,
+                                <4 0>,
+                                <5 1>;
+            nvidia,vi-mapping-names = "csi-stream-id, vi-unit-id";
+            nvidia,vi-max-channels = <72>;
+            status = "disabled";
+        };

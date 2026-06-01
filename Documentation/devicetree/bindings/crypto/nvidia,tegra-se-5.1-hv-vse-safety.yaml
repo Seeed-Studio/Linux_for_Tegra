@@ -1,0 +1,93 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/vse@C0110000/nvidia,tegra-se-5.1-hv-vse-safety.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Virtual Security Engine driver over Tegra Hypervisor IVC channel
+
+maintainers:
+  - Mallikarjun Kasoju
+  - Ashutosh Patel
+
+description: |
+     the compatability = nvidia,tegra-se-5.1-hv-vse-safety is mentioned in the following drivers
+        - <TOP>/kernel/nvidia-oot/drivers/crypto/tegra-hv-vse-safety.c
+
+     The following nodes use this compatibility
+        - /vse@C0110000
+        - /vse@C0120000
+        - /vse@C0140000
+        - /vse@C2430000
+        - /vse@C2440000
+        - /vse@C2460000
+        - /vse@C24A0000
+        - /vse@C24B0000
+        - /vse@C24D0000
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra-se-5.1-hv-vse-safety
+
+  required:
+    - compatible
+
+properties:
+
+    iommus:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            iommus are given by a tuple of 2 values:
+                - Phandle to the device
+                - Device ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+
+    se-engine-id:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0xc
+
+    nvidia,ivccfg_cnt:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x1
+        maximum: 0x1
+
+    nvidia,ivccfg:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0xffffff
+
+required:
+    - compatible
+    - iommus
+
+examples:
+    - |
+        vse@C0120000 {
+            compatible = "nvidia,tegra-se-5.1-hv-vse-safety";
+            iommus = <0x5 0x1809>;
+            status = "okay";
+            se-engine-id = <0x1>;
+            nvidia,ivccfg_cnt = <0x1>;
+            nvidia,ivccfg = <0x12e 0x1 0x0 0x0 0xffffff 0x8ea 0x1809 0x1 0x0 0x0 0x0>;
+        };

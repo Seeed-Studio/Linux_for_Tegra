@@ -1,0 +1,70 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/net/nvidia,nv-vsock.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: NVIDIA Virtual Socket (nv_vsock) Transport
+
+maintainers:
+  - NVIDIA Corporation <linux-tegra@nvidia.com>
+
+description: |
+  The NVIDIA Virtual Socket (nv_vsock) transport provides a custom
+  implementation of the AF_VSOCK protocol for NVIDIA platforms using
+  Inter-VM Communication (IVC) channels for VM to VM communication.
+
+properties:
+  compatible:
+    const: nvidia,nv-vsock
+
+  guest-cid:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    description: |
+      Context ID (CID) for the guest VM. This is REQUIRED and specifies
+      the CID that this VM will use for VSOCK communication. It is recommended
+      to use guest-cids >= 3.
+
+  max-rx-buffer-size:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    description: |
+      Maximum RX buffer size per socket in bytes. This controls the
+      maximum amount of data that can be queued for each socket to
+      prevent memory exhaustion. Must be a power of 2. If not specified,
+      defaults to 256KB (262144 bytes).
+
+  ivc-queues:
+    type: object
+    description: |
+      REQUIRED: IVC queue mappings for different CIDs. Each entry specifies
+      the IVC queue ID to use for communication with a specific CID.
+      The driver will fail to load if this node is not present.
+      Note: A guest does not need an IVC queue to itself (loopback).
+    patternProperties:
+      "^cid-[0-9]+$":
+        $ref: /schemas/types.yaml#/definitions/uint32
+        description: |
+          IVC queue ID for the specified CID. The CID is extracted
+          from the property name (e.g., "nvidia,cid-2" maps CID 2
+          to the specified IVC queue ID). Do not specify a queue
+          for the guest's own CID.
+
+required:
+  - compatible
+  - guest-cid
+  - ivc-queues
+
+examples:
+  - |
+          nv_vsock: nv-vsock {
+        compatible = "nvidia,nv-vsock";
+        guest-cid = <3>;
+        max-rx-buffer-size = <524288>;  /* 512KB per socket (power of 2) */
+
+        ivc-queues {
+            cid-2 = <&tegra_hv 410>;  /* IVC queue 410 for CID 2 */
+            cid-4 = <&tegra_hv 412>;  /* IVC queue 412 for CID 4 */
+            /* Note: No queue needed for CID 3 (this guest's own CID) */
+        };
+    };
