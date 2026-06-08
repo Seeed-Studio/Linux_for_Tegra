@@ -1,0 +1,591 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+#include "tegra264.dtsi"
+#include "nv-soc/tegra264-soc-prod.dtsi"
+#include "nv-soc/tegra264-soc-thermal.dtsi"
+
+/ {
+	skip_hugetlbfs_configuration;
+
+	bus@0 {
+		efuse-helper {
+			status = "okay";
+		};
+
+		timer@8000000 {
+			status = "okay";
+		};
+
+		actmon@d3f0000 {
+			status = "okay";
+		};
+
+		gpio@cf00000 {
+			status = "okay";
+		};
+
+		i2c@810c640000 {
+			status = "okay";
+			/* CVM EEPROM */
+			eeprom@50 {
+				compatible = "atmel,24c02";
+				reg = <0x50>;
+
+				label = "system";
+				address-width = <8>;
+				pagesize = <8>;
+				size = <256>;
+				read-only;
+			};
+		};
+
+		gpio@a808300000 {
+			status = "okay";
+		};
+
+		gpio@810c300000 {
+			status = "okay";
+		};
+
+		i2c@c600000 {
+			status = "okay";
+			ina3221@40 {
+				compatible = "ti,ina3221";
+				reg = <0x40>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+				status = "okay";
+				channel@0 {
+					reg = <0x0>;
+					label = "VDD_GPU";
+					shunt-resistor-micro-ohms = <2000>;
+				};
+				channel@1 {
+					reg = <0x1>;
+					label = "VDD_CPU_SOC_MSS";
+					shunt-resistor-micro-ohms = <2000>;
+				};
+				channel@2 {
+					reg = <0x2>;
+					label = "VIN_SYS_5V0";
+					shunt-resistor-micro-ohms = <2000>;
+					ti,summation-disable;
+				};
+			};
+		};
+
+		pinmux@810c281000 {
+			status = "okay";
+		};
+
+		pinmux@a8082e0000 {
+			status = "okay";
+		};
+
+		pinmux@c7a2000 {
+			status = "okay";
+		};
+
+		spi@810c590000 {
+			status = "okay";
+			spi@0 {
+				/* chip select 0 */
+				compatible = "tegra-spidev";
+				reg = <0x0>;
+				spi-max-frequency = <50000000>;
+			};
+		};
+
+		spi@c6c0000 {
+			status = "okay";
+			spi@0 {
+				/* chip select 0 */
+				compatible = "tegra-spidev";
+				reg = <0x0>;
+				spi-max-frequency = <50000000>;
+			};
+		};
+
+		spi@810c440000 {
+			status = "okay";
+			spi@0 {
+				/* chip select 0 */
+				compatible = "tegra-spidev";
+				reg = <0x0>;
+				spi-max-frequency = <50000000>;
+			};
+		};
+
+		spi@810c450000 {
+			status = "okay";
+			spi@0 {
+				/* chip select 0 */
+				compatible = "tegra-spidev";
+				reg = <0x0>;
+				spi-max-frequency = <50000000>;
+			};
+		};
+
+		/* QSPI0 */
+		spi@810c5b0000 {
+			status = "okay";
+
+			flash@0 {
+				compatible = "jedec,spi-nor";
+				reg = <0>;
+				spi-max-frequency = <102000000>;
+				spi-tx-bus-width = <4>;
+				spi-rx-bus-width = <4>;
+			};
+		};
+
+		iommu@8105000000 {
+			status = "okay";
+		};
+
+		iommu@8106000000 {
+			status = "okay";
+		};
+
+		iommu@810a000000 {
+			status = "okay";
+		};
+
+		iommu@810b000000 {
+			status = "okay";
+		};
+
+		iommu@8806000000 {
+			status = "okay";
+		};
+
+		cmdqv@8105200000 {
+			status = "okay";
+		};
+
+		cmdqv@8106200000 {
+			status = "okay";
+		};
+
+		cmdqv@810a200000 {
+			status = "okay";
+		};
+
+		cmdqv@810b200000 {
+			status = "okay";
+		};
+
+		cmdqv@8806200000 {
+			status = "okay";
+		};
+
+		pmc@c800000 {
+			nvidia,invert-interrupt;
+			status = "okay";
+		};
+
+		efuse@1000000 {
+			status = "okay";
+		};
+
+		sys-cbb-fabric@800000 {
+			status = "okay";
+		};
+
+		top0-cbb-fabric@8100800000 {
+			status = "okay";
+		};
+
+		tegra_soc_hwpm@1604000 {
+			status = "okay";
+		};
+
+		hardware-timestamp@c2b0000 {
+			status = "okay";
+		};
+
+		hardware-timestamp@8380000 {
+			status = "okay";
+		};
+
+		tegra-utc@c4e0000 {
+			status = "okay";
+		};
+
+		tegra-utc@c5a0000 {
+			status = "okay";
+		};
+
+		rtc@c2c0000 {
+			status = "okay";
+		};
+
+		tegra-hsp@8800000 {
+			status = "okay";
+		};
+
+		tegra-hsp@8c00000 {
+			status = "okay";
+		};
+
+		tegra-hsp@8189100000 {
+			status = "okay";
+		};
+
+		tegra-hsp@8189200000 {
+			status = "okay";
+		};
+
+		memory-controller@8108020000 {
+			status = "okay";
+
+			external-memory-controller@8108800000 {
+				status = "okay";
+			};
+		};
+
+		memory-controller-hwpm@8108020000 {
+			status = "okay";
+		};
+
+		host1x@8181200000 {
+			status = "okay";
+
+			vic@8188050000 {
+				status = "okay";
+			};
+
+			pva0@818c000000 {
+				status = "okay";
+				pva0_ctx0: pva0_niso1_ctx0 {
+					status = "okay";
+				};
+				pva0_ctx1: pva0_niso1_ctx1 {
+					status = "okay";
+				};
+				pva0_ctx2: pva0_niso1_ctx2 {
+					status = "okay";
+				};
+				pva0_ctx3: pva0_niso1_ctx3 {
+					status = "okay";
+				};
+				pva0_ctx4: pva0_niso1_ctx4 {
+					status = "okay";
+				};
+				pva0_ctx5: pva0_niso1_ctx5 {
+					status = "okay";
+				};
+				pva0_ctx6: pva0_niso1_ctx6 {
+					status = "okay";
+				};
+				pva0_ctx7: pva0_niso1_ctx7 {
+					status = "okay";
+				};
+				pva0_ctx8: pva0_niso1_ctx8 {
+					status = "okay";
+				};
+			};
+
+			crypto@8188110000 {
+				status = "okay";
+			};
+
+			crypto@8188120000 {
+				status = "okay";
+			};
+
+			crypto@8188140000 {
+				status = "okay";
+			};
+
+			crypto@8189880000 {
+				status = "disabled";
+			};
+		};
+
+		/* PCIe C0 ecam generic node for iGPU */
+		pcie@d0b0000000 {
+			power-domains = <&bpmp TEGRA264_POWER_DOMAIN_GPU>;
+			status = "okay";
+		};
+
+		mc_carveout@8108020000 {
+			status = "okay";
+		};
+
+		dma-controller@8400000 {
+			status = "okay";
+		};
+
+		ccplex@8120000000 {
+			status = "okay";
+		};
+	};
+
+	nvpmodel {
+		status = "okay";
+	};
+
+	nv-gpu-static-pg {
+		status = "okay";
+	};
+
+	bwmgr {
+		status = "okay";
+	};
+
+	eeprom-manager {
+		data-size = <0x100>;
+		bus@0 {
+			i2c-bus = <&i2c1>;
+			eeprom@0 {
+				slave-address = <0x50>;
+				label = "cvm";
+			};
+		};
+
+		bus@1 {
+			i2c-bus = <&pwr_i2c>;
+			eeprom@0 {
+				slave-address = <0x4c>;
+				label = "thermal_sensor";
+			};
+		};
+	};
+
+	bpmp {
+		status = "okay";
+		i2c {
+			status = "okay";
+
+			vrs@3c {
+				status = "okay";
+			};
+
+			tegra_tmp451: thermal-sensor@4c {
+				compatible = "ti,tmp451";
+				status = "okay";
+
+				reg = <0x4c>;
+				#thermal-sensor-cells = <1>;
+			};
+		};
+
+		thermal {
+			status = "okay";
+		};
+	};
+
+	chosen {
+		bootargs = "BOOT_IMAGE=/EFI/BOOT/Image tegra_keep_boot_clocks clk_ignore_unused earlyprintk=tegra_utc,mmio32,0xc4e0000 earlycon=tegra_utc,mmio32,0xc4e0000 androidboot.selinux=disabled console=ttyUTC0,115200 root=/dev/initrd rw rootwait rootwait rw rootfstype=ext4 firmware_class.path=/etc/firmware kmemleak=off pci=pcie_bus_perf nvme.use_threaded_interrupts=1";
+		stdout-path = "/bus@0/tegra-utc@c4e0000";
+	};
+
+	cpus {
+		status = "okay";
+
+		cpu@0 {
+			status = "okay";
+		};
+
+		cpu@1 {
+			status = "okay";
+		};
+
+		cpu@2 {
+			status = "okay";
+		};
+
+		cpu@3 {
+			status = "okay";
+		};
+
+		cpu@4 {
+			status = "okay";
+		};
+
+		cpu@5 {
+			status = "okay";
+		};
+
+		cpu@6 {
+			status = "okay";
+		};
+
+		cpu@7 {
+			status = "okay";
+		};
+
+		cpu@8 {
+			status = "okay";
+		};
+
+		cpu@9 {
+			status = "okay";
+		};
+
+		cpu@10 {
+			status = "okay";
+		};
+
+		cpu@11 {
+			status = "okay";
+		};
+
+		cpu@12 {
+			status = "okay";
+		};
+
+		cpu@13 {
+			status = "okay";
+		};
+
+		idle-states {
+			cc7 {
+				status = "okay";
+			};
+		};
+	};
+
+	tegra-carveouts {
+		status = "okay";
+	};
+
+	reserved-memory {
+		status = "okay";
+
+		fsi-carveout {
+			status = "okay";
+		};
+
+		linux,cma {
+			status = "okay";
+		};
+
+		bpmp-shmem@0 {
+			status = "okay";
+		};
+	};
+
+	psci {
+		status = "okay";
+	};
+
+	interrupt-controller@8146000000 {
+		status = "okay";
+		its@8146040000 {
+			status = "okay";
+		};
+	};
+
+	timer {
+		status = "okay";
+	};
+
+	/* Check if it has to go with L4TConfigurations.dtbo */
+	firmware {
+		uefi {
+			variables {
+				gDtPlatformFormSetGuid {
+					DtAcpiPref {
+						data = <0x0>;
+						non-volatile;
+					};
+				};
+			};
+		};
+	};
+
+	smmu_test {
+		status = "okay";
+	};
+
+	pmu {
+		status = "okay";
+	};
+
+	spe-pmu {
+		status = "okay";
+	};
+
+	ucf_uapmu@140c0000 {
+		status = "okay";
+	};
+
+	disp_usb_apmu@8808900000 {
+		status = "okay";
+	};
+
+	ucf_gpu_apmu@810c248000 {
+		status = "okay";
+	};
+
+	uphy_apmu@a808880000 {
+		status = "okay";
+	};
+
+	vision_apmu@818a000000 {
+		status = "okay";
+	};
+
+	ete_cpu_0 {
+		status = "okay";
+	};
+
+	ete_cpu_1 {
+		status = "okay";
+	};
+
+	ete_cpu_2 {
+		status = "okay";
+	};
+
+	ete_cpu_3 {
+		status = "okay";
+	};
+
+	ete_cpu_4 {
+		status = "okay";
+	};
+
+	ete_cpu_5 {
+		status = "okay";
+	};
+
+	ete_cpu_6 {
+		status = "okay";
+	};
+
+	ete_cpu_7 {
+		status = "okay";
+	};
+
+	ete_cpu_8 {
+		status = "okay";
+	};
+
+	ete_cpu_9 {
+		status = "okay";
+	};
+
+	ete_cpu_10 {
+		status = "okay";
+	};
+
+	ete_cpu_11 {
+		status = "okay";
+	};
+
+	ete_cpu_12 {
+		status = "okay";
+	};
+
+	ete_cpu_13 {
+		status = "okay";
+	};
+
+	trbe {
+		status = "okay";
+	};
+};

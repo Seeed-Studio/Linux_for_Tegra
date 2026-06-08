@@ -1,0 +1,22 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+#include "tegra264-p3834-common.dtsi"
+#include "nv-soc/tegra264-soc-thermal-slowdown.dtsi"
+#include "nv-soc/tegra264-soc-thermal-shutdown.dtsi"
+#include "nv-soc/tegra264-soc-thermal-trip-event.dtsi"
+
+/ {
+	bpmp {
+		i2c {
+			thermal-sensor@4c {
+				interrupt-parent = <&gpio_main>;
+				interrupts = <TEGRA264_MAIN_GPIO(P, 1) IRQ_TYPE_LEVEL_LOW>;
+			};
+		};
+	};
+
+	nvtherm-oc-event {
+		status = "okay";
+	};
+};

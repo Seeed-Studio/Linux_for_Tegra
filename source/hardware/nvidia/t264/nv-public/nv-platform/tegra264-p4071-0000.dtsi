@@ -1,0 +1,727 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+#include <dt-bindings/input/linux-event-codes.h>
+#include <dt-bindings/input/gpio-keys.h>
+#include <dt-bindings/sound/rt5640.h>
+#include "tegra264-p4071-0080-p3834-0008-dcb.dtsi"
+
+/ {
+	bus@0 {
+		aconnect@9000000 {
+			status = "okay";
+
+			adsp@9080000 {
+				status = "okay";
+			};
+
+			adsp1@9180000 {
+				status = "okay";
+			};
+
+			dma-controller@9440000 {
+				status = "okay";
+			};
+
+			ahub@9630000 {
+				status = "okay";
+
+				i2s@9280000 {
+					status = "okay";
+				};
+
+				i2s@92b0000 {
+					status = "okay";
+					ports {
+						port@1 {
+							endpoint {
+								dai-format = "i2s";
+								remote-endpoint = <&rt5640_ep1>;
+							};
+						};
+					};
+				};
+			};
+
+			interrupt-controller@9960000 {
+				status = "okay";
+			};
+		};
+
+		aocluster@c000000 {
+			status = "okay";
+
+			aon@c040000 {
+				status = "okay";
+			};
+		};
+
+		hda@88090b0000 {
+			nvidia,model = "NVIDIA Jetson Thor AGX HDA";
+			status = "okay";
+		};
+
+		host1x@8181200000 {
+			status = "okay";
+
+			vi0@8188400000 {
+				status = "okay";
+			};
+
+			vi0-thi@8188700000 {
+				status = "okay";
+			};
+
+			vi1@8188c00000 {
+				status = "okay";
+			};
+
+			vi1-thi@8188f00000 {
+				status = "okay";
+			};
+
+			isp@8188800000 {
+				status = "okay";
+			};
+
+			isp-thi@8188b00000 {
+				status = "okay";
+			};
+
+			isp1@818a800000 {
+				status = "okay";
+			};
+
+			isp1-thi@818ab00000 {
+				status = "okay";
+			};
+
+			nvcsi@8188000000 {
+				status = "okay";
+			};
+		};
+
+		i2c@810c640000 {
+			status = "okay";
+			/* CVB EEPROM */
+			eeprom@56 {
+				compatible = "atmel,24c02";
+				reg = <0x56>;
+
+				label = "system";
+				vcc-supply = <&vdd_1v8_cvb>;
+				address-width = <8>;
+				pagesize = <8>;
+				size = <256>;
+				read-only;
+			};
+		};
+
+		i2c@810c680000 {
+			status = "okay";
+
+			rt5640: audio-codec@1c {
+				compatible = "realtek,rt5640";
+				reg = <0x1c>;
+
+				clocks = <&bpmp TEGRA264_CLK_AUD_MCLK>;
+				clock-names = "mclk";
+
+				realtek,dmic1-data-pin = <RT5640_DMIC1_DATA_PIN_NONE>;
+				realtek,dmic2-data-pin = <RT5640_DMIC2_DATA_PIN_NONE>;
+				realtek,jack-detect-source = <RT5640_JD_SRC_HDA_HEADER>;
+
+				/* Codec IRQ output */
+				interrupt-parent = <&gpio_main>;
+				interrupts = <TEGRA264_MAIN_GPIO(Q, 7) GPIO_ACTIVE_HIGH>;
+
+				sound-name-prefix = "CVB-RT";
+
+				status = "okay";
+
+				port {
+					rt5640_ep1: endpoint {
+						link-name = "rt5640-playback";
+						remote-endpoint = <&i2s4_dap>;
+						mclk-fs = <256>;
+					};
+				};
+			};
+		};
+
+		/* i2c6 */
+		i2c@810c670000 {
+			status = "okay";
+		};
+
+		/* i2c10 */
+		i2c@810c6b0000 {
+			status = "okay";
+		};
+
+		/* PWM10 */
+		pwm@810c620000 {
+			status = "okay";
+		};
+
+		/* SoC FAN */
+		pwm@c6a0000 {
+			status = "okay";
+		};
+
+		/* NVME FAN */
+		pwm@810c5f0000 {
+			status = "okay";
+		};
+
+		serial@810c510000 {
+			status = "okay";
+		};
+
+		serial@810c530000 {
+			status = "okay";
+		};
+
+		serial@810c540000 {
+			status = "okay";
+		};
+
+		/* SoC FAN-TACH */
+		tachometer@810c5c0000 {
+			status = "okay";
+		};
+
+		spi@810c440000 {
+			status = "okay";
+			spi@0 {
+				/* chip select 0 */
+				compatible = "tegra-spidev";
+				reg = <0x0>;
+				spi-max-frequency = <50000000>;
+			};
+		};
+
+		spi@810c590000 {
+			status = "okay";
+			spi@0 {
+				/* chip select 0 */
+				compatible = "tegra-spidev";
+				reg = <0x0>;
+				spi-max-frequency = <50000000>;
+			};
+		};
+
+		/* MGBE 0 */
+		mgbe0: ethernet@a808a10000 {
+			nvidia,mac-addr-idx = <1>;
+			nvidia,uphy-gbe-mode = <1>;
+			nvidia,phy-iface-mode = <0x0>;
+			nvidia,max-platform-mtu = <9000>;
+			nvidia,pps_op_ctrl = <8>;
+			nvidia,if-name = "mgbe0_0";
+			nvidia,force-restart-lane-bringup = <1>;
+
+			fixed-link {
+				full-duplex;
+				speed = <10000>;
+			};
+		};
+
+		/* MGBE 1 */
+	        mgbe1: ethernet@a808b10000 {
+			nvidia,mac-addr-idx = <2>;
+			nvidia,uphy-gbe-mode = <1>;
+			nvidia,phy-iface-mode = <0x0>;
+			nvidia,max-platform-mtu = <9000>;
+			nvidia,pps_op_ctrl = <8>;
+			nvidia,if-name = "mgbe1_0";
+			nvidia,force-restart-lane-bringup = <1>;
+
+			fixed-link {
+				full-duplex;
+				speed = <10000>;
+			};
+		};
+
+		/* MGBE 2 */
+	        mgbe2: ethernet@a808d10000 {
+			nvidia,mac-addr-idx = <3>;
+			nvidia,uphy-gbe-mode = <1>;
+			nvidia,phy-iface-mode = <0x0>;
+			nvidia,max-platform-mtu = <9000>;
+			nvidia,pps_op_ctrl = <8>;
+			nvidia,if-name = "mgbe2_0";
+			nvidia,force-restart-lane-bringup = <1>;
+
+			fixed-link {
+				full-duplex;
+				speed = <10000>;
+			};
+		};
+
+		/* MGBE 3 */
+	        mgbe3: ethernet@a808e10000 {
+			nvidia,mac-addr-idx = <4>;
+			nvidia,uphy-gbe-mode = <1>;
+			nvidia,phy-iface-mode = <0x0>;
+			nvidia,max-platform-mtu = <9000>;
+			nvidia,pps_op_ctrl = <8>;
+			nvidia,if-name = "mgbe3_0";
+			nvidia,force-restart-lane-bringup = <1>;
+
+			fixed-link {
+				full-duplex;
+				speed = <10000>;
+			};
+		};
+
+		nvpps {
+			compatible = "nvidia,tegra264-nvpps";
+			reg = <0x0 0x0c230000 0x0 0x238>;
+			primary-emac = <&mgbe0>;
+			sec-emac = <&mgbe1>;
+			ptp_tsc_sync_trig_interval = <3>;
+			ptp_tsc_lock_threshold = <20000>; //20us
+			ts-capture-interval = <1000>;
+			nvpps-event-mode-init = <2>; /* 1: GPIO mode, 2: TIMER mode */
+			status = "okay";
+		};
+
+		/* PCIe C1 for M.2 Key E(J505) */
+		pcie@a808400000 {
+			status = "okay";
+		};
+
+		/* PCIe C2 for onboard Ethernet Realtek */
+		pcie@a808420000 {
+			status = "okay";
+			interrupts = <TEGRA264_AON_GPIO(AA, 5) GPIO_ACTIVE_LOW>;
+			interrupt-names = "wakeup";
+		};
+
+		/* PCIe C3 is SNN on Jedha */
+		pcie@a808440000 {
+			status = "disabled";
+		};
+
+		/* PCIe C4 is SNN on Jedha */
+		pcie@a808460000 {
+			status = "disabled";
+		};
+
+		/* PCIe C5 to enable NVME */
+		pcie@a808480000 {
+			status = "okay";
+		};
+
+		padctl@a808680000 {
+			status = "okay";
+			pads {
+				usb2 {
+					lanes {
+						usb2-0 {
+							status = "okay";
+						};
+						usb2-1 {
+							status = "okay";
+						};
+						usb2-2 {
+							status = "okay";
+						};
+						usb2-3 {
+							status = "okay";
+						};
+					};
+				};
+				usb3 {
+					lanes {
+						usb3-0 {
+							status = "okay";
+						};
+						usb3-1 {
+							status = "okay";
+						};
+						usb3-2 {
+							status = "okay";
+						};
+					};
+				};
+			};
+
+			ports {
+				usb2-0 {
+					mode = "otg";
+                                        usb-role-switch;
+                                        role-switch-default-mode = "peripheral";
+                                        status = "okay";
+				};
+				usb2-1 {
+					mode = "host";
+					status = "okay";
+				};
+				usb2-2 {
+					mode = "host";
+					status = "okay";
+				};
+				usb2-3 {
+					mode = "host";
+					status = "okay";
+				};
+				usb3-0 {
+					nvidia,usb2-companion = <1>;
+					status = "okay";
+				};
+				usb3-1 {
+					nvidia,usb2-companion = <0>;
+					status = "okay";
+				};
+				usb3-2 {
+					nvidia,usb2-companion = <3>;
+					status = "okay";
+				};
+			};
+		};
+
+		usb@a808670000 {
+			phys = <&{/bus@0/padctl@a808680000/pads/usb2/lanes/usb2-0}>,
+				<&{/bus@0/padctl@a808680000/pads/usb3/lanes/usb3-1}>;
+			phy-names = "usb2-0", "usb3-1";
+			status = "okay";
+		};
+
+		usb@a80aa10000 {
+			interrupts-extended = <&gic 0 952 IRQ_TYPE_LEVEL_HIGH>,
+				<&gic 2 0 IRQ_TYPE_LEVEL_HIGH>,
+				<&pmc 79 IRQ_TYPE_LEVEL_HIGH>,
+				<&pmc 80 IRQ_TYPE_LEVEL_HIGH>,
+				<&pmc 82 IRQ_TYPE_LEVEL_HIGH>,
+				<&pmc 83 IRQ_TYPE_LEVEL_HIGH>,
+				<&pmc 84 IRQ_TYPE_LEVEL_HIGH>,
+				<&pmc 85 IRQ_TYPE_LEVEL_HIGH>,
+				<&pmc 86 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "xhci", "mbox",
+					"wake0", "wake1", "wake2", "wake3",
+					"wake4", "wake5", "wake6";
+			phys = <&{/bus@0/padctl@a808680000/pads/usb2/lanes/usb2-0}>,
+				<&{/bus@0/padctl@a808680000/pads/usb2/lanes/usb2-1}>,
+				<&{/bus@0/padctl@a808680000/pads/usb2/lanes/usb2-2}>,
+				<&{/bus@0/padctl@a808680000/pads/usb2/lanes/usb2-3}>,
+				<&{/bus@0/padctl@a808680000/pads/usb3/lanes/usb3-0}>,
+				<&{/bus@0/padctl@a808680000/pads/usb3/lanes/usb3-1}>,
+				<&{/bus@0/padctl@a808680000/pads/usb3/lanes/usb3-2}>;
+			phy-names = "usb2-0", "usb2-1", "usb2-2", "usb2-3", "usb3-0", "usb3-1", "usb3-2";
+			status = "okay";
+		};
+
+		i2c@c610000 {
+			status = "okay";
+		};
+
+		i2c@810c630000 {
+			status = "okay";
+		};
+
+		i2c@810c650000 {
+			status = "okay";
+		};
+
+		i2c@810c670000 {
+			status = "okay";
+		};
+
+		i2c@810c690000 {
+			status = "okay";
+		};
+
+		i2c@810c6a0000 {
+			status = "okay";
+		};
+
+		i2c@810c6d0000 {
+			status = "okay";
+		};
+
+		i2c@c600000 {
+			ina238@44 {
+				compatible = "ti,ina238";
+				reg = <0x44>;
+				shunt-resistor = <2000>;
+				status = "okay";
+				label = "VIN";
+			};
+		};
+	};
+
+	eeprom-manager {
+		data-size = <0x100>;
+		bus@0 {
+			i2c-bus = <&i2c1>;
+			eeprom@1 {
+				slave-address = <0x56>;
+				label = "cvb";
+			};
+		};
+	};
+
+	soc_fan: pwm-fan {
+		compatible = "pwm-fan";
+		pwms = <&pwm4 0 40000>;
+		#cooling-cells = <2>;
+	};
+
+	gpio-keys {
+		compatible = "gpio-keys";
+
+		key-force-recovery {
+			label = "Force Recovery";
+			gpios = <&gpio_aon TEGRA264_AON_GPIO(EE, 1) GPIO_ACTIVE_LOW>;
+			linux,input-type = <EV_KEY>;
+			linux,code = <BTN_1>;
+		};
+
+		key-power {
+			label = "Power";
+			gpios = <&gpio_aon TEGRA264_AON_GPIO(AA, 5) GPIO_ACTIVE_LOW>;
+			linux,input-type = <EV_KEY>;
+			linux,code = <KEY_POWER>;
+			wakeup-event-action = <EV_ACT_ASSERTED>;
+			wakeup-source;
+		};
+	};
+
+	SRC_FET_cvb: regulator-vcc-src-fet {
+		compatible = "regulator-fixed";
+		regulator-name = "VCC_SRC_FET";
+		regulator-min-microvolt = <20000000>;
+		regulator-max-microvolt = <20000000>;
+		regulator-always-on;
+		regulator-boot-on;
+	};
+
+	vdd_5v_cvb: vdd_5v_ao_cvb: regulator-vdd-5v-ao {
+		compatible = "regulator-fixed";
+		regulator-name = "VDD_5V_AO";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-always-on;
+	};
+
+	vdd_3v3_cvb: regulator-vdd-3v3 {
+		compatible = "regulator-fixed";
+		regulator-name = "VDD_3V3";
+		vcc-supply = <&vdd_5v_cvb>;
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+	};
+
+	vdd_3v3_ao_cvb: regulator-vdd-3v3-ao {
+		compatible = "regulator-fixed";
+		regulator-name = "VDD_3V3_AO";
+		vcc-supply = <&vdd_5v_ao_cvb>;
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-always-on;
+	};
+
+	vdd_1v8_cvb: regulator-vdd-1v8 {
+		compatible = "regulator-fixed";
+		regulator-name = "VDD_1V8";
+		vcc-supply = <&vdd_3v3_cvb>;
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+	};
+
+	vdd_12v_cvb: regulator-vdd-12v {
+		compatible = "regulator-fixed";
+		regulator-name = "VDD_12V";
+		regulator-min-microvolt = <12000000>;
+		regulator-max-microvolt = <12000000>;
+		gpio = <&gpio_main TEGRA264_MAIN_GPIO(Y, 2) GPIO_ACTIVE_HIGH>;
+		vcc-supply = <&SRC_FET_cvb>;
+		regulator-always-on;
+		enable-active-high;
+		regulator-boot-on;
+	};
+
+	vdd_5v0_hdmi_cvb: regulator-vdd-5v0-hdmi {
+		compatible = "regulator-fixed";
+		regulator-name = "VDD_5V0_HDMI";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = <&gpio_main TEGRA264_MAIN_GPIO(U, 6) GPIO_ACTIVE_HIGH>;
+		vcc-supply = <&vdd_5v_cvb>;
+		regulator-always-on;
+		enable-active-high;
+	};
+
+	vdd_3v3_dp_cvb: regulator-vdd-3v3-dp {
+		compatible = "regulator-fixed";
+		regulator-name = "VDD_3V3_DP";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&gpio_main TEGRA264_MAIN_GPIO(V, 1) GPIO_ACTIVE_HIGH>;
+		vcc-supply = <&vdd_3v3_cvb>;
+		regulator-always-on;
+		enable-active-high;
+	};
+
+	dce@8808000000 {
+		status = "okay";
+		sha-carveout {
+			status = "okay";
+		};
+	};
+
+	display@8808c00000 {
+		status = "okay";
+		os_gpio_hotplug_a = <&gpio_main TEGRA264_MAIN_GPIO(F, 4) GPIO_ACTIVE_LOW>;
+		nvdisplay-niso {
+			status = "okay";
+		};
+	};
+
+	sound {
+		status = "okay";
+
+		dais = /* ADMAIF (FE) Ports */
+		       <&admaif0_port>, <&admaif1_port>, <&admaif2_port>, <&admaif3_port>,
+		       <&admaif4_port>, <&admaif5_port>, <&admaif6_port>, <&admaif7_port>,
+		       <&admaif8_port>, <&admaif9_port>, <&admaif10_port>, <&admaif11_port>,
+		       <&admaif12_port>, <&admaif13_port>, <&admaif14_port>, <&admaif15_port>,
+		       <&admaif16_port>, <&admaif17_port>, <&admaif18_port>, <&admaif19_port>,
+		       <&admaif20_port>, <&admaif21_port>, <&admaif22_port>, <&admaif23_port>,
+		       <&admaif24_port>, <&admaif25_port>, <&admaif26_port>, <&admaif27_port>,
+		       <&admaif28_port>, <&admaif29_port>, <&admaif30_port>, <&admaif31_port>,
+		       /* XBAR Ports */
+		       <&xbar_i2s1_port>, <&xbar_i2s4_port>,
+		       <&xbar_sfc1_in_port>, <&xbar_sfc2_in_port>,
+		       <&xbar_sfc3_in_port>, <&xbar_sfc4_in_port>,
+		       <&xbar_mvc1_in_port>, <&xbar_mvc2_in_port>,
+		       <&xbar_amx1_in1_port>, <&xbar_amx1_in2_port>,
+		       <&xbar_amx1_in3_port>, <&xbar_amx1_in4_port>,
+		       <&xbar_amx2_in1_port>, <&xbar_amx2_in2_port>,
+		       <&xbar_amx2_in3_port>, <&xbar_amx2_in4_port>,
+		       <&xbar_amx3_in1_port>, <&xbar_amx3_in2_port>,
+		       <&xbar_amx3_in3_port>, <&xbar_amx3_in4_port>,
+		       <&xbar_amx4_in1_port>, <&xbar_amx4_in2_port>,
+		       <&xbar_amx4_in3_port>, <&xbar_amx4_in4_port>,
+		       <&xbar_amx5_in1_port>, <&xbar_amx5_in2_port>,
+		       <&xbar_amx5_in3_port>, <&xbar_amx5_in4_port>,
+		       <&xbar_amx6_in1_port>, <&xbar_amx6_in2_port>,
+		       <&xbar_amx6_in3_port>, <&xbar_amx6_in4_port>,
+		       <&xbar_adx1_in_port>, <&xbar_adx2_in_port>,
+		       <&xbar_adx3_in_port>, <&xbar_adx4_in_port>,
+		       <&xbar_adx5_in_port>, <&xbar_adx6_in_port>,
+		       <&xbar_mix_in1_port>, <&xbar_mix_in2_port>,
+		       <&xbar_mix_in3_port>, <&xbar_mix_in4_port>,
+		       <&xbar_mix_in5_port>, <&xbar_mix_in6_port>,
+		       <&xbar_mix_in7_port>, <&xbar_mix_in8_port>,
+		       <&xbar_mix_in9_port>, <&xbar_mix_in10_port>,
+		       <&xbar_asrc_in1_port>, <&xbar_asrc_in2_port>,
+		       <&xbar_asrc_in3_port>, <&xbar_asrc_in4_port>,
+		       <&xbar_asrc_in5_port>, <&xbar_asrc_in6_port>,
+		       <&xbar_asrc_in7_port>,
+		       <&xbar_ope1_in_port>,
+		       /* HW accelerators */
+		       <&sfc1_out_port>, <&sfc2_out_port>,
+		       <&sfc3_out_port>, <&sfc4_out_port>,
+		       <&mvc1_out_port>, <&mvc2_out_port>,
+		       <&amx1_out_port>, <&amx2_out_port>,
+		       <&amx3_out_port>, <&amx4_out_port>,
+		       <&amx5_out_port>, <&amx6_out_port>,
+		       <&adx1_out1_port>, <&adx1_out2_port>,
+		       <&adx1_out3_port>, <&adx1_out4_port>,
+		       <&adx2_out1_port>, <&adx2_out2_port>,
+		       <&adx2_out3_port>, <&adx2_out4_port>,
+		       <&adx3_out1_port>, <&adx3_out2_port>,
+		       <&adx3_out3_port>, <&adx3_out4_port>,
+		       <&adx4_out1_port>, <&adx4_out2_port>,
+		       <&adx4_out3_port>, <&adx4_out4_port>,
+		       <&adx5_out1_port>, <&adx5_out2_port>,
+		       <&adx5_out3_port>, <&adx5_out4_port>,
+		       <&adx6_out1_port>, <&adx6_out2_port>,
+		       <&adx6_out3_port>, <&adx6_out4_port>,
+		       <&mix_out1_port>, <&mix_out2_port>, <&mix_out3_port>,
+		       <&mix_out4_port>, <&mix_out5_port>,
+		       <&asrc_out1_port>, <&asrc_out2_port>, <&asrc_out3_port>,
+		       <&asrc_out4_port>, <&asrc_out5_port>, <&asrc_out6_port>,
+		       <&ope1_out_port>,
+		       /* BE I/O Ports */
+		       <&i2s1_port>, <&i2s4_port>;
+
+		label = "NVIDIA Jetson Thor AGX APE";
+
+		widgets = "Microphone",	"CVB-RT MIC Jack",
+			  "Microphone",	"CVB-RT MIC",
+			  "Headphone",	"CVB-RT HP Jack";
+
+		routing = /* Enable I2S4 <-> RT5640 */
+			  "CVB-RT AIF1 Playback",	"I2S4 DAP-Playback",
+			  "I2S4 DAP-Capture",		"CVB-RT AIF1 Capture",
+			  /* RT5640 codec controls */
+			  "CVB-RT HP Jack",		"CVB-RT HPOL",
+			  "CVB-RT HP Jack",		"CVB-RT HPOR",
+			  "CVB-RT IN1P",		"CVB-RT MIC Jack",
+			  "CVB-RT IN2P",		"CVB-RT MIC Jack",
+			  "CVB-RT DMIC1",		"CVB-RT MIC",
+			  "CVB-RT DMIC2",		"CVB-RT MIC";
+	};
+
+	rtcpu@81893d0000 {
+		status = "okay";
+
+		hsp-vm1 {
+			status = "okay";
+		};
+	};
+
+	camera-ivc-channels {
+		echo@0 {
+			status = "okay";
+		};
+
+		dbg@1 {
+			status = "okay";
+		};
+
+		dbg@2 {
+			status = "okay";
+		};
+
+		ivccontrol@3 {
+			status = "okay";
+		};
+
+		ivccapture@4 {
+			status = "okay";
+		};
+	};
+
+	tegra-rtcpu-trace {
+		status = "okay";
+	};
+
+	tegra-capture-vi {
+		status = "okay";
+	};
+
+	tegra-capture-isp {
+		status = "okay";
+	};
+
+	tegra-capture-coe0 {
+		status = "okay";
+	};
+
+	tegra-capture-coe1 {
+		status = "okay";
+	};
+
+	tegra-capture-coe2 {
+		status = "okay";
+	};
+
+	tegra-capture-coe3 {
+		status = "okay";
+	};
+};

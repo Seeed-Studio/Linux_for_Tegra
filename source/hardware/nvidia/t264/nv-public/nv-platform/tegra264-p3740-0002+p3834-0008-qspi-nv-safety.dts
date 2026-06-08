@@ -1,0 +1,153 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+/dts-v1/;
+
+#include "tegra264-p3740-0002+p3834-0008-qspi-nvme.dts"
+#include "nv-soc/tegra264-soc-thermal-slowdown-disable.dtsi"
+
+/ {
+	model = "NVIDIA IGX7000 Thor";
+	compatible = "nvidia,p3740-0002+p3834-0008", "safety", "nvidia,p3834-0008", "nvidia,tegra264";
+
+	bus@0 {
+		tegra-hsp@8d00000 {
+			status = "okay";
+		};
+
+		i2c@c610000 { /* reserved for SMCU for safety operations */
+			status = "disabled";
+
+			ina3221@41 {
+				status = "disabled";
+			};
+
+			ina219@44 {
+				status = "disabled";
+			};
+
+			f75308@4d {
+				status = "disabled";
+			};
+		};
+
+		spi@810c440000 {
+			status = "okay";
+			compatible = "nvidia,tegra264-spi-slave";
+		};
+
+		pcie@a808440000 {
+			status = "disabled";
+		};
+	};
+
+	nvtherm-oc-event {
+		status = "disabled";
+	};
+
+	safetyservices_epl_client@110000 {
+		nvidia,tx-timeout-ms = <13>;
+		status = "okay";
+	};
+
+	ufshci@a80b8d0000 {
+		status = "okay";
+	};
+
+	thermal-shutdown-alert {
+		status = "okay";
+	};
+
+	thermal-zones {
+		cpu-thermal {
+			trips {
+				cpu_sw_shutdown_warning: thermal-shutdown-warning {
+					temperature = <115000>;
+					hysteresis = <0>;
+					type = "passive";
+				};
+
+				cpu-sw-shutdown {
+					temperature = <117500>;
+				};
+			};
+
+			cooling-maps {
+				map-shutdown-alert {
+					trip = <&cpu_sw_shutdown_warning>;
+					cooling-device = <&thermal_shutdown_alert 1 1>;
+				};
+			};
+		};
+
+		gpu-thermal {
+			trips {
+				gpu_sw_shutdown_warning: thermal-shutdown-warning {
+					temperature = <115000>;
+					hysteresis = <0>;
+					type = "passive";
+				};
+
+				gpu-sw-shutdown {
+					temperature = <117500>;
+				};
+			};
+
+			cooling-maps {
+				map-shutdown-alert {
+					trip = <&gpu_sw_shutdown_warning>;
+					cooling-device = <&thermal_shutdown_alert 1 1>;
+				};
+			};
+		};
+
+		soc012-thermal {
+			trips {
+				soc012_sw_shutdown_warning: thermal-shutdown-warning {
+					temperature = <115000>;
+					hysteresis = <0>;
+					type = "passive";
+				};
+
+				soc012-sw-shutdown {
+					temperature = <117500>;
+				};
+			};
+
+			cooling-maps {
+				map-shutdown-alert {
+					trip = <&soc012_sw_shutdown_warning>;
+					cooling-device = <&thermal_shutdown_alert 1 1>;
+				};
+			};
+		};
+
+		soc345-thermal {
+			trips {
+				soc345_sw_shutdown_warning: thermal-shutdown-warning {
+					temperature = <115000>;
+					hysteresis = <0>;
+					type = "passive";
+				};
+
+				soc345-sw-shutdown {
+					temperature = <117500>;
+				};
+			};
+
+			cooling-maps {
+				map-shutdown-alert {
+					trip = <&soc345_sw_shutdown_warning>;
+					cooling-device = <&thermal_shutdown_alert 1 1>;
+				};
+			};
+		};
+
+		tj-thermal {
+			trips {
+				tj-sw-shutdown {
+					temperature = <117500>;
+				};
+			};
+		};
+	};
+};

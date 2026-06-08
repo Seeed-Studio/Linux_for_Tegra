@@ -1,0 +1,24 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+/dts-v1/;
+/plugin/;
+
+/ {
+	overlay-name = "Tegra264 UFS Provisioning overlay";
+	compatible = "nvidia,tegra264";
+        nvidia,dtsfilename = __FILE__;
+        nvidia,dtbbuildtime = __DATE__, __TIME__;
+
+	/* Enable UFS provisioning */
+	fragment@0 {
+		target-path = "/ufshci@a80b8d0000";
+		delete_prop = "nvidia,enable-hs-mode";
+		board_config {
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+			nvidia,enable-ufs-provisioning;
+		};
+	};
+};

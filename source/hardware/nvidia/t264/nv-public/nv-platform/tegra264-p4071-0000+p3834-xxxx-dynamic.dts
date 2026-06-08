@@ -1,0 +1,19 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+/dts-v1/;
+/plugin/;
+
+/ {
+	overlay-name = "Tegra264 p4071-0000+p3834-xxxx Dynamic Overlay";
+
+	/* INA238 */
+	fragment@0 {
+		target-path = "/bus@0/i2c@c600000/ina238@44";
+		board_config {
+			ids = "4071-0000-EB1","4071-0000-TS1";
+		};
+		__overlay__ {
+			status = "disabled";
+		};
+	};
+};

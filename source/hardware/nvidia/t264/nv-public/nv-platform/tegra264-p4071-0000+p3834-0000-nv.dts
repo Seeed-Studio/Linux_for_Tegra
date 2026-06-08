@@ -1,0 +1,95 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+/dts-v1/;
+
+#include "tegra264-p3834-0000.dtsi"
+#include "tegra264-p4071-0000.dtsi"
+
+/ {
+	model = "NVIDIA Jetson Thor Developer Kit";
+	compatible = "nvidia,p4071-0000+p3834-0000", "nvidia,p3834-0000", "nvidia,tegra264";
+
+	bus@0 {
+		mgbe0: ethernet@a808a10000 {
+			status = "okay";
+		};
+
+		mgbe1: ethernet@a808b10000 {
+			status = "okay";
+		};
+
+		mgbe2: ethernet@a808d10000 {
+			status = "okay";
+		};
+	};
+
+	pwm-fan {
+		cooling-levels = <77 102 140 192 255>;
+	};
+
+	thermal-shutdown-alert {
+		status = "disabled";
+	};
+
+	thermal-zones {
+		tj-thermal {
+			trips {
+				tj_trip_active0: active-0 {
+					temperature = <74000>;
+					hysteresis = <0>;
+					type = "active";
+				};
+
+				tj_trip_active1: active-1 {
+					temperature = <80000>;
+					hysteresis = <0>;
+					type = "active";
+				};
+
+				tj_trip_active2: active-2 {
+					temperature = <85000>;
+					hysteresis = <0>;
+					type = "active";
+				};
+
+				tj_trip_active3: active-3 {
+					temperature = <94000>;
+					hysteresis = <0>;
+					type = "active";
+				};
+			};
+
+			cooling-maps {
+				map-active-0 {
+					cooling-device = <&soc_fan 0 1>;
+					trip = <&tj_trip_active0>;
+				};
+
+				map-active-1 {
+					cooling-device = <&soc_fan 1 2>;
+					trip = <&tj_trip_active1>;
+				};
+
+				map-active-2 {
+					cooling-device = <&soc_fan 2 3>;
+					trip = <&tj_trip_active2>;
+				};
+
+				map-active-3 {
+					cooling-device = <&soc_fan 3 4>;
+					trip = <&tj_trip_active3>;
+				};
+			};
+		};
+	};
+
+	tegra-isp-map {
+		nvidia,isp-mapping =
+			<0 0>,
+			<1 0>,
+			<2 0>,
+			<3 0>,
+			<4 0>,
+			<5 0>;
+	};
+};

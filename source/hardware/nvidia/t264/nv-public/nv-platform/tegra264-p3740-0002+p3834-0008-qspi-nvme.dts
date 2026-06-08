@@ -1,0 +1,22 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+//
+// ### WARNING ###
+// DO NOT ENABLE TPM DEVICE IN THE IGX DEVICE TREE
+// IF NEEDED, PLEASE REACH OUT TO THE NVIDIA IGX PRODUCT TEAM
+// IT IS ILLEGAL TO ENABLE TPM FOR DEVICE GETTING SHIPPED TO CHINA
+
+/dts-v1/;
+
+#include "tegra264-p3834-0008.dtsi"
+#include "tegra264-p3740-0002.dtsi"
+
+/ {
+	model = "NVIDIA IGX Thor Development Kit";
+	compatible = "nvidia,p3740-0002+p3834-0008", "nvidia,p3834-0008", "nvidia,tegra264";
+
+	thermal-shutdown-alert {
+		status = "disabled";
+	};
+};

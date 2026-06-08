@@ -1,0 +1,129 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+/dts-v1/;
+/plugin/;
+
+#include "../overlay/tegra264-p3971-camera-modules.dtsi"
+
+/ {
+	overlay-name = "Tegra264 p3971-0000+p3834-xxxx Dynamic Overlay";
+
+	/* PCIe C4 Endpoint */
+	fragment-t264-p3971-0000-p3834-xxxx-pcie-c4-ep@0 {
+		target-path = "/bus@0";
+		board_config {
+			odm-data = "pcie-c4-endpoint-enable";
+		};
+		__overlay__ {
+			pcie@a808460000 {
+				status = "disabled";
+			};
+
+			pcie-ep@a808460000 {
+				status = "okay";
+			};
+		};
+	};
+
+	fragment-t264-p3971-0089-p3834-0008-qspi-ufs-mgbe@1 {
+		target-path = "/bus@0";
+		board_config {
+			odm-data = "uphy1-config-10";
+		};
+		__overlay__ {
+			/* MGBE 0 */
+		        ethernet@a808a10000 {
+				status = "okay";
+				nvidia,mac-addr-idx = <1>;
+				nvidia,uphy-gbe-mode = <1>;
+				nvidia,max-platform-mtu = <9000>;
+				nvidia,phy-iface-mode = <0>;
+
+				fixed-link {
+					full-duplex;
+					speed = <10000>;
+				};
+			};
+
+			/* MGBE 1 */
+		        ethernet@a808b10000 {
+				status = "okay";
+				nvidia,mac-addr-idx = <2>;
+				nvidia,uphy-gbe-mode = <1>;
+				nvidia,max-platform-mtu = <9000>;
+				nvidia,phy-iface-mode = <0>;
+
+				fixed-link {
+					full-duplex;
+					speed = <10000>;
+				};
+			};
+
+			/* MGBE 2 */
+		        ethernet@a808d10000 {
+				status = "okay";
+				nvidia,mac-addr-idx = <3>;
+				nvidia,uphy-gbe-mode = <1>;
+				nvidia,max-platform-mtu = <9000>;
+				nvidia,phy-iface-mode = <0>;
+
+				fixed-link {
+					full-duplex;
+					speed = <10000>;
+				};
+			};
+
+			/* MGBE 3 */
+		        ethernet@a808e10000 {
+				status = "okay";
+				nvidia,mac-addr-idx = <4>;
+				nvidia,uphy-gbe-mode = <1>;
+				nvidia,max-platform-mtu = <9000>;
+				nvidia,phy-iface-mode = <0>;
+
+				fixed-link {
+					full-duplex;
+					speed = <10000>;
+				};
+			};
+		};
+	};
+
+	fragment-t264-p3971-0000-p3834-xxxx-pcie-c4-ep@1 {
+		target-path = "/bus@0/gpio@810c300000";
+		board_config {
+			odm-data = "pcie-c4-endpoint-enable";
+			ids = ">=3971-0000-TS3";
+		};
+		__overlay__ {
+			pcie_refclk_sel {
+				status = "okay";
+			};
+		};
+	};
+
+	/* PCIe C5 */
+	fragment-t264-p3971-0000-p3834-xxxx-pcie-c5-rc@2 {
+		target-path = "/bus@0";
+		board_config {
+			odm-data = "pcie-c5-rc-enable";
+			ids = ">=3971-0000-TS3";
+		};
+		__overlay__ {
+			/* Disable C4 RC */
+			pcie@a808460000 {
+				status = "disabled";
+			};
+
+			/* Disable C4 EP */
+			pcie-ep@a808460000 {
+				status = "disabled";
+			};
+
+			/* Enable C5 RC */
+			pcie@a808480000 {
+				status = "okay";
+			};
+		};
+	};
+};

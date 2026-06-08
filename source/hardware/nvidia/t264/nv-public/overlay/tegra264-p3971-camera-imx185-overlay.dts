@@ -1,0 +1,161 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+/* Jetson Device-tree overlay for Camera IMX185 on T264 platforms */
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/clock/tegra264-clk.h>
+#include <dt-bindings/gpio/tegra264-gpio.h>
+
+/* camera control gpio definitions */
+#define CAM0_RST_L	TEGRA264_MAIN_GPIO(V, 2)
+#define CAM0_PWDN	TEGRA264_MAIN_GPIO(AL, 1)
+#define JETSON_COMPATIBLE	"nvidia,p3971-0089+p3834-0008", "nvidia,p3971-0050+p3834-0005", "nvidia,p3971-0080+p3834-0008"
+
+/ {
+	overlay-name = "Jetson Camera IMX185";
+	jetson-header-name = "Jetson AGX CSI Connector";
+	compatible = JETSON_COMPATIBLE;
+
+	fragment@0 {
+		target-path = "/";
+
+		board_config {
+			ids = "LPRD-002001", "LPRD-002", "LPRD-001";
+			sw-modules = "kernel";
+		};
+
+		__overlay__ {
+			/* Add tegra-capture-vi section */
+			tegra-capture-vi {
+				status = "okay";
+				num-channels = <1>;
+				ports {
+					status = "okay";
+					port@0 {
+						status = "okay";
+						endpoint {
+							status = "okay";
+							port-index = <0>;
+							bus-width = <4>;
+							remote-endpoint = <&liimx185_csi_out0>;
+						};
+					};
+				};
+			};
+
+			/* Add tegra-camera-platform section */
+			tegra-camera-platform {
+				status = "okay";
+				compatible = "nvidia, tegra-camera-platform";
+				modules {
+					status = "okay";
+					module0 {
+						status = "okay";
+						badge = "imx185_bottom_liimx185";
+						position = "bottom";
+						orientation = "1";
+						drivernode0 {
+							status = "okay";
+							pcl_id = "v4l2_sensor";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@810c6d0000/tca9546@70/i2c@0/imx185_a@1a";
+						};
+					};
+				};
+			};
+
+			bus@0 {
+				gpio@810c300000 {
+					camera-control-output-low {
+						gpio-hog;
+						output-low;
+						gpios = <CAM0_RST_L 0 CAM0_PWDN 0>;
+						label = "cam0-rst", "cam0-pwdn";
+					};
+				};
+
+				/* Add host1x and nvcsi sections */
+				host1x@8181200000 {
+					nvcsi@8188000000 {
+						num-channels = <1>;
+						status = "okay";
+						channel@0 {
+							status = "okay";
+							ports {
+								status = "okay";
+								port@0 {
+									status = "okay";
+									endpoint@0 {
+										status = "okay";
+										port-index = <0>;
+										bus-width = <4>;
+										remote-endpoint = <&liimx185_imx185_out0>;
+									};
+								};
+								port@1 {
+									status = "okay";
+									endpoint@1 {
+										status = "okay";
+										remote-endpoint = <&liimx185_vi_in0>;
+									};
+								};
+							};
+						};
+					};
+				};
+
+				i2c@810c6d0000 {
+					tca9546@70 {
+						status = "okay";
+						compatible = "nxp,pca9546";
+						reg = <0x70>;
+						#address-cells = <1>;
+						#size-cells = <0>;
+						skip_mux_detect = "yes";
+
+						i2c@0 {
+							reg = <0>;
+							status = "okay";
+							i2c-mux,deselect-on-exit;
+							#address-cells = <1>;
+							#size-cells = <0>;
+							pca9570_a@24 {
+								status = "okay";
+								compatible = "nxp,pca9570";
+								reg = <0x24>;
+								channel = "a";
+								drive_ic = "DRV8838";
+							};
+
+							imx185_a@1a {
+								status = "okay";
+								/* Define any required hw resources needed by driver */
+								/* ie. clocks, io pins, power sources */
+								clocks = <&bpmp TEGRA264_CLK_EXTPERIPH1>,
+									<&bpmp TEGRA264_CLK_EXTPERIPH1>;
+								clock-names = "extperiph1", "pllp_grtba";
+								mclk = "extperiph1";
+								reset-gpios = <&gpio_main CAM0_RST_L GPIO_ACTIVE_HIGH>;
+								pwdn-gpios = <&gpio_main CAM0_PWDN GPIO_ACTIVE_HIGH>;
+
+								/* Add ports section */
+								ports {
+									status = "okay";
+									port@0 {
+										status = "okay";
+										endpoint {
+											status = "okay";
+											port-index = <0>;
+											bus-width = <4>;
+											remote-endpoint = <&liimx185_csi_in0>;
+										};
+									};
+								};
+							};
+						};
+					};
+				};
+			};
+		};
+	};
+};

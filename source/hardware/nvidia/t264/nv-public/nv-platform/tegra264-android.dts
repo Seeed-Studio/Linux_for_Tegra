@@ -1,0 +1,25 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+//
+// Android specific overrides
+
+/dts-v1/;
+/plugin/;
+
+/ {
+	fragment-t264-android@0 {
+		target-path = "/";
+		 __overlay__ {
+			firmware {
+				uefi {
+					use-partition-name-suffixes;
+				};
+			};
+
+			chosen {
+				use_dts_cmdline;
+				bootargs ="BOOT_IMAGE=/EFI/BOOT/Image tegra_keep_boot_clocks clk_ignore_unused earlyprintk=tegra_utc,mmio32,0xc4e0000 earlycon=tegra_utc,mmio32,0xc4e0000 enforcing=0 androidboot.selinux=permissive console=ttyUTC0,115200 root=/dev/initrd rw rootwait rootwait rw rootfstype=ext4 firmware_class.path=/etc/firmware kmemleak=off pci=pcie_bus_perf androidboot.hypervisor=disabled androidboot.verifiedbootstate=orange printk.devkmsg=on firmware_class.path=/vendor/firmware androidboot.hardware=t264ref androidboot.slot_suffix=_a androidboot.boot_devices=a80b8d0000.ufshci androidboot.xudc=a808670000.usb";
+			};
+		};
+	};
+};
