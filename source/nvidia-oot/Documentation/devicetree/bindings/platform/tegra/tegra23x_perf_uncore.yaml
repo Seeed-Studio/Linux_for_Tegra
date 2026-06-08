@@ -1,0 +1,49 @@
+# SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
+# Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/platform/tegra/tegra23x_perf_uncore.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Device tree binding for NVIDIA Tegra23x Perf Uncore
+
+maintainers:
+  - Eric Funsten <efunsten@nvidia.com>
+
+description: |
+   The tegra23x_perf_uncore driver provides an interface to the
+   scf-pmu device in order to set up PMU counters.
+
+properties:
+  compatible:
+    enum:
+      - nvidia,scf-pmu
+
+  interrupts:
+    maxItems: 1
+    description: |
+       Specifies the interrupt for the scf-pmu device.
+
+  interrupt-affinity:
+    maxItems: 1
+    description: |
+       Describes how to map the interrupt to cpu.
+
+required:
+  - compatible
+  - interrupts
+  - interrupt-affinity
+
+additionalProperties: false
+
+examples:
+  - |
+    #include <dt-bindings/gpio/tegra234-gpio.h>
+    #include <dt-bindings/interrupt-controller/arm-gic.h>
+
+    scf-pmu {
+				compatible = "nvidia,scf-pmu";
+				interrupts = <GIC_SPI 551 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-affinity = <&cpu0_0>;
+		};
+...

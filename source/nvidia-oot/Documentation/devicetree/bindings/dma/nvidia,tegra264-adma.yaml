@@ -1,0 +1,210 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/dma-controller@9440000/nvidia,tegra264-adma.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: NVIDIA Tegra ADMA driver
+
+maintainers:
+  - Mohan Kumar
+
+description: |
+     the compatability = nvidia,tegra264-adma is mentioned in the following drivers
+        - <TOP>/kernel/kernel-oot/drivers/dma/tegra210-adma.c
+
+     The following nodes use this compatibility
+        - /bus@0/aconnect@9000000/dma-controller@9440000
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra264-adma
+
+  required:
+    - compatible
+
+properties:
+
+    reg:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Registers are given by a tuple of two values:
+                - register address:
+                - register block size.
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x9450000
+                  maximum: 0x9450000
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x10000
+                  maximum: 0x10000
+
+    interrupt-parent:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+
+    interrupts:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Interrupts are give by a tuple of 3 values:
+                - interrupt specifier (GIC_SPI = 0, GIC_PPI = 1)
+                  definitions in dt-bindings/interrupt-controller/arm-gic.h
+                - interrupt number
+                - trigger type (rising edge, falling edge, both, etc)
+                  definitions in dt-bindings/interrupt-controller/irq.h
+        items:
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x90
+                  maximum: 0xbf
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x4
+                  maximum: 0x4
+
+    '#dma-cells':
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x1
+        maximum: 0x1
+
+    clocks:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Clocks are given by a tuple of 2 values:
+                - Phandle to the device
+                - Clock ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0xa3
+                  maximum: 0xa3
+
+    clock-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - d_audio
+
+
+    reg-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - vm
+
+
+    dma-channel-mask:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0xffff
+        maximum: 0xffffffff
+
+required:
+    - compatible
+    - reg
+    - interrupts
+    - clocks
+    - clock-names
+
+examples:
+    - |
+        dma-controller@9440000 {
+            compatible = "nvidia,tegra264-adma";
+            reg = <0x0 0x9440000 0x0 0xb0000>;
+            interrupt-parent = <&agic_page0>;
+            interrupts = <GIC_SPI 0x90 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0x91 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0x92 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0x93 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0x94 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0x95 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0x96 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0x97 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0x98 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0x99 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0x9a IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0x9b IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0x9c IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0x9d IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0x9e IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0x9f IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xa0 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xa1 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xa2 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xa3 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xa4 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xa5 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xa6 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xa7 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xa8 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xa9 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xaa IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xab IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xac IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xad IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xae IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xaf IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xb0 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xb1 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xb2 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xb3 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xb4 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xb5 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xb6 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xb7 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xb8 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xb9 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xba IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xbb IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xbc IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xbd IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xbe IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xbf IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xc0 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xc1 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xc2 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xc3 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xc4 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xc5 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xc6 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xc7 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xc8 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xc9 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xca IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xcb IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xcc IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xcd IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xce IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0xcf IRQ_TYPE_LEVEL_HIGH>;
+            #dma-cells = <1>;
+            clocks = <&bpmp TEGRA264_CLK_AHUB>;
+            clock-names = "d_audio";
+            status = "disabled";
+        };

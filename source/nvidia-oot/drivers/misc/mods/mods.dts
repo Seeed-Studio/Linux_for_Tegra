@@ -1,0 +1,11 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/* SPDX-FileCopyrightText: Copyright (c) 2015-2023, NVIDIA CORPORATION.  All rights reserved. */
+
+/dts-v1/;
+
+/ {
+	mods {
+		compatible = "nvidia,tegra-mods";
+		status = "okay";
+	};
+};

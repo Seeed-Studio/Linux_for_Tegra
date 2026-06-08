@@ -1,0 +1,72 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/FsiComIvc/nvidia,tegra-fsicom-channels.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: FSI Communication IVC Node
+
+maintainers:
+  - Rahul Bedarkar
+
+description: |
+     The following nodes use this compatibility
+        - /FsiComIvc
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra-fsicom-channels
+
+  required:
+    - compatible
+
+properties:
+
+    nChannel:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x9
+        maximum: 0x9
+
+    nvsciipc_endpoint:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - nvfsicom_EPD
+                - nvfsicom_CcplexApp
+                - nvfsicom_CcplexApp_state_change
+                - nvfsicom_app1
+                - nvfsicom_app2
+                - nvfsicom_appGR
+
+
+required:
+    - compatible
+
+examples:
+    - |
+        FsiComIvc {
+            compatible = "nvidia,tegra-fsicom-channels";
+            status = "disabled";
+            nChannel = <9>;
+            nvsciipc_endpoint = "nvfsicom_EPD",
+                                "nvfsicom_CcplexApp",
+                                "nvfsicom_CcplexApp_state_change",
+                                "nvfsicom_app1",
+                                "nvfsicom_app2",
+                                "nvfsicom_appGR";
+        };

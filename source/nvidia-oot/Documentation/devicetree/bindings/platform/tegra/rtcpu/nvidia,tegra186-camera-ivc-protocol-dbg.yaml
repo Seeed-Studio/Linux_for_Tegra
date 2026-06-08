@@ -1,0 +1,83 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/dbg@1/nvidia,tegra186-camera-ivc-protocol-dbg.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: The character device for ivc-bus
+
+maintainers:
+  - Evgeny Kornev
+
+description: |
+     the compatability = nvidia,tegra186-camera-ivc-protocol-dbg is mentioned in the following drivers
+        - <TOP>/kernel/nvidia-oot/drivers/platform/tegra/rtcpu/camchar.c
+
+     The following nodes use this compatibility
+        - /camera-ivc-channels/dbg@1
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra186-camera-ivc-protocol-dbg
+
+  required:
+    - compatible
+
+properties:
+
+    nvidia,service:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - debug
+
+
+    nvidia,version:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0x0
+
+    nvidia,group:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x1
+        maximum: 0x1
+
+    nvidia,frame-count:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x1
+        maximum: 0x1
+
+    nvidia,frame-size:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x200
+        maximum: 0x200
+
+required:
+    - compatible
+
+examples:
+    - |
+        dbg@1 {
+            compatible = "nvidia,tegra186-camera-ivc-protocol-dbg";
+            nvidia,service = "debug";
+            nvidia,version = <0>;
+            nvidia,group = <1>;
+            nvidia,frame-count = <1>;
+            nvidia,frame-size = <512>;
+            status = "disabled";
+        };

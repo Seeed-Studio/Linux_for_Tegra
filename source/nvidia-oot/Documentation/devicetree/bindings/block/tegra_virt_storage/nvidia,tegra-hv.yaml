@@ -1,0 +1,59 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/hyp/nvidia,tegra-hv.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Tegra Hypervisor Driver Module
+
+maintainers:
+  - Sreenivas Velpula
+  - Manish Bhardwaj
+
+description: |
+     the compatability = nvidia,tegra-hv is mentioned in the following drivers
+        - <TOP>/kernel/nvidia-oot/drivers/block/tegra_virt_storage/tegra_hv_vblk.c
+        - <TOP>/kernel/nvidia-oot/drivers/block/tegra_oops_virt_storage/tegra_hv_vblk_oops.c
+        - <TOP>/kernel/nvidia-oot/drivers/virt/tegra/tegra_hv_vcpu_yield.c
+        - <TOP>/kernel/nvidia-oot/drivers/virt/tegra/tegra_hv.c
+        - <TOP>/kernel/nvidia-oot/drivers/virt/tegra/tegra_hv_pm_ctl.c
+        - <TOP>/kernel/nvidia-oot/drivers/platform/tegra/tegra-hv-xhci-debug.c
+        - <TOP>/kernel/nvidia-oot/drivers/platform/tegra/tegra-hv-xhci.c
+
+     The following nodes use this compatibility
+        - /hyp
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra-hv
+
+  required:
+    - compatible
+
+properties:
+
+required:
+    - compatible
+
+examples:
+    - |
+      hyp {
+         compatible = "nvidia,tegra-hv";
+         status = "okay";
+         phandle = <0x10>;
+      };

@@ -1,0 +1,813 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+include <linux/types.h>
+include <linux/ioctl.h>
+include <include/uapi/linux/nvhost_events.h>
+include <uapi/linux/nvmap.h>
+include <uapi/linux/fcntl.h>
+include "soc/tegra/camrtc-capture.h"
+include "soc/tegra/camrtc-capture-messages.h"
+include <linux/nvcapture_ioctl.h>
+include <nvtypes.h>
+
+resource fd_i[fd]
+
+syz_open_dev$capture_vi_channel(dev ptr[in, string["/dev/capture-vi-channel#"]], id intptr[0:16], flags flags[open_flags]) fd_i
+
+ioctl$VI_CAPTURE_SETUP(fd fd_i, cmd const[VI_CAPTURE_SETUP], arg ptr[in, vi_capture_setup])
+ioctl$VI_CAPTURE_RELEASE(fd fd_i, cmd const[VI_CAPTURE_RELEASE], arg ptr[in, int32])
+ioctl$VI_CAPTURE_SET_CONFIG(fd fd_i, cmd const[VI_CAPTURE_SET_CONFIG], arg ptr[in, vi_capture_control_msg[msg_id_flags]])
+ioctl$VI_CAPTURE_RESET(fd fd_i, cmd const[VI_CAPTURE_RESET], arg ptr[in, int32])
+ioctl$VI_CAPTURE_GET_INFO(fd fd_i, cmd const[VI_CAPTURE_GET_INFO], arg ptr[out, vi_capture_info])
+ioctl$VI_CAPTURE_REQUEST(fd fd_i, cmd const[VI_CAPTURE_REQUEST], arg ptr[in, vi_capture_req])
+ioctl$VI_CAPTURE_STATUS(fd fd_i, cmd const[VI_CAPTURE_STATUS], arg ptr[inout, int32[-1:10]])
+ioctl$VI_CAPTURE_SET_PROGRESS_STATUS_NOTIFIER(fd fd_i, cmd const[VI_CAPTURE_SET_PROGRESS_STATUS_NOTIFIER], arg ptr[in, vi_capture_progress_status_req])
+ioctl$VI_CAPTURE_BUFFER_REQUEST(fd fd_i, cmd const[VI_CAPTURE_BUFFER_REQUEST], arg ptr[in, vi_buffer_req])
+
+nvmap_create_handle {
+	handle				int64
+} [align[8]]
+
+vi_capture_setup {
+	channel_flags			int32
+	error_mask_correctable		int32
+	vi_channel_mask			int64
+	vi2_channel_mask		int64
+	queue_depth			int32[0:0x1000, 0x100]
+	request_size			int32[0:0x10000, 0x1000]
+	mem				ptr[in, nvmap_create_handle]
+
+	slvsec_stream_main		int8
+	slvsec_stream_sub		int8
+	__pad_slvsec1			int16
+	csi_stream_id			int32[0:8]
+	virtual_channel_id		int32[0:16]
+	csi_port			int32[0:8]
+	__pad_csi			int32
+
+	error_mask_uncorrectable	int32
+	stop_on_error_notify_bits	int64
+	reserved			array[int64, 2]
+} [align[8]]
+
+vi_capture_info {
+	syncpts				vi_capture_syncpts
+	hw_channel_id			int32
+	__pad				int32
+	vi_channel_mask			int64
+	vi2_channel_mask		int64
+} [align[8]]
+
+vi_capture_syncpts {
+	progress_syncpt			int32
+	progress_syncpt_val		int32
+	emb_data_syncpt			int32
+	emb_data_syncpt_val		int32
+	line_timer_syncpt		int32
+	line_timer_syncpt_val		int32
+} [align[8]]
+
+type CAPTURE_CONTROL_MSG[MSG_TYPE] {
+	header				CAPTURE_MSG_HEADER[MSG_TYPE]
+# /** @anon_union */
+	union				CAPTURE_CONTROL_MSG_union
+} [align[8]]
+
+type vi_capture_control_msg[MSG_TYPE] {
+	ptr				ptr[in, CAPTURE_CONTROL_MSG[MSG_TYPE]]
+	size				len[ptr, int32]
+	__pad				int32
+	response			int64
+} [align[8]]
+
+vi_capture_req {
+	buffer_index			int32[0:1000]
+	num_relocs			int32[0:3]
+	reloc_relatives			int64
+} [align[8]]
+
+vi_capture_progress_status_req {
+	mem				int32
+	mem_offset			int32
+	buffer_depth			int32
+	__pad				array[int32, 3]
+} [align[8]]
+
+vi_buffer_req {
+	mem				int32
+	flag				int32
+} [align[8]]
+
+msg_id_flags = CAPTURE_CHANNEL_SETUP_REQ, CAPTURE_CHANNEL_SETUP_RESP, CAPTURE_CHANNEL_RESET_REQ, CAPTURE_CHANNEL_RESET_RESP, CAPTURE_CHANNEL_RELEASE_REQ, CAPTURE_CHANNEL_RELEASE_RESP, CAPTURE_COMPAND_CONFIG_REQ, CAPTURE_COMPAND_CONFIG_RESP, CAPTURE_PDAF_CONFIG_REQ, CAPTURE_PDAF_CONFIG_RESP, CAPTURE_SYNCGEN_ENABLE_REQ, CAPTURE_SYNCGEN_ENABLE_RESP, CAPTURE_SYNCGEN_DISABLE_REQ, CAPTURE_SYNCGEN_DISABLE_RESP, CAPTURE_CHANNEL_ISP_SETUP_REQ, CAPTURE_CHANNEL_ISP_SETUP_RESP, CAPTURE_CHANNEL_ISP_RESET_REQ, CAPTURE_CHANNEL_ISP_RESET_RESP, CAPTURE_CHANNEL_ISP_RELEASE_REQ, CAPTURE_CHANNEL_ISP_RELEASE_RESP, CAPTURE_REQUEST_REQ, CAPTURE_STATUS_IND, CAPTURE_RESET_BARRIER_IND, CAPTURE_ISP_REQUEST_REQ, CAPTURE_ISP_STATUS_IND, CAPTURE_ISP_PROGRAM_REQUEST_REQ, CAPTURE_ISP_PROGRAM_STATUS_IND, CAPTURE_ISP_RESET_BARRIER_IND, CAPTURE_ISP_EX_STATUS_IND, CAPTURE_PHY_STREAM_OPEN_REQ, CAPTURE_PHY_STREAM_OPEN_RESP, CAPTURE_PHY_STREAM_CLOSE_REQ, CAPTURE_PHY_STREAM_CLOSE_RESP, CAPTURE_PHY_STREAM_DUMPREGS_REQ, CAPTURE_PHY_STREAM_DUMPREGS_RESP, CAPTURE_CSI_STREAM_SET_CONFIG_REQ, CAPTURE_CSI_STREAM_SET_CONFIG_RESP, CAPTURE_CSI_STREAM_SET_PARAM_REQ, CAPTURE_CSI_STREAM_SET_PARAM_RESP, CAPTURE_CSI_STREAM_TPG_SET_CONFIG_REQ, CAPTURE_CSI_STREAM_TPG_SET_CONFIG_RESP, CAPTURE_CSI_STREAM_TPG_START_REQ, CAPTURE_CSI_STREAM_TPG_START_RESP, CAPTURE_CSI_STREAM_TPG_STOP_REQ, CAPTURE_CSI_STREAM_TPG_STOP_RESP, CAPTURE_CSI_STREAM_TPG_START_RATE_REQ, CAPTURE_CSI_STREAM_TPG_START_RATE_RESP, CAPTURE_CSI_STREAM_TPG_APPLY_GAIN_REQ, CAPTURE_CSI_STREAM_TPG_APPLY_GAIN_RESP, CAPTURE_CHANNEL_EI_REQ, CAPTURE_CHANNEL_EI_RESP, CAPTURE_CHANNEL_EI_RESET_REQ, CAPTURE_CHANNEL_EI_RESET_RESP
+
+type CAPTURE_MSG_HEADER[MSG_TYPE] {
+# /** Message identifier. */
+	msg_id	flags[MSG_TYPE, int32]
+# /** @anon_union */
+	union	int32
+} [align[8]]
+
+CAPTURE_CHANNEL_SETUP_REQ_MSG {
+# /** Capture channel configuration. */
+	channel_config	capture_channel_config
+} [align[8]]
+
+type iova_t int64
+
+csi_stream_config {
+# /** See @ref NvCsiStream "NVCSI stream id" */
+	stream_id	int32
+# /** See @ref NvCsiPort "NvCSI Port" */
+	csi_port	int32
+# /** CSI Virtual Channel */
+	virtual_channel	int32
+# /** Reserved */
+	__pad		int32
+} [align[8]]
+
+capture_channel_config {
+	channel_flags			flags[VICaptureChannelFlags, int32]
+# /** rtcpu internal data field - Should be set to zero */
+	channel_id			int32
+
+# /** VI unit ID. See @ref ViUnitIds "VI Unit Identifiers". */
+	vi_unit_id			int32
+
+# /** Reserved */
+	__pad				int32
+	vi_channel_mask			int64
+
+	vi2_channel_mask		int64
+	csi_stream			csi_stream_config
+
+	requests			iova_t
+
+	requests_memoryinfo		iova_t
+
+	queue_depth			int32
+
+# /** Size of the buffer reserved for each capture request. */
+	request_size			int32
+
+# /** Size of the memoryinfo buffer reserved for each capture request. */
+	request_memoryinfo_size		int32
+
+# /** Reserved */
+	reserved32			int32
+
+# /** SLVS-EC main stream */
+	slvsec_stream_main		int8
+# /** SLVS-EC sub stream */
+	slvsec_stream_sub		int8
+# /** Reserved */
+	reserved1			int16
+
+	num_vi_gos_tables		len[vi_gos_tables, int32]
+# /** VI GOS tables */
+	vi_gos_tables			array[iova_t, 12]
+# /** Capture progress syncpoint info */
+	progress_sp			syncpoint_info
+# /** Embedded data syncpoint info */
+	embdata_sp			syncpoint_info
+# /** VI line timer syncpoint info */
+	linetimer_sp			syncpoint_info
+	error_mask_uncorrectable	int32
+	error_mask_correctable		int32
+	stop_on_error_notify_bits	int64
+} [align[8]]
+
+syncpoint_info {
+# /** Syncpoint ID */
+	id		int32
+# /** Syncpoint threshold when storing a fence */
+	threshold	int32
+# /** Grid of Semaphores (GOS) SMMU stream id */
+	gos_sid		int8
+# /** GOS index */
+	gos_index	int8
+# /** GOS offset */
+	gos_offset	int16
+# /** Reserved */
+	pad_		int32
+# /** IOVA address of the Host1x syncpoint register */
+	shim_addr	iova_t
+} [align[8]]
+
+type capture_result int32
+
+CAPTURE_CHANNEL_SETUP_RESP_MSG {
+# /** Capture result return value. See @ref CapErrorCodes "Return values" */
+	result		capture_result
+# /** Capture channel identifier for the new channel. */
+	channel_id	int32
+# /** Bitmask of allocated VI channel(s). LSB is VI channel 0. */
+	vi_channel_mask	int64
+} [align[8]]
+
+CAPTURE_CHANNEL_RESET_REQ_MSG {
+# /** See @ref CapResetFlags "Reset flags" */
+	reset_flags	flags[CapResetFlags, int32]
+# /** Reserved */
+	pad__		int32
+} [align[8]]
+
+CAPTURE_CHANNEL_RESET_RESP_MSG {
+# /** Reset status return value. See @ref CapErrorCodes "Return values" */
+	result	capture_result
+	pad__	int32
+} [align[8]]
+
+CAPTURE_CHANNEL_RELEASE_REQ_MSG {
+# /** Reset flags. Currently not used in release request. */
+	reset_flags	int32
+	pad__		int32
+} [align[8]]
+
+CAPTURE_CHANNEL_RELEASE_RESP_MSG {
+# /** Release status return value. See @ref CapErrorCodes "Return values" */
+	result	capture_result
+	pad__	int32
+} [align[8]]
+
+vi_compand_config {
+# /** Input position for this knee point */
+	base	array[int32, 10]
+# /** Scale above this knee point */
+	scale	array[int32, 10]
+# /** Output offset for this knee point */
+	offset	array[int32, 10]
+} [align[8]]
+
+CAPTURE_COMPAND_CONFIG_REQ_MSG {
+# /** VI companding configuration */
+	compand_config	vi_compand_config
+} [align[8]]
+
+CAPTURE_COMPAND_CONFIG_RESP_MSG {
+	result	capture_result
+	pad__	int32
+} [align[8]]
+
+vi_pdaf_config {
+	pattern		array[int32, 32]
+	pattern_replace	array[int32, 32]
+} [align[8]]
+
+CAPTURE_PDAF_CONFIG_REQ_MSG {
+# /** PDAF configuration data */
+	pdaf_config	vi_pdaf_config
+} [align[8]]
+
+CAPTURE_PDAF_CONFIG_RESP_MSG {
+# /** PDAF config setup result. See @ref CapErrorCodes "Return values". */
+	result	capture_result
+# /** Reserved */
+	pad__	int32
+} [align[8]]
+
+vi_syncgen_config {
+
+	hclk_div		int32
+# /** Number of fractional bits of HALF_CYCLE */
+	hclk_div_fmt		int8
+# /** Horizontal sync signal */
+	xhs_width		int8
+# /** Vertical sync signal */
+	xvs_width		int8
+# /** Cycles to delay after XVS before assert XHS */
+	xvs_to_xhs_delay	int8
+# /** Resevred - UNUSED */
+	cvs_interval		int16
+# /** Reserved */
+	pad1__			int16
+# /** Reserved */
+	pad2__			int32
+} [align[8]]
+
+CAPTURE_SYNCGEN_ENABLE_REQ_MSG {
+# /** Syncgen unit */
+	unit		int32
+# /** Reserved */
+	pad__		int32
+# /** VI SYNCGEN unit configuration */
+	syncgen_config	vi_syncgen_config
+} [align[8]]
+
+CAPTURE_SYNCGEN_ENABLE_RESP_MSG {
+# /** Syncgen unit */
+	unit	int32
+# /** Syncgen enable request result. See @ref CapErrorCodes "Return values". */
+	result	capture_result
+} [align[8]]
+
+SyncgenDisableFlags = CAPTURE_SYNCGEN_DISABLE_FLAG_IMMEDIATE
+
+CAPTURE_SYNCGEN_DISABLE_REQ_MSG {
+# /** Syncgen unit */
+	unit			int32
+# /** See SyncgenDisableFlags "Syncgen disable flags" */
+	syncgen_disable_flags	flags[SyncgenDisableFlags, int32]
+} [align[8]]
+
+CAPTURE_SYNCGEN_DISABLE_RESP_MSG {
+# /** Syncgen unit */
+	unit	int32
+# /** Syncgen disable request result .See @ref CapErrorCodes "Return values". */
+	result	capture_result
+} [align[8]]
+
+CAPTURE_PHY_STREAM_OPEN_REQ_MSG {
+# /** See NvCsiStream "NVCSI stream id" */
+	stream_id	int32
+# /** See NvCsiPort "NvCSI Port" */
+	csi_port	int32
+# /** See @ref NvPhyType "NvCSI Physical stream type" */
+	phy_type	int32
+# /** Reserved */
+	pad32__		int32
+} [align[8]]
+
+CAPTURE_PHY_STREAM_OPEN_RESP_MSG {
+# /** Stream open request status. See @ref CapErrorCodes "Return values". */
+	result	int32
+# /** Reserved */
+	pad32__	int32
+} [align[8]]
+
+CAPTURE_PHY_STREAM_CLOSE_REQ_MSG {
+# /** NVCSI stream Id */
+	stream_id	int32
+# /** NVCSI port */
+	csi_port	int32
+# /** See @ref NvPhyType "NvCSI Physical stream type" */
+	phy_type	int32
+# /** Reserved */
+	pad32__		int32
+} [align[8]]
+
+CAPTURE_PHY_STREAM_CLOSE_RESP_MSG {
+# /** Stream close request status. See @ref CapErrorCodes "Return values". */
+	result	int32
+# /** Reserved */
+	pad32__	int32
+} [align[8]]
+
+CAPTURE_PHY_STREAM_DUMPREGS_REQ_MSG {
+# /** NVCSI stream Id */
+	stream_id	int32
+# /** NVCSI port */
+	csi_port	int32
+} [align[8]]
+
+CAPTURE_PHY_STREAM_DUMPREGS_RESP_MSG {
+# /** Stream dump registers request status. See @ref CapErrorCodes "Return values". */
+	result	int32
+	pad32__	int32
+} [align[8]]
+
+nvcsi_brick_config {
+# /** Select PHY @ref NvCsiPhyType "mode" for both partitions */
+	phy_mode	int32
+
+	lane_swizzle	int32
+
+	lane_polarity	array[int8, 4]
+
+	pad32__		int32
+} [align[8]]
+
+nvcsi_cil_config {
+# /** Number of data lanes used (0-4) */
+	num_lanes	int8
+# /** LP bypass mode (boolean) */
+	lp_bypass_mode	int8
+# /** Set MIPI THS-SETTLE timing (LP clock cycles with SoC default clock rate) */
+	t_hs_settle	int8
+# /** Set MIPI TCLK-SETTLE timing (LP clock cycles with SoC default clock rate) */
+	t_clk_settle	int8
+#/** @deprecated  */
+	cil_clock_rate	int32
+# /** MIPI clock rate for D-Phy. Symbol rate for C-Phy [kHz] */
+	mipi_clock_rate	int32
+# /** Reserved */
+	pad32__		int32
+} [align[8]]
+
+vi_hsm_csimux_error_mask_config {
+# /** Mask correctable CSIMUX. See @ref HsmCsimuxErrors "CSIMUX error bitmask". */
+	error_mask_correctable		int32
+# /** Mask uncorrectable CSIMUX. See @ref HsmCsimuxErrors "CSIMUX error bitmask". */
+	error_mask_uncorrectable	int32
+} [align[8]]
+
+nvcsi_error_config {
+	host1x_intr_mask_lic	int32
+	host1x_intr_mask_hsm	int32
+	host1x_intr_type_hsm	int32
+
+	status2vi_notify_mask	int32
+
+	stream_intr_mask_lic	int32
+	stream_intr_mask_hsm	int32
+	stream_intr_type_hsm	int32
+
+	cil_intr_mask_hsm	int32
+	cil_intr_type_hsm	int32
+	cil_intr0_mask_lic	int32
+	cil_intr1_mask_lic	int32
+
+	pad32__			int32
+
+	csimux_config		vi_hsm_csimux_error_mask_config
+} [align[8]]
+
+NvCsiConfigFlags = NVCSI_CONFIG_FLAG_BRICK, NVCSI_CONFIG_FLAG_CIL, NVCSI_CONFIG_FLAG_ERROR
+
+CAPTURE_CSI_STREAM_SET_CONFIG_REQ_MSG {
+# /** NVCSI stream Id */
+	stream_id	int32
+# /** NVCSI port */
+	csi_port	int32
+# /** @ref See NvCsiConfigFlags "NVCSI Configuration Flags" */
+	config_flags	flags[NvCsiConfigFlags, int32]
+# /** Reserved */
+	pad32__		int32
+# /** NVCSI super control and interface logic (SCIL aka brick) configuration */
+	brick_config	nvcsi_brick_config
+# /** NVCSI control and interface logic (CIL) partition configuration */
+	cil_config	nvcsi_cil_config
+# /** User-defined error configuration */
+	error_config	nvcsi_error_config
+} [align[8]]
+
+CAPTURE_CSI_STREAM_SET_CONFIG_RESP_MSG {
+# /** NVCSI stream config request status. See @ref CapErrorCodes "Return values". */
+	result	int32
+# /** Reserved */
+	pad32__	int32
+} [align[8]]
+
+nvcsi_dpcm_config {
+	dpcm_ratio	int32
+	pad32__		int32
+} [align[8]]
+
+nvcsi_watchdog_config {
+# /** Enable/disable the pixel parser watchdog */
+	enable	int8
+# /** Reserved */
+	pad8__	array[int8, 3]
+# /** The watchdog timer timeout period */
+	period	int32
+} [align[8]]
+
+CAPTURE_CSI_STREAM_SET_PARAM_REQ_MSG_union [
+# /** Set DPCM config for an NVCSI stream @anon_union_member */
+	dpcm_config	nvcsi_dpcm_config
+# /** NVCSI watchdog timer config @anon_union_member */
+	watchdog_config	nvcsi_watchdog_config
+]
+
+CAPTURE_CSI_STREAM_SET_PARAM_REQ_MSG {
+# /** NVCSI stream Id */
+	stream_id		int32
+# /** NVCSI stream virtual channel id */
+	virtual_channel_id	int32
+# /** The parameter to set. See @ref NvCsiParamType "NVCSI Parameter Type" */
+	param_type		int32
+# /** Reserved */
+	pad32__			int32
+
+# /** @anon_union */
+	union			CAPTURE_CSI_STREAM_SET_PARAM_REQ_MSG_union
+} [align[8]]
+
+CAPTURE_CSI_STREAM_SET_PARAM_RESP_MSG {
+# /** NVCSI set stream parameter request status. See @ref CapErrorCodes "Return values". */
+	result	int32
+# /** Reserved */
+	pad32__	int32
+} [align[8]]
+
+nvcsi_tpg_config_t186 {
+# /** NvCSI stream number */
+	stream_id		int8
+# /** DEPRECATED - to be removed */
+	stream			int8
+# /** NvCSI virtual channel ID */
+	virtual_channel_id	int8
+# /** DEPRECATED - to be removed */
+	virtual_channel		int8
+# /** Initial frame number */
+	initial_frame_number	int16
+# /** Reserved */
+	pad16__			int16
+# /** Enable frame number generation */
+	enable_frame_counter	int32
+# /** NvCSI datatype */
+	datatype		int32
+# /** DEPRECATED - to be removed */
+	data_type		int32
+# /** Width of the generated test image */
+	image_width		int16
+# /** Height of the generated test image */
+	image_height		int16
+# /** Pixel value for each horizontal color bar (format according to DT) */
+	pixel_values		array[int32, 8]
+} [align[8]]
+
+NvCsiTpgFlag = NVCSI_TPG_FLAG_PATCH_MODE, NVCSI_TPG_FLAG_SINE_MODE, NVCSI_TPG_FLAG_PHASE_INCREMENT, NVCSI_TPG_FLAG_AUTO_STOP, NVCSI_TPG_FLAG_EMBEDDED_PATTERN_CONFIG_INFO, NVCSI_TPG_FLAG_ENABLE_LS_LE, NVCSI_TPG_FLAG_PHY_MODE_CPHY, NVCSI_TPG_FLAG_ENABLE_HEADER_CRC_ECC_CHECK, NVCSI_TPG_FLAG_ENABLE_CRC_ECC_OVERRIDE, NVCSI_TPG_FLAG_FORCE_NVCSI2VI_ERROR_FORWARDING
+
+nvcsi_tpg_config_t194 {
+# /** NvCSI Virtual channel ID */
+	virtual_channel_id		int8
+# /** NvCSI datatype */
+	datatype			int8
+# /** @ref NvCsiTpgFlag "NvCSI TPG flag" */
+	flags				flags[NvCsiTpgFlag, int16]
+# /** Starting framen number for TPG */
+	initial_frame_number		int16
+# /** Maximum number for frames to be generated by TPG */
+	maximum_frame_number		int16
+# /** Width of the generated frame in pixels */
+	image_width			int16
+# /** Height of the generated frame in pixels */
+	image_height			int16
+# /** Embedded data line width in bytes */
+	embedded_line_width		int32
+# /** Line count of the embedded data before the pixel frame. */
+	embedded_lines_top		int32
+# /** Line count of the embedded data after the pixel frame. */
+	embedded_lines_bottom		int32
+# /* The lane count for the VC. */
+	lane_count			int32
+# /** Initial phase */
+	initial_phase			int32
+# /** Initial horizontal frequency for red channel */
+	red_horizontal_init_freq	int32
+# /** Initial vertical frequency for red channel */
+	red_vertical_init_freq		int32
+# /** Rate of change of the horizontal frequency for red channel */
+	red_horizontal_freq_rate	int32
+# /** Rate of change of the vertical frequency for red channel */
+	red_vertical_freq_rate		int32
+# /** Initial horizontal frequency for green channel */
+	green_horizontal_init_freq	int32
+# /** Initial vertical frequency for green channel */
+	green_vertical_init_freq	int32
+# /** Rate of change of the horizontal frequency for green channel */
+	green_horizontal_freq_rate	int32
+# /** Rate of change of the vertical frequency for green channel */
+	green_vertical_freq_rate	int32
+# /** Initial horizontal frequency for blue channel */
+	blue_horizontal_init_freq	int32
+# /** Initial vertical frequency for blue channel */
+	blue_vertical_init_freq		int32
+# /** Rate of change of the horizontal frequency for blue channel */
+	blue_horizontal_freq_rate	int32
+# /** Rate of change of the vertical frequency for blue channel */
+	blue_vertical_freq_rate		int32
+} [align[8]]
+
+nvcsi_tpg_config_tpg_ng {
+# /** NvCSI Virtual channel ID */
+	virtual_channel_id		int8
+# /** NvCSI datatype */
+	datatype			int8
+# /** @ref NvCsiTpgFlag "NvCSI TPG flag" */
+	flags				flags[NvCsiTpgFlag, int16]
+# /** Starting framen number for TPG */
+	initial_frame_number		int16
+# /** Maximum number for frames to be generated by TPG */
+	maximum_frame_number		int16
+# /** Width of the generated frame in pixels */
+	image_width			int16
+# /** Height of the generated frame in pixels */
+	image_height			int16
+# /** Embedded data line width in bytes */
+	embedded_line_width		int32
+# /** Line count of the embedded data before the pixel frame. */
+	embedded_lines_top		int32
+# /** Line count of the embedded data after the pixel frame. */
+	embedded_lines_bottom		int32
+# /** Initial phase */
+	initial_phase_red		int32
+# /** Initial phase */
+	initial_phase_green		int32
+# /** Initial phase */
+	initial_phase_blue		int32
+# /** Initial horizontal frequency for red channel */
+	red_horizontal_init_freq	int32
+# /** Initial vertical frequency for red channel */
+	red_vertical_init_freq		int32
+# /** Rate of change of the horizontal frequency for red channel */
+	red_horizontal_freq_rate	int32
+# /** Rate of change of the vertical frequency for red channel */
+	red_vertical_freq_rate		int32
+# /** Initial horizontal frequency for green channel */
+	green_horizontal_init_freq	int32
+# /** Initial vertical frequency for green channel */
+	green_vertical_init_freq	int32
+# /** Rate of change of the horizontal frequency for green channel */
+	green_horizontal_freq_rate	int32
+# /** Rate of change of the vertical frequency for green channel */
+	green_vertical_freq_rate	int32
+# /** Initial horizontal frequency for blue channel */
+	blue_horizontal_init_freq	int32
+# /** Initial vertical frequency for blue channel */
+	blue_vertical_init_freq		int32
+# /** Rate of change of the horizontal frequency for blue channel */
+	blue_horizontal_freq_rate	int32
+# /** Rate of change of the vertical frequency for blue channel */
+	blue_vertical_freq_rate		int32
+# /** NvCSI stream number */
+	stream_id			int8
+# /** NvCSI tpg embedded data spare0 reg settings */
+	emb_data_spare_0		int8
+# /** NvCSI tpg embedded data spare1 reg settings */
+	emb_data_spare_1		int8
+# /** NvCSI TPG output brightness gain */
+	brightness_gain_ratio		int8
+
+# /** This field is for the CPHY SOF packet first and second packet header CRC override */
+	override_crc_ph_sof		int32
+# /** This field is for the CPHY EOF packet first and second packet header CRC override */
+	override_crc_ph_eof		int32
+# /** This field is for the CPHY SOL packet first and second packet header CRC override */
+	override_crc_ph_sol		int32
+# /** This field is for the CPHY EOL packet first and second packet header CRC override */
+	override_crc_ph_eol		int32
+# /** This field is for the CPHY long packet first and second packet header CRC override */
+	override_crc_ph_long_packet	int32
+# /** This field is for the long packet payload CRC override (both CPHY and DPHY) */
+	override_crc_payload		int32
+
+	override_ecc_ph			int32
+# /** Reserved size */
+	reserved			int32
+} [align[8]]
+
+nvcsi_tpg_config [
+# /** TPG configuration for T186 */
+	t186		nvcsi_tpg_config_t186
+# /** TPG configuration for T194 */
+	t194		nvcsi_tpg_config_t194
+# /** Next gen TPG configuration*/
+	tpg_ng		nvcsi_tpg_config_tpg_ng
+# /** Reserved size */
+	reserved	array[int32, 32]
+]
+
+CAPTURE_CSI_STREAM_TPG_SET_CONFIG_REQ_MSG {
+# /** TPG configuration */
+	union	nvcsi_tpg_config
+} [align[8]]
+
+CAPTURE_CSI_STREAM_TPG_SET_CONFIG_RESP_MSG {
+# /** Set TPG config request status. See @ref CapErrorCodes "Return values". */
+	result	int32
+# /** Reserved */
+	pad32__	int32
+} [align[8]]
+
+nvcsi_tpg_rate_config {
+# /** Horizontal blanking (clocks) */
+	hblank		int32
+# /** Vertical blanking (clocks) */
+	vblank		int32
+# /** T194 only: Interval between pixels (clocks) */
+	pixel_interval	int32
+# /** next gen TPG only: data speed */
+	lane_speed	int32
+} [align[8]]
+
+CAPTURE_CSI_STREAM_TPG_START_REQ_MSG {
+# /** NVCSI stream Id */
+	stream_id		int32
+# /** NVCSI stream virtual channel id */
+	virtual_channel_id	int32
+# /** TPG rate configuration */
+	tpg_rate_config		nvcsi_tpg_rate_config
+} [align[8]]
+
+CAPTURE_CSI_STREAM_TPG_START_RESP_MSG {
+# /** TPG start request status. See @ref CapErrorCodes "Return values". */
+	result	int32
+# /** Reserved */
+	pad32__	int32
+} [align[8]]
+
+CAPTURE_CSI_STREAM_TPG_STOP_REQ_MSG {
+# /** NVCSI stream Id */
+	stream_id		int32
+# /** NVCSI stream virtual channel id */
+	virtual_channel_id	int32
+} [align[8]]
+
+CAPTURE_CSI_STREAM_TPG_STOP_RESP_MSG {
+# /** Stop TPG steaming request status. See @ref CapErrorCodes "Return values". */
+	result	int32
+	pad32__	int32
+} [align[8]]
+
+CAPTURE_CSI_STREAM_TPG_START_RATE_REQ_MSG {
+# /** NVCSI stream Id */
+	stream_id		int32
+# /** NVCSI stream virtual channel id */
+	virtual_channel_id	int32
+# /** TPG frame rate in Hz */
+	frame_rate		int32
+# /** Reserved */
+	__pad32			int32
+} [align[8]]
+
+CAPTURE_CSI_STREAM_TPG_START_RATE_RESP_MSG {
+# /** TPG start rate request status. See @ref CapErrorCodes "Return values". */
+	result	int32
+# /** Reserved */
+	pad32__	int32
+} [align[8]]
+
+CAPTURE_CONTROL_MSG_union [
+# /** @anon_union_member */
+	channel_setup_req		CAPTURE_CHANNEL_SETUP_REQ_MSG
+# /** @anon_union_member */
+	channel_setup_resp		CAPTURE_CHANNEL_SETUP_RESP_MSG
+# /** @anon_union_member */
+	channel_reset_req		CAPTURE_CHANNEL_RESET_REQ_MSG
+# /** @anon_union_member */
+	channel_reset_resp		CAPTURE_CHANNEL_RESET_RESP_MSG
+# /** @anon_union_member */
+	channel_release_req		CAPTURE_CHANNEL_RELEASE_REQ_MSG
+# /** @anon_union_member */
+	channel_release_resp		CAPTURE_CHANNEL_RELEASE_RESP_MSG
+# /** @anon_union_member */
+	compand_config_req		CAPTURE_COMPAND_CONFIG_REQ_MSG
+# /** @anon_union_member */
+	compand_config_resp		CAPTURE_COMPAND_CONFIG_RESP_MSG
+# /** @anon_union_member */
+	pdaf_config_req			CAPTURE_PDAF_CONFIG_REQ_MSG
+# /** @anon_union_member */
+	pdaf_config_resp		CAPTURE_PDAF_CONFIG_RESP_MSG
+# /** @anon_union_member */
+	syncgen_enable_req		CAPTURE_SYNCGEN_ENABLE_REQ_MSG
+# /** @anon_union_member */
+	syncgen_enable_resp		CAPTURE_SYNCGEN_ENABLE_RESP_MSG
+# /** @anon_union_member */
+	syncgen_disable_req		CAPTURE_SYNCGEN_DISABLE_REQ_MSG
+# /** @anon_union_member */
+	syncgen_disable_resp		CAPTURE_SYNCGEN_DISABLE_RESP_MSG
+
+# /** @anon_union_member */
+	phy_stream_open_req		CAPTURE_PHY_STREAM_OPEN_REQ_MSG
+# /** @anon_union_member */
+	phy_stream_open_resp		CAPTURE_PHY_STREAM_OPEN_RESP_MSG
+# /** @anon_union_member */
+	phy_stream_close_req		CAPTURE_PHY_STREAM_CLOSE_REQ_MSG
+# /** @anon_union_member */
+	phy_stream_close_resp		CAPTURE_PHY_STREAM_CLOSE_RESP_MSG
+# /** @anon_union_member */
+	phy_stream_dumpregs_req		CAPTURE_PHY_STREAM_DUMPREGS_REQ_MSG
+
+# /** @anon_union_member */
+	phy_stream_dumpregs_resp	CAPTURE_PHY_STREAM_DUMPREGS_RESP_MSG
+
+# /** @anon_union_member */
+	csi_stream_set_config_req	CAPTURE_CSI_STREAM_SET_CONFIG_REQ_MSG
+# /** @anon_union_member */
+	csi_stream_set_config_resp	CAPTURE_CSI_STREAM_SET_CONFIG_RESP_MSG
+
+# /** @anon_union_member */
+	csi_stream_set_param_req	CAPTURE_CSI_STREAM_SET_PARAM_REQ_MSG
+
+# /** @anon_union_member */
+	csi_stream_set_param_resp	CAPTURE_CSI_STREAM_SET_PARAM_RESP_MSG
+
+# /** @anon_union_member */
+	csi_stream_tpg_set_config_req	CAPTURE_CSI_STREAM_TPG_SET_CONFIG_REQ_MSG
+
+# /** @anon_union_member */
+	csi_stream_tpg_set_config_resp	CAPTURE_CSI_STREAM_TPG_SET_CONFIG_RESP_MSG
+
+# /** @anon_union_member */
+	csi_stream_tpg_start_req	CAPTURE_CSI_STREAM_TPG_START_REQ_MSG
+
+# /** @anon_union_member */
+	csi_stream_tpg_start_resp	CAPTURE_CSI_STREAM_TPG_START_RESP_MSG
+
+# /** @anon_union_member */
+	csi_stream_tpg_stop_req		CAPTURE_CSI_STREAM_TPG_STOP_REQ_MSG
+
+# /** @anon_union_member */
+	csi_stream_tpg_stop_resp	CAPTURE_CSI_STREAM_TPG_STOP_RESP_MSG
+
+# /** @anon_union_member */
+	csi_stream_tpg_start_rate_req	CAPTURE_CSI_STREAM_TPG_START_RATE_REQ_MSG
+
+# /** @anon_union_member */
+	csi_stream_tpg_start_rate_resp	CAPTURE_CSI_STREAM_TPG_START_RATE_RESP_MSG
+]
+
+VICaptureChannelFlags = CAPTURE_CHANNEL_FLAG_VIDEO, CAPTURE_CHANNEL_FLAG_RAW, CAPTURE_CHANNEL_FLAG_PLANAR, CAPTURE_CHANNEL_FLAG_SEMI_PLANAR, CAPTURE_CHANNEL_FLAG_PDAF, CAPTURE_CHANNEL_FLAG_EMBDATA, CAPTURE_CHANNEL_FLAG_ISPA, CAPTURE_CHANNEL_FLAG_ISPB, CAPTURE_CHANNEL_FLAG_ISP_DIRECT, CAPTURE_CHANNEL_FLAG_ISPSW, CAPTURE_CHANNEL_FLAG_RESET_ON_ERROR, CAPTURE_CHANNEL_FLAG_LINETIMER, CAPTURE_CHANNEL_FLAG_SLVSEC, CAPTURE_CHANNEL_FLAG_ENABLE_HSM_ERROR_MASKS, CAPTURE_CHANNEL_FLAG_ENABLE_VI_PFSD, CAPTURE_CHANNEL_FLAG_CSI
+CapResetFlags = CAPTURE_CHANNEL_RESET_FLAG_IMMEDIATE

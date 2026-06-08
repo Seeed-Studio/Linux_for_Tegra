@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: GPL-2.0
+# Copyright (c) 2023, NVIDIA CORPORATION.  All rights reserved.
+#
+# The makefile to install public headers on desired path.
+
+# Get the path of Makefile
+ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
+
+headers_install:
+	mkdir -p $(INSTALL_HDR_PATH); \
+	rsync -mrl --include='*/' --include='*\.h' --exclude='*' \
+	$(ROOT_DIR)/include $(INSTALL_HDR_PATH)
+
+clean:
+	rm -rf $(INSTALL_HDR_PATH)

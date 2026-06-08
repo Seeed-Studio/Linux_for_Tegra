@@ -1,0 +1,143 @@
+NVIDIA nvpps driver bindings
+
+Nvpps is a Linux Kernel mode driver to support Time domain correlation feature on
+Nvidia Tegra SOCs
+
+Required properties:
+
+- compatible: This should be nvidia,tegra264-nvpps for Thor and nvidia,tegra234-nvpps for Orin.
+
+- primary-emac: specifies ethernet emac device DT. This is the primary ethernet MAC device utilized
+		to calculate PTP time. For example, if MGBE0 is used to calculate the PTP time,
+		then phandle of the device tree node corresponding to MGBE0 needs to be passed.
+
+                For Example for Orin:
+                        mgbe0: ethernet@6800000
+                        eqos: ethernet@2310000
+
+                For Example for Thor:
+                        mgbe3: ethernet@a808e10000
+
+Optional properties:
+
+- sec-emac: specifies secondary ethernet MAC device DT node to be used to calculate PTP time.
+- ptp_tsc_sync_dis: Define this boolean flag if PTP TSC rate sync logic needs to be disabled in nvpps driver.
+					The default behaviour is to keep PTP TSC sync logic enabled.
+- ptp_tsc_lock_threshold: specifies the threshold value in nsecs which is used by HW to determine
+				 if the TSC PTP sync/Lock is lost. The lock is deemed to be lost if the HW
+				 determined absolute diff between PTP & TSC time domains exceed this value.
+				 On Orin platforms, The Min & Max values are 1us & 2.114ms. The default value used is 20us.
+				 Since the resolution is 1usec & the value should be specified in nanosecs.
+				 1us is specified as 1000 and 2.114ms is specified as 2114000
+				 On Thor platforms, The Min & Max values are 1ns & 16.777215ms. The default value used is 20us
+				 1ns is specified as 1 and 16.777215ms is specified as 16777215
+				 When ptp_tsc_sync_dis is not set, this property is mandatory.
+- ptp_tsc_sync_trig_interval: Defines interval(in terms of PPS edge count) at which PTP-TSC sync
+				 alignment should be triggered eg: if value 3 is provided, then an attempt is
+				 made to sync TSC with PTP(if not synchronized) on every 3rd PPS edge.
+				 Supported min & max values are 1 & 8 respectively and by default, value
+				 of 1 is used to trigger TSC sync on every PPS edge.
+				 When ptp_tsc_sync_dis is not set, this property is mandatory.
+- reg: specifies start address and registers count details of TSC module.
+       When ptp_tsc_sync_dis is not set, this property is mandatory.
+
+- nvpps-gpios: specifies GPIO number for PPS input signal. If not provided, then Timer mode is default operating mode
+- timestamps: specifies timestamp for the GPIO provided by HTE.
+- timestamp-names: specifies name for GPIO timestamp.
+- ts-capture-interval: Defines the interval between timestamp captures in milliseconds.
+                      Valid range is from 100ms to 1000ms. This property determines how often
+                      the driver collects timestamp data. If this property is not specified,
+                      the driver will collect timestamps every 1000ms(1s) by default.
+- nvpps-event-mode-init: Optional property that specifies the initial operating mode of the NvPPS driver.
+                         Valid values are 1 (GPIO mode) and 2 (TIMER mode). If this property is not
+                         specified, the default mode is determined based on the presence of the
+                         nvpps-gpios property - GPIO mode becomes the default when nvpps-gpios is
+                         specified, otherwise TIMER mode is used as the default.
+
+Example: Timer mode on Orin.
+
+mgbe0: ethernet@6800000{
+};
+
+nvpps {
+	status = "okay";
+	compatible = "nvidia,tegra234-nvpps";
+	primary-emac = <&mgbe0>;
+	sec-emac = <&mgbe0>;
+	ptp_tsc_sync_dis;
+};
+
+
+Example: GPIO mode on Orin
+
+mgbe0: ethernet@6800000{
+};
+
+nvpps {
+	status = "okay";
+	compatible = "nvidia,tegra234-nvpps";
+	ptp_tsc_sync_dis;
+	nvpps-gpios = <&gpio_aon TEGRA234_AON_GPIO(BB, 0) GPIO_ACTIVE_HIGH>;
+	timestamps = <&hte_aon TEGRA234_AON_GPIO(BB, 0)>;
+	timestamp-names = "nvpps_gpio";
+	ts-capture-interval = <1000>;
+	nvpps-event-mode-init = <1>; /* 1 for GPIO mode, 2 for TIMER mode */
+};
+
+
+Example: Timer mode on Orin with additional properties.
+
+mgbe0: ethernet@6800000{
+};
+
+nvpps {
+	status = "okay";
+	compatible = "nvidia,tegra234-nvpps";
+	primary-emac = <&mgbe0>;
+	reg = <0x0 0xc6a0000 0x0 0x1000>;
+	ptp_tsc_lock_threshold = <20000>;
+	ptp_tsc_sync_trig_interval = <3>;
+	ts-capture-interval = <1000>;
+	nvpps-event-mode-init = <2>; /* 1 for GPIO mode, 2 for TIMER mode */
+};
+
+Example: Timer mode on Thor with additional properties.
+
+mgbe1: ethernet@a808b10000{
+};
+
+mgbe3: ethernet@a808e10000{
+};
+
+nvpps {
+	status = "okay";
+	compatible = "nvidia,tegra264-nvpps";
+	primary-emac = <&mgbe3>;
+	sec-emac = <&mgbe1>;
+	reg = <0x0 0xc230000 0x0 0x1000>;
+	ptp_tsc_lock_threshold = <20000>;  // 20us
+	ptp_tsc_sync_trig_interval = <3>;  // trigger tsc sync on every 3 PPS edges
+	ts-capture-interval = <1000>;
+	nvpps-event-mode-init = <2>; /* 1 for GPIO mode, 2 for TIMER mode */
+};
+
+Example: GPIO mode on Thor with additional properties.
+
+mgbe1: ethernet@a808b10000{
+};
+
+mgbe3: ethernet@a808e10000{
+};
+
+nvpps {
+	status = "okay";
+	compatible = "nvidia,tegra264-nvpps";
+	primary-emac = <&mgbe3>;
+	sec-emac = <&mgbe1>;
+	reg = <0x0 0xc230000 0x0 0x1000>;
+	ptp_tsc_lock_threshold = <20000>;  // 20us
+	ptp_tsc_sync_trig_interval = <3>;  // trigger tsc sync on every 3 PPS edges
+	nvpps-gpios = <&gpio_aon TEGRA264_AON_GPIO(AA, 6) GPIO_ACTIVE_HIGH>;  // GPIO PPS input pin PAA.6
+	ts-capture-interval = <1000>;
+	nvpps-event-mode-init = <1>; /* 1 for GPIO mode, 2 for TIMER mode */
+};

@@ -1,0 +1,54 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/FsiComClientChConfigEpd/nvidia,tegra-fsicom-EPD.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: FSU Communication Client Configuration
+
+maintainers:
+  - Rahul Bedarkar
+
+description: |
+     The following nodes use this compatibility
+        - /FsiComClientChConfigEpd
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra-fsicom-EPD
+
+  required:
+    - compatible
+
+properties:
+
+    channelid_list:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0x0
+
+required:
+    - compatible
+
+examples:
+    - |
+        FsiComClientChConfigEpd {
+            compatible = "nvidia,tegra-fsicom-EPD";
+            status = "disabled";
+            channelid_list = <0>;
+        };

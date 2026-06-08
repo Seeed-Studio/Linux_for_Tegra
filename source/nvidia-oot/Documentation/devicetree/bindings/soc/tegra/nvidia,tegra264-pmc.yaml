@@ -1,0 +1,123 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/pmc@c800000/nvidia,tegra264-pmc.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Tegra PMC Module
+
+maintainers:
+  - Suresh Mangipudi
+
+description: |
+     the compatability = nvidia,tegra264-pmc is mentioned in the following drivers
+        - <TOP>/kernel/kernel-oot/drivers/soc/tegra/tegra264-pmc.c
+        - <TOP>/kernel/kernel-oot/drivers/gpio/gpio-tegra186.c
+
+     The following nodes use this compatibility
+        - /bus@0/pmc@c800000
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra264-pmc
+
+  required:
+    - compatible
+
+properties:
+
+    reg:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Registers are given by a tuple of two values:
+                - register address:
+                - register block size.
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0xc800000
+                  maximum: 0xc9c0000
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x10000
+                  maximum: 0x100000
+
+    reg-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - pmc
+                - wake
+                - scratch
+                - misc
+
+
+    '#interrupt-cells':
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x2
+        maximum: 0x2
+
+    interrupt-controller:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+    '#padcontroller-cells':
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x1
+        maximum: 0x1
+
+    nvidia,restrict-voltage-switch:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+    pinctrl-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - default
+
+
+    pinctrl-0:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+
+required:
+    - compatible
+    - reg
+
+examples:
+    - |
+        pmc@c800000 {
+            compatible = "nvidia,tegra264-pmc";
+            status = "disabled";
+            reg = <0x0 0x0c800000 0x0 0x100000>,
+                  <0x0 0x0c990000 0x0 0x10000>,
+                  <0x0 0x0c980000 0x0 0x10000>,
+                  <0x0 0x0c9c0000 0x0 0x40000>;
+            reg-names = "pmc, wake, scratch, misc";
+            #interrupt-cells = <2>;
+            interrupt-controller;
+            #padcontroller-cells = <1>;
+            nvidia,restrict-voltage-switch;
+            pinctrl-names = "default";
+            pinctrl-0 = <&iopad_defaults>;
+        };

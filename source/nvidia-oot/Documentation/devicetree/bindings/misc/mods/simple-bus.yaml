@@ -1,0 +1,72 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/bus@0/simple-bus.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Mods Simple Bus Driver
+
+maintainers:
+  - Chris Dragan
+  - Kiran Kasamsetty
+
+description: |
+     the compatability = simple-bus is mentioned in the following drivers
+        - <TOP>/kernel/nvidia-oot/drivers/misc/mods/mods_clock.c
+
+     The following nodes use this compatibility
+        - /bus@0
+        - /mods-simple-bus
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - simple-bus
+
+  required:
+    - compatible
+
+properties:
+
+    '#address-cells':
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x1
+        maximum: 0x2
+
+    '#size-cells':
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0x2
+
+    device_type:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - mods-simple-bus
+
+
+required:
+    - compatible
+
+examples:
+    - |
+        bus@0 {
+            compatible = "simple-bus";
+            #address-cells = <2>;
+            #size-cells = <2>;
+            ranges = <0x0 0x0 0x0 0x0 0x100 0x0>;
+        };

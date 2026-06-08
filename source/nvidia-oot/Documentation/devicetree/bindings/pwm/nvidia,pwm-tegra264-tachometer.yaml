@@ -1,0 +1,150 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/tachometer@810c5c0000/nvidia,pwm-tegra264-tachometer.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: PWM based NVIDIA Tegra Tachometer driver
+
+maintainers:
+  - Suresh Mangipudi
+
+description: |
+     the compatability = nvidia,pwm-tegra264-tachometer is mentioned in the following drivers
+        - <TOP>/kernel/nvidia-oot/drivers/pwm/pwm-tegra-tachometer.c
+
+     The following nodes use this compatibility
+        - /bus@0/tachometer@810c5c0000
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,pwm-tegra264-tachometer
+
+  required:
+    - compatible
+
+properties:
+
+    reg:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Registers are given by a tuple of two values:
+                - register address:
+                - register block size.
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x81
+                  maximum: 0x81
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0xc5c0000
+                  maximum: 0xc5c0000
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x10
+                  maximum: 0x10
+
+    '#pwm-cells':
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x2
+        maximum: 0x2
+
+    clocks:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Clocks are given by a tuple of 2 values:
+                - Phandle to the device
+                - Clock ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x158
+                  maximum: 0x158
+
+    resets:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Resets are given by a tuple of 2 values:
+                - Phandle to the device
+                - Reset ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x2c
+                  maximum: 0x2c
+
+    clock-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - tach
+
+
+    reset-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - tach
+
+
+    pulse-per-rev:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x2
+        maximum: 0x2
+
+    capture-window-length:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x2
+        maximum: 0x2
+
+    disable-clk-gate:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+required:
+    - compatible
+    - reg
+    - clocks
+    - resets
+    - clock-names
+    - reset-names
+
+examples:
+    - |
+        tachometer@810c5c0000 {
+            compatible = "nvidia,pwm-tegra264-tachometer";
+            status = "disabled";
+            reg = <0x81 0x0c5c0000 0x0 0x10>;
+            #pwm-cells = <2>;
+            clocks = <&bpmp TEGRA264_CLK_CLK1M>;
+            resets = <&bpmp TEGRA264_RESET_TACH0>;
+            clock-names = "tach";
+            reset-names = "tach";
+            pulse-per-rev = <2>;
+            capture-window-length = <2>;
+            disable-clk-gate;
+        };

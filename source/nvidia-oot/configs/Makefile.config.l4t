@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+#
+# There can be two config files that are included for a given build:
+#
+#   1. Makefile.config.$(kernel_name)
+#   2. Makefile.config.$(system_type)
+#
+# This file gets included when system_type=l4t for the OOT build.
+#
+
+export NV_OOT_HVC_SYSFS_SKIP_BUILD=y

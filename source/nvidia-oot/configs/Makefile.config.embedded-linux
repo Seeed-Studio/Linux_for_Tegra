@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+# Embedded linux specific environment variables to distinguish between embedded-linux and non embedded-linux builds.
+
+export NV_OOT_NVMAP_IN_EMBEDDED_LINUX=y
+subdir-ccflags-y += -DNV_CONFIG_NVMAP_IN_EMBEDDED_LINUX
+
+export NV_OOT_NVHOST_NATIVE_DIS=y
+export NV_OOT_NVHOST_DISABLE_LEGACY_IOCTL=y

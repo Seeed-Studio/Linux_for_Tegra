@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+# Kernel RHIVOS-1 specific environment variables to configure the OOT modules
+
+export NV_OOT_REALTEK_R8126_SKIP_BUILD=y
+export NV_OOT_REALTEK_R8168_SKIP_BUILD=y
+export NV_OOT_REALTEK_RTL8822CE_SKIP_BUILD=y
+export NV_OOT_REALTEK_RTL8852CE_SKIP_BUILD=y
+export NV_OOT_REALTEK_BTUSB_SKIP_BUILD=y

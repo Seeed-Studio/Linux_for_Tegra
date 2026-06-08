@@ -1,0 +1,6 @@
+# SPDX-License-Identifier: GPL-2.0
+# Copyright (c) 2022, NVIDIA CORPORATION.  All rights reserved.
+
+obj-m += spi-aurix-tegra.o
+obj-m += spi-tegra210-quad.o
+obj-m += spi-tegra124-slave.o

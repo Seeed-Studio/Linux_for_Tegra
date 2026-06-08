@@ -1,0 +1,32 @@
+# SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/platform/tegra/tegra_bootloader_debug.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Device tree binding for NVIDIA Tegra Bootloader Debug
+
+maintainers:
+  - Deepak Nibade <dnibade@nvidia.com>
+
+description: |
+   The tegra_bootloader_debug driver provides infrastructure to profile Boot and Resume KPIs
+
+properties:
+  compatible:
+    enum:
+      - nvidia,tegra_bl_debug
+
+required:
+  - compatible
+
+additionalProperties: false
+
+examples:
+  - |
+    profiler_device {
+        compatible = "nvidia,tegra_bl_debug";
+        usec_timer_reg_base = <0x0C240000>; /* USEC_CNTR_USECCVR_0 */
+        status = "okay";
+    };
+...

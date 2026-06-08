@@ -1,0 +1,60 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/gpio-keys/gpio-keys.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Keyboard driver for GPIOs
+
+maintainers:
+  - Suresh Mangipudi
+
+description: |
+     the compatability = gpio-keys is mentioned in the following drivers
+        - <TOP>/kernel/kernel-oot/drivers/input/keyboard/gpio_keys.c
+        - <TOP>/kernel/kernel-oot/drivers/input/keyboard/gpio_keys_polled.c
+        - <TOP>/kernel/kernel-oot/drivers/input/misc/soc_button_array.c
+        - <TOP>/kernel/kernel-oot/drivers/mfd/ucb1x00-assabet.c
+        - <TOP>/kernel/kernel-oot/drivers/mfd/rohm-bd71828.c
+        - <TOP>/kernel/kernel-oot/drivers/mfd/rohm-bd718x7.c
+        - <TOP>/kernel/kernel-oot/drivers/platform/x86/barco-p50-gpio.c
+        - <TOP>/kernel/kernel-oot/drivers/platform/x86/meraki-mx100.c
+        - <TOP>/kernel/kernel-oot/drivers/platform/x86/pcengines-apuv2.c
+        - <TOP>/kernel/kernel-oot/drivers/platform/x86/x86-android-tablets.c
+
+     The following nodes use this compatibility
+        - /gpio-keys
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - gpio-keys
+
+  required:
+    - compatible
+
+properties:
+
+required:
+    - compatible
+
+examples:
+    - |
+        gpio-keys {
+            compatible = "gpio-keys";
+            status = "okay";
+        };
