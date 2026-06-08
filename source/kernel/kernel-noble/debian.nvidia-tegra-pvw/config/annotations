@@ -1,0 +1,163 @@
+# Menu: HEADER
+# FORMAT: 4
+# ARCH: arm64
+# FLAVOUR: arm64-nvidia-tegra-pvw arm64-nvidia-tegra-pvw-rt
+# FLAVOUR_DEP: {'arm64-nvidia-tegra-pvw': 'arm64-nvidia-tegra', 'arm64-nvidia-tegra-pvw-rt': 'arm64-nvidia-tegra-rt'}
+
+include "../../debian.nvidia-tegra/config/annotations"
+
+CONFIG_ARM_FFA_TRANSPORT                        policy<{'arm64': 'y'}>
+CONFIG_ARM_FFA_TRANSPORT                        note<'EMBARGOED'>
+
+CONFIG_BACKLIGHT_CLASS_DEVICE                   policy<{'arm64': 'y'}>
+CONFIG_BACKLIGHT_CLASS_DEVICE                   note<'EMBARGOED'>
+
+CONFIG_CFS_BANDWIDTH                            policy<{'arm64': 'y'}>
+CONFIG_CFS_BANDWIDTH                            note<'EMBARGOED'>
+
+CONFIG_CRYPTO_USER_API                          policy<{'arm64': 'm'}>
+CONFIG_CRYPTO_USER_API                          note<'EMBARGOED'>
+
+CONFIG_CRYPTO_USER_API_AEAD                     policy<{'arm64': 'm'}>
+CONFIG_CRYPTO_USER_API_AEAD                     note<'EMBARGOED'>
+
+CONFIG_CRYPTO_USER_API_HASH                     policy<{'arm64': 'm'}>
+CONFIG_CRYPTO_USER_API_HASH                     note<'EMBARGOED'>
+
+CONFIG_CRYPTO_USER_API_RNG                      policy<{'arm64': 'm'}>
+CONFIG_CRYPTO_USER_API_RNG                      note<'EMBARGOED'>
+
+CONFIG_CRYPTO_USER_API_SKCIPHER                 policy<{'arm64': 'm'}>
+CONFIG_CRYPTO_USER_API_SKCIPHER                 note<'EMBARGOED'>
+
+CONFIG_DRM_SIMPLEDRM                            policy<{'arm64': 'n'}>
+CONFIG_DRM_SIMPLEDRM                            note<'EMBARGOED, disable for CONFIG_FB_SIMPLE'>
+
+CONFIG_EXFAT_FS                                 policy<{'arm64': 'y'}>
+CONFIG_EXFAT_FS                                 note<'EMBARGOED'>
+
+CONFIG_FB_SIMPLE                                policy<{'arm64': 'y'}>
+CONFIG_FB_SIMPLE                                note<'EMBARGOED'>
+
+CONFIG_INFINIBAND                               policy<{'arm64': 'm'}>
+CONFIG_INFINIBAND                               note<'EMBARGOED'>
+
+CONFIG_INFINIBAND_IPOIB                         policy<{'arm64': 'm'}>
+CONFIG_INFINIBAND_IPOIB                         note<'EMBARGOED'>
+
+CONFIG_INFINIBAND_USER_ACCESS                   policy<{'arm64': 'm'}>
+CONFIG_INFINIBAND_USER_ACCESS                   note<'EMBARGOED'>
+
+CONFIG_INFINIBAND_USER_MAD                      policy<{'arm64': 'm'}>
+CONFIG_INFINIBAND_USER_MAD                      note<'EMBARGOED'>
+
+CONFIG_INTEGRITY_ASYMMETRIC_KEYS                policy<{'arm64': 'y'}>
+CONFIG_INTEGRITY_ASYMMETRIC_KEYS                note<'EMBARGOED'>
+
+CONFIG_INTEGRITY_PLATFORM_KEYRING               policy<{'arm64': 'y'}>
+CONFIG_INTEGRITY_PLATFORM_KEYRING               note<'EMBARGOED'>
+
+CONFIG_INTEGRITY_SIGNATURE                      policy<{'arm64': 'y'}>
+CONFIG_INTEGRITY_SIGNATURE                      note<'EMBARGOED'>
+
+CONFIG_IP6_NF_MATCH_HL                          policy<{'arm64': 'm'}>
+CONFIG_IP6_NF_MATCH_HL                          note<'EMBARGOED'>
+
+CONFIG_IP6_NF_MATCH_RT                          policy<{'arm64': 'm'}>
+CONFIG_IP6_NF_MATCH_RT                          note<'EMBARGOED'>
+
+CONFIG_IP_ADVANCED_ROUTER                       policy<{'arm64': 'y'}>
+CONFIG_IP_ADVANCED_ROUTER                       note<'EMBARGOED'>
+
+CONFIG_IP_MULTIPLE_TABLES                       policy<{'arm64': 'y'}>
+CONFIG_IP_MULTIPLE_TABLES                       note<'EMBARGOED'>
+
+CONFIG_IP_NF_TARGET_REDIRECT                    policy<{'arm64': 'm'}>
+CONFIG_IP_NF_TARGET_REDIRECT                    note<'EMBARGOED'>
+
+CONFIG_IP_SCTP                                  policy<{'arm64': 'm'}>
+CONFIG_IP_SCTP                                  note<'EMBARGOED'>
+
+CONFIG_LOGO                                     policy<{'arm64': 'n'}>
+CONFIG_LOGO                                     note<'EMBARGOED'>
+
+CONFIG_MLX5_INFINIBAND                          policy<{'arm64': 'm'}>
+CONFIG_MLX5_INFINIBAND                          note<'EMBARGOED'>
+
+CONFIG_NETFILTER_XT_MATCH_COMMENT               policy<{'arm64': 'm'}>
+CONFIG_NETFILTER_XT_MATCH_COMMENT               note<'EMBARGOED'>
+
+CONFIG_NETFILTER_XT_MATCH_HASHLIMIT             policy<{'arm64': 'm'}>
+CONFIG_NETFILTER_XT_MATCH_HASHLIMIT             note<'EMBARGOED'>
+
+CONFIG_NETFILTER_XT_MATCH_LIMIT                 policy<{'arm64': 'm'}>
+CONFIG_NETFILTER_XT_MATCH_LIMIT                 note<'EMBARGOED'>
+
+CONFIG_NETFILTER_XT_MATCH_MULTIPORT             policy<{'arm64': 'm'}>
+CONFIG_NETFILTER_XT_MATCH_MULTIPORT             note<'EMBARGOED'>
+
+CONFIG_NETFILTER_XT_MATCH_RATEEST               policy<{'arm64': 'm'}>
+CONFIG_NETFILTER_XT_MATCH_RATEEST               note<'EMBARGOED'>
+
+CONFIG_NETFILTER_XT_MATCH_RECENT                policy<{'arm64': 'm'}>
+CONFIG_NETFILTER_XT_MATCH_RECENT                note<'EMBARGOED'>
+
+CONFIG_NETFILTER_XT_MATCH_STATISTIC             policy<{'arm64': 'm'}>
+CONFIG_NETFILTER_XT_MATCH_STATISTIC             note<'EMBARGOED'>
+
+CONFIG_NFT_COMPAT                               policy<{'arm64': 'm'}>
+CONFIG_NFT_COMPAT                               note<'EMBARGOED'>
+
+CONFIG_NFT_MASQ                                 policy<{'arm64': 'm'}>
+CONFIG_NFT_MASQ                                 note<'EMBARGOED'>
+
+CONFIG_NFT_NAT                                  policy<{'arm64': 'm'}>
+CONFIG_NFT_NAT                                  note<'EMBARGOED'>
+
+CONFIG_PSTORE_BLK                               policy<{'arm64': 'y'}>
+CONFIG_PSTORE_BLK                               note<'EMBARGOED'>
+
+CONFIG_PSTORE_CONSOLE                           policy<{'arm64': 'y'}>
+CONFIG_PSTORE_CONSOLE                           note<'EMBARGOED'>
+
+CONFIG_PSTORE_RAM                               policy<{'arm64': 'm'}>
+CONFIG_PSTORE_RAM                               note<'EMBARGOED'>
+
+CONFIG_QFMT_V2                                  policy<{'arm64': 'm'}>
+CONFIG_QFMT_V2                                  note<'EMBARGOED'>
+
+CONFIG_SENSORS_INA238                           policy<{'arm64': 'm'}>
+CONFIG_SENSORS_INA238                           note<'EMBARGOED'>
+
+CONFIG_SYSTEM_BLACKLIST_KEYRING                 policy<{'arm64': 'y'}>
+CONFIG_SYSTEM_BLACKLIST_KEYRING                 note<'EMBARGOED'>
+
+CONFIG_TEGRA_HV_DRIVER                          policy<{'arm64': 'y'}>
+CONFIG_TEGRA_HV_DRIVER                          note<'EMBARGOED'>
+
+CONFIG_UIO                                      policy<{'arm64': 'm'}>
+CONFIG_UIO                                      note<'EMBARGOED'>
+
+CONFIG_USB_IPHETH                               policy<{'arm64': 'm'}>
+CONFIG_USB_IPHETH                               note<'EMBARGOED'>
+
+CONFIG_USB_NET_RNDIS_HOST                       policy<{'arm64': 'm'}>
+CONFIG_USB_NET_RNDIS_HOST                       note<'EMBARGOED'>
+
+CONFIG_VIRT_DRIVERS                             policy<{'arm64': 'y'}>
+CONFIG_VIRT_DRIVERS                             note<'EMBARGOED'>
+
+CONFIG_VXLAN                                    policy<{'arm64': 'm'}>
+CONFIG_VXLAN                                    note<'EMBARGOED'>
+
+CONFIG_ZRAM                                     policy<{'arm64': 'm'}>
+CONFIG_ZRAM                                     note<'EMBARGOED'>
+
+
+# ---- Annotations without notes ----
+
+CONFIG_ARCH_TEGRA_264_SOC                       policy<{'arm64': 'y'}>
+CONFIG_DRM_GEM_SHMEM_HELPER                     policy<{'arm64': 'm'}>
+CONFIG_PINCTRL_TEGRA264                         policy<{'arm64': 'y'}>
+CONFIG_PSTORE_BLK_CONSOLE_SIZE                  policy<{'arm64': '64'}>
+CONFIG_PSTORE_ZONE                              policy<{'arm64': 'y'}>
