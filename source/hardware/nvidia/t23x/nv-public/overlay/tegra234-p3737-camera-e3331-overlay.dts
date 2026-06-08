@@ -1,0 +1,136 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2017-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/clock/tegra234-clock.h>
+#include <dt-bindings/gpio/tegra234-gpio.h>
+#include <dt-bindings/tegra234-p3737-0000+p3701-0000.h>
+
+/* camera control gpio definitions */
+#define CAM0_RST_L	TEGRA234_MAIN_GPIO(H, 3)
+
+/* TODO: Re-enable cam1 and cam2*/
+/ {
+	overlay-name = "Jetson Camera E3331 module";
+	jetson-header-name = "Jetson AGX CSI Connector";
+	compatible = JETSON_COMPATIBLE;
+
+	fragment@0 {
+		target-path = "/";
+
+		board_config {
+			ids = "3331-*";
+			sw-modules = "kernel";
+		};
+
+		__overlay__ {
+			tegra-capture-vi {
+				num-channels = <1>;
+				ports {
+					status = "okay";
+					port@0 {
+						status = "okay";
+						endpoint {
+							status = "okay";
+							remote-endpoint = <&e3331_csi_out0>;
+						};
+					};
+				};
+			};
+			tegra-camera-platform {
+				compatible = "nvidia, tegra-camera-platform";
+
+				modules {
+					status = "okay";
+					module0 {
+						status = "okay";
+						badge = "e3331_rear_22N02A";
+						position = "rear";
+						orientation = "1";
+						drivernode0 {
+							status = "okay";
+							pcl_id = "v4l2_sensor";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@3180000/tca9546@70/i2c@0/imx318_a@10";
+						};
+					};
+				};
+			};
+			bus@0 {
+				gpio@2200000 {
+					camera-control-output-low {
+						gpio-hog;
+						output-low;
+						gpios = <CAM0_RST_L 0>;
+						label = "cam0-rst";
+					};
+				};
+				host1x@13e00000 {
+					nvcsi@15a00000 {
+						num-channels = <1>;
+						channel@0 {
+							status = "okay";
+							ports {
+								status = "okay";
+								port@0 {
+									status = "okay";
+									endpoint@0 {
+										status = "okay";
+										remote-endpoint = <&e3331_imx318_out0>;
+									};
+								};
+								port@1 {
+									status = "okay";
+									endpoint@1 {
+										status = "okay";
+										remote-endpoint = <&e3331_vi_in0>;
+									};
+								};
+							};
+						};
+					};
+				};
+				i2c@3180000 {
+					tca9546@70 {
+						compatible = "nxp,pca9546";
+						reg = <0x70>;
+						#address-cells = <1>;
+						#size-cells = <0>;
+						skip_mux_detect;
+						status = "okay";
+						i2c@0 {
+							reg = <0>;
+							i2c-mux,deselect-on-exit;
+							#address-cells = <1>;
+							#size-cells = <0>;
+							status = "okay";
+							imx318_a@10 {
+								status = "okay";
+								clocks = <&bpmp TEGRA234_CLK_EXTPERIPH1>,
+									 <&bpmp TEGRA234_CLK_PLLP_OUT0>;
+								clock-names = "extperiph1", "pllp_grtba";
+								mclk = "extperiph1";
+								clock-frequency = <24000000>;
+								reset-gpios = <&gpio CAM0_RST_L GPIO_ACTIVE_HIGH>;
+								ports {
+									#address-cells = <1>;
+									#size-cells = <0>;
+									status = "okay";
+									port@0 {
+										status = "okay";
+										reg = <0>;
+										endpoint {
+											status = "okay";
+											remote-endpoint = <&e3331_csi_in0>;
+										};
+									};
+								};
+							};
+						};
+					};
+				};
+			};
+		};
+	};
+};

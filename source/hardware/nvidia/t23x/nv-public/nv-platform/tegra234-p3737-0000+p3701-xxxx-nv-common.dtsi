@@ -1,0 +1,236 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+#include "nv-soc/tegra234-overlay.dtsi"
+#include "nv-soc/tegra234-soc-audio-dai-links.dtsi"
+#include "nv-soc/tegra234-soc-camera.dtsi"
+#include "tegra234-p3737-0000.dtsi"
+#include "tegra234-dcb-p3737-0000-p3701-0000.dtsi"
+
+/ {
+	aliases {
+		ethernet0 = "/bus@0/ethernet@6800000";
+		serial2 = "/bus@0/serial@3110000";
+	};
+
+	cpus {
+		idle-states {
+			c7 {
+				status = "okay";
+			};
+		};
+	};
+
+	nvpmodel {
+		status = "okay";
+	};
+
+	scf-pmu {
+		status = "okay";
+	};
+
+	soctherm-oc-event {
+		status = "okay";
+	};
+
+	bus@0 {
+		smmu_test {
+			compatible = "nvidia,smmu_test";
+			iommus = <&smmu_niso0 TEGRA234_SID_SMMU_TEST>;
+			status = "okay";
+		};
+
+		pinmux@2430000 {
+			status = "okay";
+		};
+
+		aconnect@2900000 {
+			adsp@2993000 {
+				status = "okay";
+			};
+		};
+
+		serial@3110000 {
+			compatible = "nvidia,tegra194-hsuart";
+			reset-names = "serial";
+			status = "okay";
+		};
+
+		i2c@3180000 {
+			status = "okay";
+		};
+
+		i2c@3190000 {
+			status = "okay";
+		};
+
+		i2c@31b0000 {
+			nvidia,hw-instance-id = <0x5>;
+			status = "okay";
+		};
+
+		i2c@31c0000 {
+			status = "okay";
+		};
+
+		i2c@31e0000 {
+			status = "okay";
+		};
+
+		tachometer@39c0000 {
+			status = "okay";
+		};
+
+		hsp@3d00000 {
+			status = "okay";
+		};
+
+		ethernet@6800000 {
+			status = "okay";
+		};
+
+		aon@c000000 {
+			status = "okay";
+		};
+
+		hardware-timestamp@c1e0000 {
+			status = "okay";
+		};
+
+		i2c@c240000 {
+			status = "okay";
+		};
+
+		hdr40_i2c1: i2c@c250000 {
+			status = "okay";
+		};
+
+		rtc@c2a0000 {
+			status = "okay";
+		};
+
+		mttcan@c310000 {
+			status = "okay";
+		};
+
+		mttcan@c320000 {
+			status = "okay";
+		};
+
+		actmon@d230000 {
+			status = "okay";
+		};
+
+		hwpm@f100000 {
+			status = "okay";
+		};
+
+		mc-hwpm@2c10000 {
+			status = "okay";
+		};
+
+		host1x@13e00000 {
+			nvjpg@15380000 {
+				status = "okay";
+			};
+
+			nvdec@15480000 {
+				status = "okay";
+			};
+
+			nvenc@154c0000 {
+				status = "okay";
+			};
+
+			tsec@15500000 {
+				status = "okay";
+			};
+
+			nvjpg@15540000 {
+				status = "okay";
+			};
+
+			crypto@15820000 {
+				status = "okay";
+			};
+
+			crypto@15840000 {
+				status = "okay";
+			};
+
+			nvdla0@15880000 {
+				status = "okay";
+			};
+
+			nvdla1@158c0000 {
+				status = "okay";
+			};
+
+			ofa@15a50000 {
+				status = "okay";
+			};
+
+			pva0@16000000 {
+				status = "okay";
+
+				pva0_niso1_ctx0 {
+					status = "okay";
+				};
+
+				pva0_niso1_ctx1 {
+					status = "okay";
+				};
+
+				pva0_niso1_ctx2 {
+					status = "okay";
+				};
+
+				pva0_niso1_ctx3 {
+					status = "okay";
+				};
+
+				pva0_niso1_ctx4 {
+					status = "okay";
+				};
+
+				pva0_niso1_ctx5 {
+					status = "okay";
+				};
+
+				pva0_niso1_ctx6 {
+					status = "okay";
+				};
+
+				pva0_niso1_ctx7 {
+					status = "okay";
+				};
+			};
+		};
+
+		gpu@17000000 {
+			status = "okay";
+		};
+
+		pcie-ep@141a0000 {
+			nvidia,refclk-select-gpios = <&gpio
+							TEGRA234_MAIN_GPIO(Q, 4)
+							GPIO_ACTIVE_HIGH>;
+		};
+	};
+
+	tegra-hsp@b950000 {
+		status = "okay";
+	};
+
+	dce@d800000 {
+		status = "okay";
+	};
+
+	tegra_mce@e100000 {
+		status = "okay";
+	};
+
+	display@13800000 {
+		status = "okay";
+	};
+};

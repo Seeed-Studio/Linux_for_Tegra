@@ -1,0 +1,17 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+/dts-v1/;
+/plugin/;
+
+/ {
+	overlay-name = "Tegra234 p3768-0000+p3767-xxxx Dynamic Overlay";
+};
+
+/*
+ * Include this file last in the device tree.  It manages run-time
+ * pruning of peripherals that are not available across the various
+ * SKUs of p3767.  For example PVA can be enabled in the device tree
+ * and it will automatically be disabled for SKUs without PVA support.
+ */
+#include "tegra234-p3767-sku-handling.dtsi"

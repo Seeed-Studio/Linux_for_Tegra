@@ -1,0 +1,259 @@
+// SPDX-License-Identifier: GPL-2.0
+// SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+#include "nv-soc/tegra234-soc-safetyservice-fsicom.dtsi"
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/interrupt/tegra234-irq.h>
+
+/ {
+	compatible = "nvidia,p3740-0002+p3701-0008", "safety", "nvidia,p3701-0008", "nvidia,tegra234";
+
+	bus@0 {
+		i2c@3160000 {
+			nvidia,epl-reporter-id = <0x8050>;
+		};
+
+		i2c@c240000 {
+			nvidia,epl-reporter-id = <0x8051>;
+		};
+
+		i2c@3180000 {
+			nvidia,epl-reporter-id = <0x8052>;
+		};
+
+		i2c@3190000 {
+			nvidia,epl-reporter-id = <0x8053>;
+		};
+
+		i2c@31b0000 {
+			nvidia,epl-reporter-id = <0x8054>;
+		};
+
+		i2c@31c0000 {
+			nvidia,epl-reporter-id = <0x8056>;
+		};
+
+		i2c@c250000 {
+			nvidia,epl-reporter-id = <0x8057>;
+		};
+
+		i2c@31e0000 {
+			nvidia,epl-reporter-id = <0x8058>;
+		};
+
+		hsp_top2: hsp@1600000 {
+			interrupts = <GIC_SPI 266 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI 267 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "shared1", "shared2";
+			status = "okay";
+		};
+
+		spi@3230000  {
+			compatible = "nvidia,tegra186-spi-slave";
+			status = "okay";
+			spi@0 {
+				compatible = "nvidia,tegra-spidev";
+				reg = <0>;
+				spi-max-frequency = <50000000>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+				controller-data {
+					nvidia,lsbyte-first;
+				};
+			};
+		};
+	};
+
+	chosen {
+		/*
+		 * The ideal approach for disabling rail-gating
+		 * for GPU should be deleting the power-domains
+		 * property in GPU node. But /delete-property/
+		 * is not a valid syntax in the device tree
+		 * overlay, the nvidia,tegra-joint_xpu_rail is
+		 * specified to achieve the same as an
+		 * alternative.
+		 */
+		nvidia,tegra-joint_xpu_rail;
+	};
+
+	cpus {
+		idle-states {
+			c7 {
+				status = "disabled";
+			};
+		};
+	};
+
+	fsicom_client {
+		status = "okay";
+	};
+
+	FsiComIvc {
+		status = "okay";
+	};
+
+	/* FSI<->CCPLEX Communication through DRAM Carveout demo app */
+	FsiComAppChConfApp1 {
+		compatible = "nvidia,tegra-fsicom-sampleApp1";
+		status = "okay";
+		channelid_list = <3>;
+	};
+
+	hsierrrptinj {
+		compatible = "nvidia,tegra23x-hsierrrptinj";
+		mboxes = <&hsp_top0 (TEGRA_HSP_MBOX_TYPE_SM | TEGRA_HSP_MBOX_TYPE_SM_128BIT) TEGRA_HSP_SM_TX(1)>;
+		mbox-names = "hsierrrptinj-tx";
+		status = "okay";
+	};
+
+	safetyservices_epl_client@110000 {
+		/* userspace app uses this driver to send error code */
+		status = "okay";
+	};
+
+	thermal-zones {
+		cpu-thermal {
+			cooling-maps {
+				map-cpufreq {
+					cooling-device = <&cpu0_0 0 0>,
+							 <&cpu1_0 0 0>,
+							 <&cpu2_0 0 0>;
+				};
+
+				map-devfreq {
+					cooling-device = <&ga10b 0 0>;
+				};
+
+				map-throttle-alert {
+					cooling-device = <&cpu_throttle_alert 0 0>;
+				};
+			};
+		};
+
+		gpu-thermal {
+			cooling-maps {
+				map-cpufreq {
+					cooling-device = <&cpu0_0 0 0>,
+							 <&cpu1_0 0 0>,
+							 <&cpu2_0 0 0>;
+				};
+
+				map-devfreq {
+					cooling-device = <&ga10b 0 0>;
+				};
+
+				map-throttle-alert {
+					cooling-device = <&gpu_throttle_alert 0 0>;
+				};
+			};
+		};
+
+		cv0-thermal {
+			cooling-maps {
+				map-cpufreq {
+					cooling-device = <&cpu0_0 0 0>,
+							 <&cpu1_0 0 0>,
+							 <&cpu2_0 0 0>;
+				};
+
+				map-devfreq {
+					cooling-device = <&ga10b 0 0>;
+				};
+
+				map-throttle-alert {
+					cooling-device = <&cv0_throttle_alert 0 0>;
+				};
+			};
+		};
+
+		cv1-thermal {
+			cooling-maps {
+				map-cpufreq {
+					cooling-device = <&cpu0_0 0 0>,
+							 <&cpu1_0 0 0>,
+							 <&cpu2_0 0 0>;
+				};
+
+				map-devfreq {
+					cooling-device = <&ga10b 0 0>;
+				};
+
+				map-throttle-alert {
+					cooling-device = <&cv1_throttle_alert 0 0>;
+				};
+			};
+		};
+
+		cv2-thermal {
+			cooling-maps {
+				map-cpufreq {
+					cooling-device = <&cpu0_0 0 0>,
+							 <&cpu1_0 0 0>,
+							 <&cpu2_0 0 0>;
+				};
+
+				map-devfreq {
+					cooling-device = <&ga10b 0 0>;
+				};
+
+				map-throttle-alert {
+					cooling-device = <&cv2_throttle_alert 0 0>;
+				};
+			};
+		};
+
+		soc0-thermal {
+			cooling-maps {
+				map-cpufreq {
+					cooling-device = <&cpu0_0 0 0>,
+							 <&cpu1_0 0 0>,
+							 <&cpu2_0 0 0>;
+				};
+
+				map-devfreq {
+					cooling-device = <&ga10b 0 0>;
+				};
+
+				map-throttle-alert {
+					cooling-device = <&soc0_throttle_alert 0 0>;
+				};
+			};
+		};
+
+		soc1-thermal {
+			cooling-maps {
+				map-cpufreq {
+					cooling-device = <&cpu0_0 0 0>,
+							 <&cpu1_0 0 0>,
+							 <&cpu2_0 0 0>;
+				};
+
+				map-devfreq {
+					cooling-device = <&ga10b 0 0>;
+				};
+
+				map-throttle-alert {
+					cooling-device = <&soc1_throttle_alert 0 0>;
+				};
+			};
+		};
+
+		soc2-thermal {
+			cooling-maps {
+				map-cpufreq {
+					cooling-device = <&cpu0_0 0 0>,
+							 <&cpu1_0 0 0>,
+							 <&cpu2_0 0 0>;
+				};
+
+				map-devfreq {
+					cooling-device = <&ga10b 0 0>;
+				};
+
+				map-throttle-alert {
+					cooling-device = <&soc2_throttle_alert 0 0>;
+				};
+			};
+		};
+	};
+};

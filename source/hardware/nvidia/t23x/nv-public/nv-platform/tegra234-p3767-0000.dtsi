@@ -1,0 +1,99 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+#include <dt-bindings/gpio/tegra234-gpio.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/interrupt/tegra234-irq.h>
+#include "nv-soc/tegra234-soc-thermal.dtsi"
+#include "nv-soc/tegra234-soc-thermal-slowdown-corepair.dtsi"
+#include "nv-soc/tegra234-soc-thermal-shutdown.dtsi"
+#include "nv-soc/tegra234-soc-thermal-trip-event.dtsi"
+
+/ {
+	bus@0 {
+		mmc@3400000 {
+			no-sdio;
+			no-mmc;
+			nvidia,cd-wakeup-capable;
+			nvidia,boot-detect-delay = <1000>;
+			vmmc-supply = <&vdd_3v3_sd>;
+		};
+
+		nvrng@3ae0000 {
+			status = "okay";
+		};
+
+		gpu@17000000 {
+			status = "okay";
+		};
+	};
+
+	chosen {
+		nvidia,tegra-joint_xpu_rail;
+	};
+
+	opp-table-cluster0 {
+		opp-1510400000 { /* Max CPU freq for Orin Nano */
+			opp-hz = /bits/ 64 <1510400000>;
+			opp-peak-kBps = <3200000>;
+		};
+
+		opp-1984000000 { /* Max CPU freq for ONX */
+			opp-hz = /bits/ 64 <1984000000>;
+			opp-peak-kBps = <3200000>;
+		};
+	};
+
+	opp-table-cluster1 {
+		opp-1510400000 { /* Max CPU freq for Orin Nano */
+			opp-hz = /bits/ 64 <1510400000>;
+			opp-peak-kBps = <3200000>;
+		};
+
+		opp-1984000000 { /* Max CPU freq for ONX */
+			opp-hz = /bits/ 64 <1984000000>;
+			opp-peak-kBps = <3200000>;
+		};
+	};
+
+	opp-table-cluster2 {
+		opp-1510400000 { /* Max CPU freq for Orin Nano */
+			opp-hz = /bits/ 64 <1510400000>;
+			opp-peak-kBps = <3200000>;
+		};
+
+		opp-1984000000 { /* Max CPU freq for ONX */
+			opp-hz = /bits/ 64 <1984000000>;
+			opp-peak-kBps = <3200000>;
+		};
+	};
+
+	reserved-memory {
+		linux,cma { /* Needed for nvgpu comptags */
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0x0 0x10000000>; /* 256MB */
+			alignment = <0x0 0x10000>;
+			linux,cma-default;
+			status = "okay";
+		};
+	};
+
+	vdd_3v3_sd: regulator-vdd-3v3-sd {
+			compatible = "regulator-fixed";
+			regulator-name = "VDD_3V3_SD";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			gpio = <&gpio TEGRA234_MAIN_GPIO(A, 0) GPIO_ACTIVE_HIGH>;
+			enable-active-high;
+	};
+
+        hdr40_vdd_3v3: regulator-vdd-3v3-sys {
+		/* BUCK_3V3_EN enable is driven by button MCU */
+		compatible = "regulator-fixed";
+		regulator-name = "VDD-3V3-SYS";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-always-on;
+	};
+};

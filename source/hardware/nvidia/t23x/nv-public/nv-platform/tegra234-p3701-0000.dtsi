@@ -1,0 +1,78 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+#include "tegra234-p3701-0000-prod-overlay.dtsi"
+#include "nv-soc/tegra234-soc-thermal.dtsi"
+#include "nv-soc/tegra234-soc-thermal-slowdown-cluster.dtsi"
+#include "nv-soc/tegra234-soc-thermal-shutdown.dtsi"
+#include "nv-soc/tegra234-soc-thermal-trip-event.dtsi"
+
+/ {
+	bus@0 {
+		spi@3270000 {
+			flash@0 {
+				spi-max-frequency = <51000000>;
+				spi-tx-bus-width = <1>;
+				spi-rx-bus-width = <1>;
+			};
+		};
+
+		nvrng@3ae0000 {
+			status = "okay";
+		};
+	};
+
+	bpmp {
+		i2c {
+			vrs@3c {
+				compatible = "nvidia,vrs-pseq";
+				reg = <0x3c>;
+				interrupt-parent = <&pmc>;
+				/* VRS Wake ID is 24 */
+				interrupts = <24 IRQ_TYPE_LEVEL_LOW>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				status = "okay";
+			};
+
+			tegra_tmp451: thermal-sensor@4c {
+				#thermal-sensor-cells = <1>;
+			};
+
+			vrs11_1@20 {
+				compatible = "nvidia,vrs11";
+				reg = <0x20>;
+				rail-name-loopA = "GPU";
+				rail-name-loopB = "CPU";
+			};
+
+			vrs11_2@22 {
+				compatible = "nvidia,vrs11";
+				reg = <0x22>;
+				rail-name-loopA = "SOC";
+				rail-name-loopB = "CV";
+			};
+		};
+	};
+
+	eeprom-manager {
+		bus@0 {
+			i2c-bus = <&gen1_i2c>;
+			eeprom@0 {
+				slave-address = <0x50>;
+				label = "cvm";
+			};
+		};
+	};
+
+	reserved-memory {
+		linux,cma { /* Needed for nvgpu comptags */
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0x0 0x10000000>; /* 256MB */
+			alignment = <0x0 0x10000>;
+			linux,cma-default;
+			status = "okay";
+		};
+	};
+};
