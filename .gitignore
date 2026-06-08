@@ -1,0 +1,10 @@
+
+# Large binary files excluded (available from NVIDIA official downloads)
+nv_tegra/nvidia_drivers.tbz2
+bootloader/nvidia-l4t-bootloader_*.deb
+nv_tegra/l4t_deb_packages/nvidia-l4t-3d-core_*.deb
+unified_flash/tools/flashtools/flashing_kernel/initramfs/t264/boot_flashing.img
+nv_tegra/openrm/nvidia_l4t_firmware_openrm.tbz2
+nv_tegra/l4t_deb_packages/openrm/nvidia-l4t-firmware-openrm_*.deb
+bootloader/nvidia-l4t-kernel-partitions_*.deb
+kernel/Image
