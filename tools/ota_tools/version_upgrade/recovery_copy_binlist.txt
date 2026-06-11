@@ -1,0 +1,256 @@
+# SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: MIT
+#
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the "Software"),
+# to deal in the Software without restriction, including without limitation
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+# DEALINGS IN THE SOFTWARE.
+
+# This file contains a list of binaries to be injected into initrd to build
+# recovery image for OTA
+# There are couple of variables, those are replaced by the packaging script.
+# They are:
+# <ARCH>: the name of the folder containing the appropriate libraries.
+# <OTA_DIR>: the path of the ota directory
+# <ROOTFS>: the path of the rootfs
+# <KERNEL_VERSION>: the version of kernel
+
+# Line format:
+# <UBUNTU_CODENAME>:<SOURCE>:<DESTINATION>
+# NOTE: This list assumes that the destination root folder is where the initrd
+# is extracted
+
+all:<OTA_DIR>/init:/init
+all:<OTA_DIR>/nv_recovery.sh:/bin/nv_recovery.sh
+all:<OTA_DIR>/nv_ota_common.func:/bin/nv_ota_common.func
+all:<OTA_DIR>/nv_ota_disk_enc.func:/bin/nv_ota_disk_enc.func
+all:<OTA_DIR>/nv_ota_exception_handler.sh:/bin/nv_ota_exception_handler.sh
+all:<OTA_DIR>/nv_ota_internals.sh:/bin/nv_ota_internals.sh
+all:<OTA_DIR>/nv_ota_log.sh:/bin/nv_ota_log.sh
+all:<OTA_DIR>/nv_ota_utils.func:/bin/nv_ota_utils.func
+
+# Files for making Ubuntu focal recovery image
+focal:<ROOTFS>/bin/mv:/bin/mv
+focal:<ROOTFS>/bin/sync:/bin/sync
+focal:<ROOTFS>/sbin/blockdev:/bin/blockdev
+focal:<ROOTFS>/usr/bin/cut:/bin/cut
+focal:<ROOTFS>/usr/bin/cksum:/bin/cksum
+focal:<ROOTFS>/usr/bin/sha1sum:/bin/sha1sum
+focal:<ROOTFS>/usr/bin/seq:/bin/seq
+focal:<ROOTFS>/usr/bin/dirname:/bin/dirname
+focal:<ROOTFS>/usr/bin/tr:/bin/tr
+focal:<ROOTFS>/usr/bin/du:/bin/du
+focal:<ROOTFS>/usr/bin/chattr:/bin/chattr
+focal:<ROOTFS>/usr/sbin/mtd_debug:/bin/mtd_debug
+focal:<ROOTFS>/lib/<ARCH>/ld-2.31.so:/lib/<ARCH>/ld-2.31.so
+focal:<ROOTFS>/lib/<ARCH>/libc-2.31.so:/lib/<ARCH>/libc-2.31.so
+focal:<ROOTFS>/lib/<ARCH>/libdl-2.31.so:/lib/<ARCH>/libdl-2.31.so
+focal:<ROOTFS>/lib/<ARCH>/libm-2.31.so:/lib/<ARCH>/libm-2.31.so
+focal:<ROOTFS>/lib/<ARCH>/libnsl-2.31.so:/lib/<ARCH>/libnsl-2.31.so
+focal:<ROOTFS>/lib/<ARCH>/libnss_files-2.31.so:/lib/<ARCH>/libnss_files-2.31.so
+focal:<ROOTFS>/lib/<ARCH>/libnss_nis-2.31.so:/lib/<ARCH>/libnss_nis-2.31.so
+focal:<ROOTFS>/lib/<ARCH>/libpthread-2.31.so:/lib/<ARCH>/libpthread-2.31.so
+focal:<ROOTFS>/lib/<ARCH>/libresolv-2.31.so:/lib/<ARCH>/libresolv-2.31.so
+focal:<ROOTFS>/lib/<ARCH>/librt-2.31.so:/lib/<ARCH>/librt-2.31.so
+focal:<ROOTFS>/lib/<ARCH>/libwrap.so.0:/lib/<ARCH>/libwrap.so.0
+focal:<ROOTFS>/lib/<ARCH>/libaudit.so.1:/lib/<ARCH>/libaudit.so.1
+focal:<ROOTFS>/lib/<ARCH>/libpam.so.0:/lib/<ARCH>/libpam.so.0
+focal:<ROOTFS>/lib/<ARCH>/libpam_misc.so.0:/lib/<ARCH>/libpam_misc.so.0
+focal:<ROOTFS>/lib/<ARCH>/libsystemd.so.0:/lib/<ARCH>/libsystemd.so.0
+focal:<ROOTFS>/lib/<ARCH>/liblzma.so.5:/lib/<ARCH>/liblzma.so.5
+focal:<ROOTFS>/lib/<ARCH>/libgcrypt.so.20:/lib/<ARCH>/libgcrypt.so.20
+focal:<ROOTFS>/lib/<ARCH>/libgpg-error.so.0:/lib/<ARCH>/libgpg-error.so.0
+focal:<ROOTFS>/lib/<ARCH>/libutil.so.1:/lib/<ARCH>/libutil.so.1
+focal:<ROOTFS>/lib/<ARCH>/libcrypt.so.1:/lib/<ARCH>/libcrypt.so.1
+focal:<ROOTFS>/lib/<ARCH>/libz.so.1:/lib/<ARCH>/libz.so.1
+focal:<ROOTFS>/lib/<ARCH>/libcap.so.2:/lib/<ARCH>/libcap.so.2
+focal:<ROOTFS>/lib/<ARCH>/libcap-ng.so.0:/lib/<ARCH>/libcap-ng.so.0
+focal:<ROOTFS>/lib/<ARCH>/libprocps.so.8:/lib/<ARCH>/libprocps.so.8
+focal:<ROOTFS>/lib/<ARCH>/libnss_compat.so.2:/lib/<ARCH>/libnss_compat.so.2
+focal:<ROOTFS>/lib/<ARCH>/libmnl.so.0:/lib/<ARCH>/libmnl.so.0
+focal:<ROOTFS>/lib/<ARCH>/libdbus-1.so.3:/lib/libdbus-1.so.3
+focal:<ROOTFS>/lib/<ARCH>/libreadline.so.8:/lib/libreadline.so.8
+focal:<ROOTFS>/lib/<ARCH>/libtinfo.so.6:/lib/libtinfo.so.6
+focal:<ROOTFS>/lib/<ARCH>/libdevmapper.so.1.02.1:/lib/libdevmapper.so.1.02.1
+focal:<ROOTFS>/lib/<ARCH>/libblkid.so.1:/lib/libblkid.so.1
+focal:<ROOTFS>/lib/<ARCH>/libuuid.so.1:/lib/libuuid.so.1
+focal:<ROOTFS>/lib/<ARCH>/libudev.so.1:/lib/libudev.so.1
+focal:<ROOTFS>/lib/<ARCH>/libselinux.so.1:/lib/libselinux.so.1
+focal:<ROOTFS>/lib/<ARCH>/libpcre.so.3:/lib/libpcre.so.3
+focal:<ROOTFS>/usr/lib/<ARCH>/libssl.so.1.1:/lib/libssl.so.1.1
+focal:<ROOTFS>/usr/lib/<ARCH>/libgssapi_krb5.so.2:/lib/<ARCH>/libgssapi_krb5.so.2
+focal:<ROOTFS>/usr/lib/<ARCH>/libkrb5.so.3:/lib/<ARCH>/libkrb5.so.3
+focal:<ROOTFS>/usr/lib/<ARCH>/libk5crypto.so.3:/lib/<ARCH>/libk5crypto.so.3
+focal:<ROOTFS>/usr/lib/<ARCH>/libkrb5support.so.0:/lib/<ARCH>/libkrb5support.so.0
+focal:<ROOTFS>/usr/lib/<ARCH>/libcrypto.so.1.1:/lib/<ARCH>/libcrypto.so.1.1
+focal:<ROOTFS>/usr/lib/<ARCH>/liblz4.so.1:/lib/<ARCH>/liblz4.so.1
+focal:<ROOTFS>/usr/lib/<ARCH>/libelf.so.1:/lib/<ARCH>/libelf.so.1
+focal:<ROOTFS>/usr/lib/<ARCH>/libbsd.so.0:/lib/<ARCH>/libbsd.so.0
+focal:<ROOTFS>/usr/lib/<ARCH>/libzstd.so.1:/lib/<ARCH>/libzstd.so.1
+focal:<ROOTFS>/usr/lib/<ARCH>/libe2p.so.2:/lib/<ARCH>/libe2p.so.2
+focal:<ROOTFS>/usr/lib/<ARCH>/libcom_err.so.2:/lib/<ARCH>/libcom_err.so.2
+focal:<ROOTFS>/lib/modules/<KERNEL_VERSION>/kernel/drivers/mtd/mtd.ko:/lib/modules/<KERNEL_VERSION>/kernel/drivers/mtd/mtd.ko
+focal:<ROOTFS>/lib/modules/<KERNEL_VERSION>/kernel/drivers/mtd/mtdblock.ko:/lib/modules/<KERNEL_VERSION>/kernel/drivers/mtd/mtdblock.ko
+focal:<ROOTFS>/lib/modules/<KERNEL_VERSION>/kernel/drivers/mtd/mtd_blkdevs.ko:/lib/modules/<KERNEL_VERSION>/kernel/drivers/mtd/mtd_blkdevs.ko
+focal:<ROOTFS>/lib/modules/<KERNEL_VERSION>/kernel/drivers/mtd/devices/qspi_mtd.ko:/lib/modules/<KERNEL_VERSION>/kernel/drivers/mtd/devices/qspi_mtd.ko
+focal:<ROOTFS>/lib/modules/<KERNEL_VERSION>/kernel/drivers/spi/spi-tegra210-qspi.ko:/lib/modules/<KERNEL_VERSION>/kernel/drivers/spi/spi-tegra210-qspi.ko
+focal:<ROOTFS>/usr/lib/modules/<KERNEL_VERSION>/kernel/drivers/net/ethernet/realtek/r8126/r8126.ko:/lib/modules/<KERNEL_VERSION>/kernel/drivers/net/ethernet/realtek/r8126/r8126.ko
+focal:<ROOTFS>/usr/lib/modules/<KERNEL_VERSION>/kernel/drivers/net/ethernet/realtek/r8168/r8168.ko:/lib/modules/<KERNEL_VERSION>/kernel/drivers/net/ethernet/realtek/r8168/r8168.ko
+
+# Files for making Ubuntu noble recovery image
+noble:<ROOTFS>/usr/bin/mv:/bin/mv
+noble:<ROOTFS>/usr/bin/sync:/bin/sync
+noble:<ROOTFS>/usr/sbin/blockdev:/bin/blockdev
+noble:<ROOTFS>/usr/sbin/parted:/bin/parted
+noble:<ROOTFS>/usr/bin/cut:/bin/cut
+noble:<ROOTFS>/usr/bin/cksum:/bin/cksum
+noble:<ROOTFS>/usr/bin/sha1sum:/bin/sha1sum
+noble:<ROOTFS>/usr/bin/seq:/bin/seq
+noble:<ROOTFS>/usr/bin/dirname:/bin/dirname
+noble:<ROOTFS>/usr/bin/tr:/bin/tr
+noble:<ROOTFS>/usr/bin/du:/bin/du
+noble:<ROOTFS>/usr/bin/chattr:/bin/chattr
+noble:<ROOTFS>/usr/bin/busybox:/bin/busybox
+noble:<ROOTFS>/usr/bin/findmnt:/bin/findmnt
+noble:<ROOTFS>/usr/bin/partx:/bin/partx
+noble:<ROOTFS>/usr/bin/wc:/bin/wc
+noble:<ROOTFS>/usr/bin/uname:/bin/uname
+noble:<ROOTFS>/usr/sbin/mtd_debug:/bin/mtd_debug
+noble:<ROOTFS>/usr/sbin/sfdisk:/bin/sfdisk
+noble:<ROOTFS>/usr/sbin/sgdisk:/bin/sgdisk
+noble:<ROOTFS>/usr/sbin/partprobe:/bin/partprobe
+noble:<ROOTFS>/usr/lib/<ARCH>/ld-linux-aarch64.so.1:/lib/<ARCH>/ld-linux-aarch64.so.1
+noble:<ROOTFS>/usr/lib/<ARCH>/libc.so.6:/lib/<ARCH>/libc.so.6
+noble:<ROOTFS>/usr/lib/<ARCH>/libdl.so.2:/lib/<ARCH>/libdl.so.2
+noble:<ROOTFS>/usr/lib/<ARCH>/libm.so.6:/lib/<ARCH>/libm.so.6
+noble:<ROOTFS>/usr/lib/<ARCH>/libnsl.so.2:/lib/<ARCH>/libnsl.so.2
+noble:<ROOTFS>/usr/lib/<ARCH>/libnss_files.so.2:/lib/<ARCH>/libnss_files.so.2
+noble:<ROOTFS>/usr/lib/<ARCH>/libpthread.so.0:/lib/<ARCH>/libpthread.so.0
+noble:<ROOTFS>/usr/lib/<ARCH>/libresolv.so.2:/lib/<ARCH>/libresolv.so.2
+noble:<ROOTFS>/usr/lib/<ARCH>/librt.so.1:/lib/<ARCH>/librt.so.1
+noble:<ROOTFS>/usr/lib/<ARCH>/libwrap.so.0:/lib/<ARCH>/libwrap.so.0
+noble:<ROOTFS>/usr/lib/<ARCH>/libaudit.so.1:/lib/<ARCH>/libaudit.so.1
+noble:<ROOTFS>/usr/lib/<ARCH>/libpam.so.0:/lib/<ARCH>/libpam.so.0
+noble:<ROOTFS>/usr/lib/<ARCH>/libpam_misc.so.0:/lib/<ARCH>/libpam_misc.so.0
+noble:<ROOTFS>/usr/lib/<ARCH>/libsystemd.so.0:/lib/<ARCH>/libsystemd.so.0
+noble:<ROOTFS>/usr/lib/<ARCH>/liblzma.so.5:/lib/<ARCH>/liblzma.so.5
+noble:<ROOTFS>/usr/lib/<ARCH>/libgcrypt.so.20:/lib/<ARCH>/libgcrypt.so.20
+noble:<ROOTFS>/usr/lib/<ARCH>/libgpg-error.so.0:/lib/<ARCH>/libgpg-error.so.0
+noble:<ROOTFS>/usr/lib/<ARCH>/libutil.so.1:/lib/<ARCH>/libutil.so.1
+noble:<ROOTFS>/usr/lib/<ARCH>/libcrypt.so.1:/lib/<ARCH>/libcrypt.so.1
+noble:<ROOTFS>/usr/lib/<ARCH>/libz.so.1:/lib/<ARCH>/libz.so.1
+noble:<ROOTFS>/usr/lib/<ARCH>/libcap.so.2:/lib/<ARCH>/libcap.so.2
+noble:<ROOTFS>/usr/lib/<ARCH>/libcap-ng.so.0:/lib/<ARCH>/libcap-ng.so.0
+noble:<ROOTFS>/usr/lib/<ARCH>/libproc2.so.0:/lib/<ARCH>/libproc2.so.0
+noble:<ROOTFS>/usr/lib/<ARCH>/libnss_compat.so.2:/lib/<ARCH>/libnss_compat.so.2
+noble:<ROOTFS>/usr/lib/<ARCH>/libmnl.so.0:/lib/<ARCH>/libmnl.so.0
+noble:<ROOTFS>/usr/lib/<ARCH>/libdbus-1.so.3:/lib/libdbus-1.so.3
+noble:<ROOTFS>/usr/lib/<ARCH>/libreadline.so.8:/lib/libreadline.so.8
+noble:<ROOTFS>/usr/lib/<ARCH>/libtinfo.so.6:/lib/libtinfo.so.6
+noble:<ROOTFS>/usr/lib/<ARCH>/libdevmapper.so.1.02.1:/lib/libdevmapper.so.1.02.1
+noble:<ROOTFS>/usr/lib/<ARCH>/libblkid.so.1:/lib/libblkid.so.1
+noble:<ROOTFS>/usr/lib/<ARCH>/libuuid.so.1:/lib/libuuid.so.1
+noble:<ROOTFS>/usr/lib/<ARCH>/libudev.so.1:/lib/libudev.so.1
+noble:<ROOTFS>/usr/lib/<ARCH>/libselinux.so.1:/lib/libselinux.so.1
+noble:<ROOTFS>/usr/lib/<ARCH>/libpcre.so.3:/lib/libpcre.so.3
+noble:<ROOTFS>/usr/lib/<ARCH>/libssl.so.3:/lib/libssl.so.3
+noble:<ROOTFS>/usr/lib/<ARCH>/libgssapi_krb5.so.2:/lib/<ARCH>/libgssapi_krb5.so.2
+noble:<ROOTFS>/usr/lib/<ARCH>/libkrb5.so.3:/lib/<ARCH>/libkrb5.so.3
+noble:<ROOTFS>/usr/lib/<ARCH>/libk5crypto.so.3:/lib/<ARCH>/libk5crypto.so.3
+noble:<ROOTFS>/usr/lib/<ARCH>/libkrb5support.so.0:/lib/<ARCH>/libkrb5support.so.0
+noble:<ROOTFS>/usr/lib/<ARCH>/libcrypto.so.3:/lib/<ARCH>/libcrypto.so.3
+noble:<ROOTFS>/usr/lib/<ARCH>/liblz4.so.1:/lib/<ARCH>/liblz4.so.1
+noble:<ROOTFS>/usr/lib/<ARCH>/libelf.so.1:/lib/<ARCH>/libelf.so.1
+noble:<ROOTFS>/usr/lib/<ARCH>/libe2p.so.2:/lib/<ARCH>/libe2p.so.2
+noble:<ROOTFS>/usr/lib/<ARCH>/libcom_err.so.2:/lib/<ARCH>/libcom_err.so.2
+noble:<ROOTFS>/usr/lib/<ARCH>/libfdisk.so.1:/lib/<ARCH>/libfdisk.so.1
+noble:<ROOTFS>/usr/lib/<ARCH>/libstdc++.so.6:/lib/<ARCH>/libstdc++.so.6
+noble:<ROOTFS>/usr/lib/<ARCH>/libpopt.so.0:/lib/<ARCH>/libpopt.so.0
+noble:<ROOTFS>/usr/lib/<ARCH>/libgcc_s.so.1:/lib/<ARCH>/libgcc_s.so.1
+noble:<ROOTFS>/usr/lib/<ARCH>/libparted.so.2:/lib/<ARCH>/libparted.so.2
+noble:<ROOTFS>/usr/lib/modules/<KERNEL_VERSION>/kernel/drivers/phy/tegra/phy-tegra194-p2u.ko:/lib/modules/<KERNEL_VERSION>/kernel/drivers/phy/tegra/phy-tegra194-p2u.ko
+noble:<ROOTFS>/usr/lib/modules/<KERNEL_VERSION>/kernel/drivers/pci/controller/dwc/pcie-tegra194.ko:/lib/modules/<KERNEL_VERSION>/kernel/drivers/pci/controller/dwc/pcie-tegra194.ko
+noble:<ROOTFS>/usr/lib/modules/<KERNEL_VERSION>/kernel/drivers/nvme/host/nvme-core.ko:/lib/modules/<KERNEL_VERSION>/kernel/drivers/nvme/host/nvme-core.ko
+noble:<ROOTFS>/usr/lib/modules/<KERNEL_VERSION>/kernel/drivers/nvme/host/nvme.ko:/lib/modules/<KERNEL_VERSION>/kernel/drivers/nvme/host/nvme.ko
+noble:<ROOTFS>/usr/lib/modules/<KERNEL_VERSION>/kernel/drivers/thermal/tegra/tegra-bpmp-thermal.ko:/lib/modules/<KERNEL_VERSION>/kernel/drivers/thermal/tegra/tegra-bpmp-thermal.ko
+noble:<ROOTFS>/usr/lib/modules/<KERNEL_VERSION>/kernel/drivers/pwm/pwm-tegra.ko:/lib/modules/<KERNEL_VERSION>/kernel/drivers/pwm/pwm-tegra.ko
+noble:<ROOTFS>/usr/lib/modules/<KERNEL_VERSION>/kernel/drivers/hwmon/pwm-fan.ko:/lib/modules/<KERNEL_VERSION>/kernel/drivers/hwmon/pwm-fan.ko
+noble:<ROOTFS>/usr/lib/modules/<KERNEL_VERSION>/kernel/drivers/net/ethernet/stmicro/stmmac/dwmac-tegra.ko:/lib/modules/<KERNEL_VERSION>/kernel/drivers/net/ethernet/stmicro/stmmac/dwmac-tegra.ko
+noble:<ROOTFS>/usr/lib/modules/<KERNEL_VERSION>/kernel/drivers/usb/gadget/libcomposite.ko:/lib/modules/<KERNEL_VERSION>/kernel/drivers/usb/gadget/libcomposite.ko
+noble:<ROOTFS>/usr/lib/modules/<KERNEL_VERSION>/kernel/net/ipv6/ipv6.ko:/lib/modules/<KERNEL_VERSION>/kernel/net/ipv6/ipv6.ko
+noble:<ROOTFS>/usr/lib/modules/<KERNEL_VERSION>/updates/drivers/net/ethernet/realtek/r8126/r8126.ko:/lib/modules/<KERNEL_VERSION>/updates/drivers/net/ethernet/realtek/r8126/r8126.ko
+noble:<ROOTFS>/usr/lib/modules/<KERNEL_VERSION>/updates/drivers/net/ethernet/realtek/r8168/r8168.ko:/lib/modules/<KERNEL_VERSION>/updates/drivers/net/ethernet/realtek/r8168/r8168.ko
+noble:<ROOTFS>/usr/lib/modules/<KERNEL_VERSION>/updates/drivers/pci/controller/pcie-tegra264.ko:/lib/modules/<KERNEL_VERSION>/updates/drivers/pci/controller/pcie-tegra264.ko
+noble:<ROOTFS>/usr/lib/modules/<KERNEL_VERSION>/updates/drivers/scsi/ufs/ufs-tegra.ko:/lib/modules/<KERNEL_VERSION>/updates/drivers/scsi/ufs/ufs-tegra.ko
+noble:<ROOTFS>/usr/lib/modules/<KERNEL_VERSION>/updates/drivers/scsi/ufs/ufs-tegra-provision.ko:/lib/modules/<KERNEL_VERSION>/updates/drivers/scsi/ufs/ufs-tegra-provision.ko
+noble:<ROOTFS>/usr/lib/modules/<KERNEL_VERSION>/modules.alias:/lib/modules/<KERNEL_VERSION>/modules.alias
+noble:<ROOTFS>/usr/lib/modules/<KERNEL_VERSION>/modules.alias.bin:/lib/modules/<KERNEL_VERSION>/modules.alias.bin
+noble:<ROOTFS>/usr/lib/modules/<KERNEL_VERSION>/modules.builtin:/lib/modules/<KERNEL_VERSION>/modules.builtin
+noble:<ROOTFS>/usr/lib/modules/<KERNEL_VERSION>/modules.builtin.bin:/lib/modules/<KERNEL_VERSION>/modules.builtin.bin
+noble:<ROOTFS>/usr/lib/modules/<KERNEL_VERSION>/modules.builtin.modinfo:/lib/modules/<KERNEL_VERSION>/modules.builtin.modinfo
+noble:<ROOTFS>/usr/lib/modules/<KERNEL_VERSION>/modules.dep:/lib/modules/<KERNEL_VERSION>/modules.dep
+noble:<ROOTFS>/usr/lib/modules/<KERNEL_VERSION>/modules.dep.bin:/lib/modules/<KERNEL_VERSION>/modules.dep.bin
+noble:<ROOTFS>/usr/lib/modules/<KERNEL_VERSION>/modules.devname:/lib/modules/<KERNEL_VERSION>/modules.devname
+noble:<ROOTFS>/usr/lib/modules/<KERNEL_VERSION>/modules.order:/lib/modules/<KERNEL_VERSION>/modules.order
+noble:<ROOTFS>/usr/lib/modules/<KERNEL_VERSION>/modules.softdep:/lib/modules/<KERNEL_VERSION>/modules.softdep
+noble:<ROOTFS>/usr/lib/modules/<KERNEL_VERSION>/modules.symbols:/lib/modules/<KERNEL_VERSION>/modules.symbols
+noble:<ROOTFS>/usr/lib/modules/<KERNEL_VERSION>/modules.symbols.bin:/lib/modules/<KERNEL_VERSION>/modules.symbols.bin
+
+# For enabling sshd
+all:<ROOTFS>/etc/ssh/sshd_config:/etc/ssh/sshd_config
+#all:<ROOTFS>/etc/ssh/ssh_import_id:/etc/ssh/ssh_import_id
+all:<ROOTFS>/usr/sbin/sshd:/bin/sshd
+all:<ROOTFS>/bin/su:/bin/su
+all:<ROOTFS>/usr/bin/whoami:/bin/whoami
+all:<ROOTFS>/usr/bin/passwd:/bin/passwd
+all:<ROOTFS>/bin/ps:/bin/ps
+all:<ROOTFS>/bin/ping:/bin/ping
+all:<ROOTFS>/sbin/dhclient-script:/sbin/dhclient-script
+all:<ROOTFS>/bin/ip:/bin/ip
+all:<ROOTFS>/bin/run-parts:/bin/run-parts
+focal:<ROOTFS>/usr/bin/w.procps:/bin/w
+noble:<ROOTFS>/usr/bin/w:/bin/w
+all:<ROOTFS>/usr/bin/scp:/bin/scp
+all:<ROOTFS>/usr/bin/find:/bin/find
+all:<ROOTFS>/usr/bin/xxd:/bin/xxd
+all:<ROOTFS>/usr/bin/head:/bin/head
+
+# For enabling wpa_supplicant
+all:<ROOTFS>/bin/kmod:/bin/kmod
+#all:<ROOTFS>/sbin/wpa_supplicant:/sbin/wpa_supplicant
+#all:<ROOTFS>/etc/wpa_supplicant.conf:/etc/wpa_supplicant.conf
+#all:<ROOTFS>/etc/wpa_supplicant/action_wpa.sh:/etc/wpa_supplicant/action_wpa.sh
+#all:<ROOTFS>/etc/wpa_supplicant/functions.sh:/etc/wpa_supplicant/functions.sh
+#all:<ROOTFS>/etc/wpa_supplicant/ifupdown.sh:/etc/wpa_supplicant/ifupdown.sh
+
+# For adding nv_update_engine and nvbootctrl
+focal:<ROOTFS>/usr/bin/diff:/bin/diff
+noble:<ROOTFS>/usr/bin/diff:/bin/diff
+
+# For supporting disk encryption
+focal:<ROOTFS>/bin/cpio:/bin/cpio
+focal:<ROOTFS>/usr/bin/lsblk:/bin/lsblk
+focal:<ROOTFS>/usr/lib/<ARCH>/libsmartcols.so.1:/lib/<ARCH>/libsmartcols.so.1
+focal:<ROOTFS>/usr/lib/<ARCH>/libmount.so.1:/lib/<ARCH>/libmount.so.1
+noble:<ROOTFS>/usr/bin/cpio:/bin/cpio
+noble:<ROOTFS>/usr/bin/lsblk:/bin/lsblk
+noble:<ROOTFS>/usr/lib/<ARCH>/libsmartcols.so.1:/lib/<ARCH>/libsmartcols.so.1
+noble:<ROOTFS>/usr/lib/<ARCH>/libmount.so.1:/lib/<ARCH>/libmount.so.1
+
+# Support Ethernet
+all:<ROOTFS>/usr/lib/modules/<KERNEL_VERSION>/updates/drivers/nvpps/nvpps.ko:/lib/modules/<KERNEL_VERSION>/updates/drivers/nvpps/nvpps.ko
+all:<ROOTFS>/usr/lib/modules/<KERNEL_VERSION>/updates/drivers/net/ethernet/nvidia/nvethernet/nvethernet.ko:/lib/modules/<KERNEL_VERSION>/updates/drivers/net/ethernet/nvidia/nvethernet/nvethernet.ko
+

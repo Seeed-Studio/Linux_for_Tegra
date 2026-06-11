@@ -1,0 +1,31 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ *
+ * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+ * property and proprietary rights in and to this material, related
+ * documentation and any modifications thereto. Any use, reproduction,
+ * disclosure or distribution of this material and related documentation
+ * without an express license agreement from NVIDIA CORPORATION or
+ * its affiliates is strictly prohibited.
+ */
+
+/ {
+	mb1_bct {
+		boot_device {
+			qspi@0 {
+				cs@0 {
+					clock-source-id = <0x5>; /* 1:CLK_M, 3:PLLP_OUT0, 5:PLLC_OUT0 */
+					clock-source-frequency = <600750000>;
+					interface-frequency = <100125000>;
+					enable-ddr-mode;
+					maximum-bus-width = <2>;
+					fifo-access-mode = <0>;
+					read-dummy-cycle = <8>;
+					trimmer1-val = <0>;
+					trimmer2-val = <0x0>;
+				};
+			};
+		};
+	};
+};

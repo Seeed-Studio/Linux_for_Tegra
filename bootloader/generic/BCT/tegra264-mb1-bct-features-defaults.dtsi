@@ -1,0 +1,82 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ *
+ * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+ * property and proprietary rights in and to this material, related
+ * documentation and any modifications thereto. Any use, reproduction,
+ * disclosure or distribution of this material and related documentation
+ * without an express license agreement from NVIDIA CORPORATION or
+ * its affiliates is strictly prohibited.
+ */
+
+/ {
+    mb1_bct {
+        psc_shared_features {
+#ifdef ENABLE_MULTI_SKU_SUPPORT
+			enable_multi_sku_support = <1>;
+#else
+			enable_multi_sku_support = <0>;
+#endif
+
+#ifdef DISABLE_PREPROD_FIREWALLS
+			disable_preprod_firewalls = <1>;
+#else
+			disable_preprod_firewalls = <0>;
+#endif
+			enable_igpu_display_sdm = <0>;
+			enable_mdm_mode = <1>;
+			enable_characterization_prep = <0>;
+#ifdef CONFIG_ENABLE_SC7
+			disable_sc7 = <0>;
+#else
+			disable_sc7 = <1>;
+#endif
+			enable_special_thresholds = <0>;
+        };
+
+        non_psc_shared_features {
+#if defined(ENABLE_DRAM_ECC_PRL)
+			enable_dram_page_retirement = <1>;
+#else
+			enable_dram_page_retirement = <0>;
+#endif
+			enable_vpr_resize = <0>;
+			carveout_alloc_direction = <1>;
+			enable_tz_encryption = <1>;
+			enable_vpr_encryption = <1>;
+			disable_l2_tz_encryption_regeneration = <0>;
+			disable_vpr_encryption_regeneration = <0>;
+			enable_pllref_ufs = <1>;
+			enable_secondary_storage_in_mb1 = <0>;
+			die0_pmc_dpd_aux_unclamp = <1>;
+			die1_pmc_dpd_aux_unclamp = <1>;
+#if defined(ENABLE_DRAM_ECC_SBE)
+			enable_dram_error_injection_sbe = <1>;
+#endif
+#if defined(ENABLE_DRAM_ECC_DBE)
+			enable_dram_error_injection_dbe = <1>;
+#endif
+			enable_pcie_c2_ep = <0>;
+			enable_dram_staged_scrubbing = <1>;
+
+#if defined(AUTO_BUILD) && defined(DISABLE_NSDRAM_ENCRYPT)
+			enable_nsdram_encryption = <0>;
+#else
+			enable_nsdram_encryption = <1>;
+#endif
+
+#ifdef DISABLE_SNOR_PROVISIONING
+			disable_snor_provisioning = <1>;
+#else
+			disable_snor_provisioning = <0>;
+#endif
+
+#ifdef AUTO_BUILD
+			num_boot_chains = <3>;
+#else
+			num_boot_chains = <2>;
+#endif
+        };
+    };
+};

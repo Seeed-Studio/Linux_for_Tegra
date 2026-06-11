@@ -1,0 +1,1 @@
+tools/kernel_flash/l4t_initrd_flash.sh

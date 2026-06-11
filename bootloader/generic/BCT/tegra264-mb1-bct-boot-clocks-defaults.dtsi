@@ -1,0 +1,239 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ *
+ * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+ * property and proprietary rights in and to this material, related
+ * documentation and any modifications thereto. Any use, reproduction,
+ * disclosure or distribution of this material and related documentation
+ * without an express license agreement from NVIDIA CORPORATION or
+ * its affiliates is strictly prohibited.
+ */
+
+/ {
+    mb1_bct {
+        clock_data {
+            bpmp_cpu_nic_clk_divisor = <0>;
+            bpmp_apb_clk_divisor = <0>;
+            axi_cbb_clk_divisor = <0>;
+            tz_se_clk_divisor = <1>;
+            aon_apb_clk_divisor = <0>;
+            switch_bpmp_clk_nafll = <1>;
+            bpmp_vmon_enable = <0>;
+            cpu_cluster_clocks_misc_ctrl = <0>;
+
+            /* NOTE that a number of clock sources can be enabled in the bootloader based on
+             * the BCT knobs of "enable_nafll", "enable_pllp", "enable_spll", and "enable_pllx"
+             * and the sources to CPU cluster clock and SCF clock are determined along with
+             * "max_allowed_clk_src" which indicates the highest clock source allowed among
+             * the following valid clock sources.
+             *
+             *     - CCPLEX_CLK_SOURCE_OSC    (0)
+             *     - CCPLEX_CLK_SOURCE_PLLP   (1)
+             *     - CCPLEX_CLK_SOURCE_SPLL   (2)
+             *     - CCPLEX_CLK_SOURCE_PLLX   (2)
+             *     - CCPLEX_CLK_SOURCE_NAFLL  (3)
+             *
+             * For example, CCPLEX_CLK_SOURCE_NAFLL at "scf_max_allowed_clk_src" allows the
+             * bootloader to take account of other lower clock sources such as PLLP and SPLL
+             * for the source to SCF clock when NAFLL is not enabled or fails to be locked.
+             * The bootloader takes the next highest clock source if it's enabled and locked.
+             * Otherwise, the bootloader continues moving to the next highest clock source.
+             */
+
+            /* Clock source and divider override for CPU cluster crab clock.
+             * Any clock source can be used with any clock diver setting.
+             * Effective only when a valid clock source is used.
+             * NOTE the CPU cluster crab clock must be slower than core clock.
+             * NOTE this override will be ignored
+             *      when the clock source override is set to CCPLEX_CLK_SOURCE_MAX,
+             *      when the clock source override is not available,
+             *      when the clock freq is equal to or higher than the core clock freq.
+             */
+            cpu_crab_clk_src_override = <CCPLEX_CLK_SOURCE_MAX>;
+            cpu_crab_clk_div_override = <CCPLEX_CLK_DIVIDER_2P0>;
+
+            scf_nafll {
+                /* SCF NAFLL tuning at CFOV boot */
+                nafll_cfg1 = <0x00000000>;
+                nafll_cfg2 = <0x030A0C0D>;
+                nafll_cfg3 = <0xFC000000>;
+                nafll_coeff = <0xD9010003>;
+                nafll_ctrl1 = <0x0000000C>;
+                nafll_ctrl2 = <0x0F2500B0>;
+                nafll_skp_ctrl = <0x00000025>;
+                nafll_skp_coeff = <0xFFFF0000>;
+            };
+            cpu_nafll {
+                /* CPU cluster NAFLL at CFOV boot */
+                nafll_cfg1 = <0x00000000>;
+                nafll_cfg2 = <0x050A0C0D>;
+                nafll_cfg3 = <0xFC300000>;
+                nafll_coeff = <0xD9010003>;
+                nafll_ctrl1 = <0x0000000C>;
+                nafll_ctrl2 = <0x0F2500B0>;
+                nafll_skp_ctrl = <0x00000025>;
+                nafll_skp_coeff = <0xFFFF0000>;
+            };
+            bpmp_nafll {
+                nafll_cfg1 = <0x00000000>;
+                nafll_cfg2 = <0x030A0C0D>;
+                nafll_cfg3 = <0xFC000000>;
+                nafll_coeff = <0xD9010003>;
+                nafll_ctrl1 = <0x0000000c>;
+                nafll_ctrl2 = <0x0F2500B0>;
+                nafll_skp_ctrl = <0x00000025>;
+                nafll_skp_coeff = <0xffff0000>;
+                nafll_lut_sw_freq_req = <0x000002D0>;
+                nafll_misc = <0x00000000>;
+            };
+            mcf_nafll {
+                /* MCF NAFLL tuning at CFOV boot */
+                nafll_cfg1 = <0x00000000>;
+                nafll_cfg2 = <0x030A0C0D>;
+                nafll_cfg3 = <0xFC000000>;
+                nafll_coeff = <0xD9010003>;
+                nafll_ctrl1 = <0x0000000C>;
+                nafll_ctrl2 = <0x0F2500B0>;
+                nafll_skp_ctrl = <0x00000025>;
+                nafll_skp_coeff = <0xFFFF0000>;
+            };
+            ist_nafll {
+                nafll_cfg1 = <0x30000000>;
+                nafll_cfg2 = <0x030a0c00>;
+                nafll_cfg3 = <0x00000000>;
+                nafll_coeff = <0xb9060009>;
+                nafll_ctrl1 = <0x0000000c>;
+                nafll_ctrl2 = <0x0f2500b0>;
+                nafll_skp_ctrl = <0x00000020>;
+                nafll_skp_coeff = <0xffff0000>;
+                nafll_lut_sw_freq_req = <0x00000480>;
+                nafll_misc = <0x00000000>;
+            };
+            cpu_clock_features {
+                /* NAFLL and PLLX tuning values
+                 * NOTE that PLLP and SPLL are enabled with default settings so no tuning values
+                 * are present in the BCT.
+                 */
+
+                /* SCF clock control knobs */
+                scf_enable_nafll           = <0x01>; // flag to enable SCF NAFLL
+                scf_enable_pllp            = <0x01>; // flag to enable PLLP for SCF
+                scf_enable_spll            = <0x01>; // flag to enable SPLL for SCF
+                scf_allow_dvco_min_reached = <0x01>; // flag to check if DVCO MIN is reached at SCF NAFLL
+                scf_max_allowed_clk_src    = <CCPLEX_CLK_SOURCE_NAFLL>;
+                scf_clk_first_request      = <0x6F>; // 9bit NDIV when the skipper is enabled
+                scf_cfov_boot_ndiv         = <0x6F>; // 9bit NDIV at CFOV boot mode for SCF NAFLL
+
+                /* CPU cluster clock control knobs */
+                cpu_enable_nafll           = <0x01>; // flag to enable CPU cluster NAFLL
+                cpu_enable_pllp            = <0x01>; // flag to enable PLLP for CPU cluster
+                cpu_enable_pllx            = <0x00>; // flag to enable PLLX for CPU cluster
+                cpu_allow_dvco_min_reached = <0x01>; // flag to check if DVCO MIN is reached at CPU cluster NAFLL
+                cpu_max_allowed_clk_src    = <CCPLEX_CLK_SOURCE_NAFLL>;
+                cpu_clk_first_request      = <0x6F>; // 9bit NDIV when the skipper is enabled
+                cpu_clk_shaper             = <0x00>; // 5bit shaper trim setting
+                cpu_cfov_boot_ndiv         = <0x6F>; // 9bit NDIV at CFOV boot mode for CPU cluster NAFLL
+                cpu_periph_clk_sel         = <0x00>; // 1bit CPU cluster periph clk src selection, 0-PLLP and 1-NAFLL
+            };
+            cpu_pllx_data {
+                /* PLLX tuning values */
+                cpu_pllx_base          = <0x00000001>;
+                cpu_pllx_base1         = <0x00000020>;
+                cpu_pllx_base2         = <0x00000041>;
+            };
+
+            /* CPU cluster domain clocks divider table at each clock source
+             * NOTE the CPU core clock divider is fixed at DIV1.
+             * NOTE the CPU cluster crab clock must be slower than core clock.
+             */
+            ccplex_clk_div@0 { /* CCPLEX_CLK_SOURCE_OSC */
+                cpu_at_clk   = <CCPLEX_CLK_DIVIDER_1P0>;
+                cpu_pclk     = <CCPLEX_CLK_DIVIDER_1P0>;
+                cpu_gic_clk  = <CCPLEX_CLK_DIVIDER_1P0>;
+                cpu_crab_clk = <CCPLEX_CLK_DIVIDER_1P0>;
+            };
+            ccplex_clk_div@1 { /* CCPLEX_CLK_SOURCE_PLLP */
+                cpu_at_clk   = <CCPLEX_CLK_DIVIDER_4P0>;
+                cpu_pclk     = <CCPLEX_CLK_DIVIDER_4P0>;
+                cpu_gic_clk  = <CCPLEX_CLK_DIVIDER_4P0>;
+                cpu_crab_clk = <CCPLEX_CLK_DIVIDER_2P0>;
+            };
+            ccplex_clk_div@2 { /* CCPLEX_CLK_SOURCE_PLLX */
+                cpu_at_clk   = <CCPLEX_CLK_DIVIDER_4P0>;
+                cpu_pclk     = <CCPLEX_CLK_DIVIDER_4P0>;
+                cpu_gic_clk  = <CCPLEX_CLK_DIVIDER_4P0>;
+                cpu_crab_clk = <CCPLEX_CLK_DIVIDER_2P0>;
+            };
+            ccplex_clk_div@3 { /* CCPLEX_CLK_SOURCE_NAFLL */
+                cpu_at_clk   = <CCPLEX_CLK_DIVIDER_4P0>;
+                cpu_pclk     = <CCPLEX_CLK_DIVIDER_4P0>;
+                cpu_gic_clk  = <CCPLEX_CLK_DIVIDER_4P0>;
+                cpu_crab_clk = <CCPLEX_CLK_DIVIDER_2P0>;
+            };
+
+            pllc {
+                pllc@0 {
+                    /* TODO: Detemine default values
+                    ctrl1 = <0x0>;
+                    ss_ctrl1 = <0x0>;
+                    ss_ctrl2 = <0x0>;
+                    setup1 = <0x0>;
+                    input_divider = <0x2>;
+                    feedback_divider = <0x77>;
+                    post_divider = <0x2>;
+                    ndiv_new = <0x0>;
+                    kvco = <0x0>;
+                    kcp = <0x0>;
+                    enable_ss = <0x0>;
+                    enable_dynamic_ramp = <0x0>;
+                    */
+                };
+                pllc@1 {
+                    /* TODO: Detemine default values
+                    ctrl1 = <0x0>;
+                    ss_ctrl1 = <0x0>;
+                    ss_ctrl2 = <0x0000f000>;
+                    setup1 = <0x0>;
+                    input_divider = <0x1>;
+                    feedback_divider = <0x2c>;
+                    post_divider = <0x1>;
+                    ndiv_new = <0x0>;
+                    kvco = <0x0>;
+                    kcp = <0x0>;
+                    enable_ss = <0x0>;
+                    enable_dynamic_ramp = <0x1>;
+                    */
+                };
+            };
+            plle {
+                plle@0 {
+                    enable_ss = <0x1>;
+                    ss_ctrl3 = <0x24010025>;
+                    configs = <0xFF 0x0>;
+                };
+                plle@1 {
+                    /* TODO: Detemine default values
+                    enable_ss = <0x1>;
+                    ss_ctrl3 = <0x24010025>;
+                    configs = <0xFF 0x0>;
+                    */
+                };
+                plle@2 {
+                    /* TODO: Detemine default values
+                    enable_ss = <0x1>;
+                    ss_ctrl3 = <0x24010025>;
+                    configs = <0xFF 0x0>;
+                    */
+                };
+                plle@3 {
+                    /* TODO: Detemine default values
+                    enable_ss = <0x1>;
+                    ss_ctrl3 = <0x24010025>;
+                    configs = <0xFF 0x0>;
+                    */
+                };
+            };
+        };
+    };
+};

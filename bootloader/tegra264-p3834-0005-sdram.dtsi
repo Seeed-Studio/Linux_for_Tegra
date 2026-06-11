@@ -1,0 +1,47 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ *
+ * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+ * property and proprietary rights in and to this material, related
+ * documentation and any modifications thereto. Any use, reproduction,
+ * disclosure or distribution of this material and related documentation
+ * without an express license agreement from NVIDIA CORPORATION or
+ * its affiliates is strictly prohibited.
+ */
+
+#ifdef ENABLE_ECC
+#include "tegra264-p3834-0005-rc00-ecc.dtsi"
+#include "tegra264-p3834-0005-rc01-ecc.dtsi"
+#include "tegra264-p3834-0005-rc02-ecc.dtsi"
+#include "tegra264-p3834-0005-rc03-ecc.dtsi"
+#include "tegra264-p3834-0005-rc04-ecc.dtsi"
+#include "tegra264-p3834-0005-rc05-ecc.dtsi"
+#include "tegra264-p3834-0005-rc06-ecc.dtsi"
+#include "tegra264-p3834-0005-rc07-ecc.dtsi"
+#include "tegra264-p3834-0005-rc08-ecc.dtsi"
+#include "tegra264-p3834-0005-rc09-ecc.dtsi"
+#include "tegra264-p3834-0005-rc10-ecc.dtsi"
+#include "tegra264-p3834-0005-rc11-ecc.dtsi"
+#include "tegra264-p3834-0005-rc12-ecc.dtsi"
+#include "tegra264-p3834-0005-rc13-ecc.dtsi"
+#include "tegra264-p3834-0005-rc14-ecc.dtsi"
+#include "tegra264-p3834-0005-rc15-ecc.dtsi"
+#else
+#include "tegra264-p3834-0005-rc00.dtsi"
+#include "tegra264-p3834-0005-rc01.dtsi"
+#include "tegra264-p3834-0005-rc02.dtsi"
+#include "tegra264-p3834-0005-rc03.dtsi"
+#include "tegra264-p3834-0005-rc04.dtsi"
+#include "tegra264-p3834-0005-rc05.dtsi"
+#include "tegra264-p3834-0005-rc06.dtsi"
+#include "tegra264-p3834-0005-rc07.dtsi"
+#include "tegra264-p3834-0005-rc08.dtsi"
+#include "tegra264-p3834-0005-rc09.dtsi"
+#include "tegra264-p3834-0005-rc10.dtsi"
+#include "tegra264-p3834-0005-rc11.dtsi"
+#include "tegra264-p3834-0005-rc12.dtsi"
+#include "tegra264-p3834-0005-rc13.dtsi"
+#include "tegra264-p3834-0005-rc14.dtsi"
+#include "tegra264-p3834-0005-rc15.dtsi"
+#endif

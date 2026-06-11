@@ -1,0 +1,193 @@
+#!/bin/bash
+
+# SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: MIT
+#
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the "Software"),
+# to deal in the Software without restriction, including without limitation
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+# DEALINGS IN THE SOFTWARE.
+
+# This is a script that exports functions to support disk encryption.
+
+get_uuid_for_luks_partition()
+{
+	# Get UUID for LUKS partition
+	# Usage:
+	#        get_uuid_for_luks_partition {part_node} {_ret_uuid}
+	local part_node="${1}"
+	local _ret_uuid="${2}"
+	local uuid=
+
+	# Get UUID of the encrypted LUKS partition
+	uuid="$(LD_LIBRARY_PATH="/lib/cryptsetup" /lib/cryptsetup/ld-linux-aarch64.so.1 /sbin/cryptsetup luksDump "${part_node}" | grep "UUID:" | cut -d: -f 2 | sed 's/^[\t ]\+//g')"
+	eval "${_ret_uuid}=${uuid}"
+}
+
+is_luks_partition()
+{
+	# Check whether enrypted partition is LUKS format
+	# Usage:
+	#        is_luks_partition {part_node}
+	local part_node="${1}"
+	if ! eval LD_LIBRARY_PATH="/lib/cryptsetup" \
+		/lib/cryptsetup/ld-linux-aarch64.so.1 \
+		/sbin/cryptsetup isLuks "${part_node}"; then
+		ota_log "The encrypted partition ${part_node} is not LUKS format"
+		return 1
+	fi
+	return 0
+}
+
+is_unlocked()
+{
+	# Check whether LUKS enrypted partition is unlocked
+	# If it is unlocked, return 0 and save the name of
+	# the unlocked device at /dev/mapper/ into {_ret_dm_name}
+	# Usage:
+	#        is_unlocked {part_node} {_ret_dm_name}
+	local part_node="${1}"
+	local _ret_dm_name="${2}"
+	local name=
+	local unlocked_device=
+	local ret=1
+
+	pushd /dev/mapper > /dev/null 2>&1 || exit 1
+	for name in *;
+	do
+		if [ "${name}" == "control" ]; then
+			continue
+		fi
+		get_encrypted_partition_by_dm_name "${name}" unlocked_device
+		if [ "${part_node}" == "${unlocked_device}" ]; then
+			eval "${_ret_dm_name}=${name}"
+			ota_log "The encrypted LUKS partition ${part_node} has been unlocked at /dev/mapper/${name}"
+			ret=0
+			break
+		fi
+	done
+	popd > /dev/null 2>&1 || exit 1
+	return ${ret}
+}
+
+get_encrypted_partition_by_dm_name()
+{
+	# Get the encrypted partition by dm name
+	# Usage:
+	#        get_encrypted_partition_by_dm_name {dm_name} {_ret_part_node}
+	local dm_name="${1}"
+	local _ret_part_node="${2}"
+	local part_node=
+
+	part_node="$(LD_LIBRARY_PATH="/lib/cryptsetup" /lib/cryptsetup/ld-linux-aarch64.so.1 /sbin/cryptsetup status "${dm_name}" | grep "device:" | cut -d: -f 2 | sed 's/^[ ]\+//g')"
+	eval "${_ret_part_node}=${part_node}"
+}
+
+unlock_encrypted_partition()
+{
+	# Unlock the LUKS encrypted partition
+	# Steps:
+	#   1. Check whether this partition is encrypted as LUKS format.
+	#   2. Check whether this partition has been unlocked.
+	#      If yes, return the name of the unlocked device under /dev/mapper
+	#      If no, continue
+	#   3. Get uuid of the encrypted partition
+	#   4. Unlock the encrypted LUKS partition by the passphrase obtained
+	#      from the luks-srv-app.
+	# Usage:
+	#        unlock_encrypted_partition ${part_node} {dm_name} {_ret_dm_name}
+	local part_node="${1}"
+	local dm_name="${2}"
+	local _ret_dm_name="${3}"
+	local luks_uuid=
+
+	# Check whether it is LUKS format
+	ota_log "is_luks_partition ${part_node}"
+	if ! is_luks_partition "${part_node}"; then
+		ota_log "The encrypted partition ${part_node} is not LUKS format"
+		return 1
+	fi
+
+	# Check whether it has been unlocked
+	# Return the name of the unlocked device under /dev/mapper/
+	local unlocked_device_name=
+	ota_log "is_unlocked ${part_node} unlocked_device_name"
+	if is_unlocked "${part_node}" unlocked_device_name; then
+		eval "${_ret_dm_name}=${unlocked_device_name}"
+		return 0
+	fi
+
+	# Get UUID of the encrypted LUKS partition
+	ota_log "get_uuid_for_luks_partition ${part_node} luks_uuid"
+	get_uuid_for_luks_partition "${part_node}" luks_uuid
+	if [ "${luks_uuid}" == "" ]; then
+		ota_log "Failed to get UUID for LUKS partitiion ${part_node} luks_uuid"
+		return 1
+	fi
+
+	# Unlock the encrypted LUKS partition with the specified name ${dm_name}
+	if ! nvluks-srv-app -u -c "${luks_uuid}" | LD_LIBRARY_PATH="/lib/cryptsetup" /lib/cryptsetup/ld-linux-aarch64.so.1 /sbin/cryptsetup luksOpen "${part_node}" "${dm_name}"; then
+		ota_log "Failed to unlock the LUKS partition ${part_node}(UUID=${luks_uuid})"
+		return 1
+	fi
+	eval "${_ret_dm_name}=${dm_name}"
+	return 0
+}
+
+lock_encrypted_partition()
+{
+	# Lock the LUKS partition
+	# Usage:
+	#        lock_encrypted_partition {dm_name}
+	local dm_name="${1}"
+
+	if ! LD_LIBRARY_PATH="/lib/cryptsetup" /lib/cryptsetup/ld-linux-aarch64.so.1 /sbin/cryptsetup close "${dm_name}"; then
+		ota_log "Failed to close LUKS partition ${dm_name}"
+		return 1
+	fi
+	return 0
+}
+
+prepare_disk_encryption()
+{
+	local _ldk_dir="${1}"
+	local _initrd="${2}"
+	local _fake_uuid="00010203-0405-0607-0809-0a0b0c0d0e0f"
+	local _fake_uuid_b="0f0e0d0c-0b0a-0908-0706-050403020100"
+	local _bl_dir="${_ldk_dir}/bootloader"
+	local _rootfs_dir="${_ldk_dir}/rootfs"
+
+	if ! declare -F -f prepare_luks_bin_list > /dev/null 2>&1; then
+		source "${_ldk_dir}"/tools/disk_encryption/disk_encryption_helper.func
+	fi
+
+	# Prepare the needed binaries
+	prepare_luks_bin_list "${_ldk_dir}" "${_rootfs_dir}" _luks_bin_list
+	_luks_bin_list+=("/sbin/cryptsetup" "/usr/sbin/nvluks-srv-app")
+
+	# Prepare the initrd
+	local _tempinitrddir="${_bl_dir}/temp_initrd"
+	mkdir -p "${_tempinitrddir}"
+	pushd "${_tempinitrddir}" > /dev/null 2>&1 || error_exit "Failed to enter ${_tempinitrddir}"
+	if ! prepare_luks_initrd "${_initrd}" "${_rootfs_dir}" "${_fake_uuid}" \
+		"${_fake_uuid_b}" "true" "${_luks_bin_list[@]}"; then
+		popd > /dev/null 2>&1 || error_exit "Failed to leave ${_tempinitrddir}"
+		rm -rf "${_tempinitrddir}"
+		exit 1
+	fi
+	popd > /dev/null 2>&1 || error_exit "Failed to leave ${_tempinitrddir}"
+	rm -rf "${_tempinitrddir}"
+}

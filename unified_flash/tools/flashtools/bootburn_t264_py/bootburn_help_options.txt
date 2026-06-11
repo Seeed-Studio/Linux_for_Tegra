@@ -1,0 +1,69 @@
+#Usage help file: Common options are for both safe and standard builds
+#Format: option followed by the command details separated by comma.
+#Command details include a token
+#        Common for safe and standard build
+#        Standard for Standard build
+
+            b, Common::Board Name
+            d, Standard::Provide DTB file to be used. Can be done for multiple partitions.  -d <PARTITION_NAME> <lename>.  Possible values for PARTITION_NAME are bpmp-fw-dtb and kernel-dtb.  Default file is dened in BoardSetlePathsAndDefaultValues.
+            g, Common::Generate binaries at mentioned path only and do not flash.
+            h, Common::Prints this message.
+            k, Standard::Absolute path of the native cfg file to be used (not applicable for hypervisor cfgs).  Default value is quickboot_qspi_linux.cfg for boot in case of linux.  Default value is quickboot_qspi_qnx.cfg for boot in case of qnx.
+            l, Standard::Use this option to flash native Linux cfg
+            m, Standard::Flashing Mods. This option enables mods specic-overrides.
+            o, Standard::Skip flashing recovery partitions.
+            p, Common::Provide PKC Key file. Flash PKC secured image.
+            q, Standard::Use this option to flash native QNX cfg
+            r, Common::Tegra Chip revision for which binaries are generated.  Supported revision are 01 and 02, Example,  -r 01  -r is ignored when target is being flashed.
+            s, Standard::Skip the FS flashing.
+            t, Common::Specify the output directory that will store the les being flashed.   Default name is _temp_dump with a random string appended at the end.
+            u, Common::Used with the PartitionName (see FileToFlash.txt) to generate individual components
+            x, Common::Specify the aurix port for DDPX to put the tegras in recovery.
+            y, Standard::Dont pipeline Qspi0, Qspi1, Emmc, and UFS
+            B, Common::Specify boot device. Supported boot device are qspi ,emmc and ufs. Default is qspi.
+            C, Standard::Use debug binaries for Bootloader
+            D, Common::Enable debug prints of the Flashing script.
+            E, Common::Use this option to Enable DRAM ECC.
+            I, Common::Flash specic target.  When multiple targets are connected to your host use the Bus & Device number of   the device to differentiate among various devices to specify target to flash.   Example,  -I 003 043
+            M, Standard::Development Version firmware
+            O, Standard::Fast Flash recovery partitions
+            P, Common::Pick prebuild binaries from mentioned path and do not generate.
+            R, Common::RCM Support. Boot without Flashing Software(BCT is used from Media). Default flash-boot.
+            T, Standard::Enable tracing of bootburn operations to a trace log file.\n On Ubuntu 18.04 you will also need to install lockfile-progs\n EXAMPLE: sudo apt-get install -f lockfile-progs
+            U, Standard::Pass in the UFS provision cfg file.
+            V, Standard::Enable Read back verication to check flashing error if any.
+            X, Standard::Enable Golden Register Address:Value Dump into GR memory carveout.
+            Y, Standard::Specify dt-overlay odm-data parameter.
+            adbSerial, Standard::specify ADB seiral number of the target device
+            applet, Standard::specify command to be sent to the applet
+            asymmetric, Standard::Used to perform operations specific to asymmetric boot chains
+            board_config, Standard::User defined bootburn helper json file
+            chain, Standard::Only Generate images either A or B chain
+            clean, Common::Clean/Full Erase of Non-volatile Storage Device
+            customer-data, Common::Update customer data in BR BCT. It can take two values: Customer data value and optional customer data value json file: <Customer data json file> [<Customer data schema file>]
+            dev, Standard::This is a development branch where targetConfig.TOP is set
+            devicetype, Common::Only Flash Type spi, sdhci or ufshci
+            disable_uart, Common::disables uart on target for rcm-boot and cold-boot
+            encrypt, Common::Global switch to enable encryption.
+            filesystem, Standard::For PDK installer to pass location of root FS file system.  The --platform option must be used in conjunction with this call
+            find_board_name, common::detects board name (base_board_name+chip_sku_name)
+            fpga, Standard::Create flash images for the FPGA bring up
+            fskp-bct-path, Common::Path to fskp bct (Required only for asymmetric boot chains)
+            headers, Standard::Headers directory path for new BCH headers and BCT
+            hsm, Common::Use HSM with either [rsa|eddsa]+sbk+kek0 ex rsa+sbk+kek0
+            init_persistent_partitions,
+            l4t, Standard::Create flash images for l4t
+            logs, Common::Location for log files
+            merge-chains, Common::Merge chains generated using --chain arguments. Arguments: Space separtred list of the format <chain_id> = Absolute path to chain output directory
+            multi-die, Standard::Flashing for multisocket images
+            no_du_pvit, common::Disable generation of DU only entries in PVIT
+            no_firmware_update, Standard::Force all firmware updates to be canceled
+            oot_kernel, Standard::Used to flash OOT kernel dtb to target
+            platform, Standard::For PDK installer to pass location of prebuilt images created with create_bsp_images.py
+            safety, Common::This is production safety flashing.  Certain options are not allowed to comply to TCL-1 classification
+            skipBctPreserve, Common::Skip Unsigned Customer Data Update from Target
+            target_pvit, Common::target PVIT partition needed to generate and flash selected partitions
+            toolsonly, Standard::Output tools to output directory only.  must use the -g option to specify the location to place the tools
+            usb-instance, Common::The USB port path to flash
+            user, Common::User who called the application to chown files to
+            vdk, Standard::Create flash images for the VDK simulator

@@ -1,0 +1,748 @@
+{
+    "customer-data-unsigned": {
+        "allowed-offset-ranges": [[0, 1024]],
+        "data": {
+            "boardSerial": {
+                "parser-metadata" : {
+                    "data-separator-string": null,
+                    "number-of-words": 1
+                },
+                "schema": {
+                    "version": {
+                        "type": "unsigned-char",
+                        "format-string": "B",
+                        "offset": 16
+                    },
+                    "value": [
+                        {
+                            "type": "decimal",
+                            "format-string": "Q",
+                            "offset": 20
+                        }
+                    ]
+                }
+            },
+            "macInUseCount": {
+                "parser-metadata" : {
+                    "data-separator-string": null,
+                    "number-of-words": 1
+                },
+                "schema": {
+                    "value": [
+                        {
+                            "type": "unsigned-char",
+                            "format-string": "B",
+                            "offset": 34
+                        }
+                    ]
+                }
+            },
+            "macId0": {
+                "parser-metadata" : {
+                    "data-separator-string": " ",
+                    "number-of-words": 3
+                },
+                "schema": {
+                    "value": [
+                        {
+                            "type": "string",
+                            "format-string": "s",
+                            "offset": 40,
+                            "max-len": 10,
+                            "min-len": 1
+                        },
+                        {
+                            "type": "hex",
+                            "format-string": "Q",
+                            "offset": 50,
+                            "max-len": 6,
+                            "min-len": 6
+                        },
+                        {
+                            "type": "unsigned-char",
+                            "format-string": "B",
+                            "offset": 56
+                        }
+                    ]
+                }
+            },
+            "macId1": {
+                "parser-metadata" : {
+                    "data-separator-string": " ",
+                    "number-of-words": 3
+                },
+                "schema": {
+                    "value": [
+                        {
+                            "type": "string",
+                            "format-string": "s",
+                            "offset": 64,
+                            "max-len": 10,
+                            "min-len": 1
+                        },
+                        {
+                            "type": "hex",
+                            "format-string": "Q",
+                            "offset": 74,
+                            "max-len": 6,
+                            "min-len": 6
+                        },
+                        {
+                            "type": "unsigned-char",
+                            "format-string": "B",
+                            "offset": 80
+                        }
+                    ]
+                }
+            },
+            "macId2": {
+                "parser-metadata" : {
+                    "data-separator-string": " ",
+                    "number-of-words": 3
+                },
+                "schema": {
+                    "value": [
+                        {
+                            "type": "string",
+                            "format-string": "s",
+                            "offset": 88,
+                            "max-len": 10,
+                            "min-len": 1
+                        },
+                        {
+                            "type": "hex",
+                            "format-string": "Q",
+                            "offset": 98,
+                            "max-len": 6,
+                            "min-len": 6
+                        },
+                        {
+                            "type": "unsigned-char",
+                            "format-string": "B",
+                            "offset": 104
+                        }
+                    ]
+                }
+            },
+            "macId3": {
+                "parser-metadata" : {
+                    "data-separator-string": " ",
+                    "number-of-words": 3
+                },
+                "schema": {
+                    "value": [
+                        {
+                            "type": "string",
+                            "format-string": "s",
+                            "offset": 112,
+                            "max-len": 10,
+                            "min-len": 1
+                        },
+                        {
+                            "type": "hex",
+                            "format-string": "Q",
+                            "offset": 122,
+                            "max-len": 6,
+                            "min-len": 6
+                        },
+                        {
+                            "type": "unsigned-char",
+                            "format-string": "B",
+                            "offset": 128
+                        }
+                    ]
+                }
+            },
+            "macId4": {
+                "parser-metadata" : {
+                    "data-separator-string": " ",
+                    "number-of-words": 3
+                },
+                "schema": {
+                    "value": [
+                        {
+                            "type": "string",
+                            "format-string": "s",
+                            "offset": 136,
+                            "max-len": 10,
+                            "min-len": 1
+                        },
+                        {
+                            "type": "hex",
+                            "format-string": "Q",
+                            "offset": 146,
+                            "max-len": 6,
+                            "min-len": 6
+                        },
+                        {
+                            "type": "unsigned-char",
+                            "format-string": "B",
+                            "offset": 152
+                        }
+                    ]
+                }
+            },
+            "macId5": {
+                "parser-metadata" : {
+                    "data-separator-string": " ",
+                    "number-of-words": 3
+                },
+                "schema": {
+                    "value": [
+                        {
+                            "type": "string",
+                            "format-string": "s",
+                            "offset": 160,
+                            "max-len": 10,
+                            "min-len": 1
+                        },
+                        {
+                            "type": "hex",
+                            "format-string": "Q",
+                            "offset": 170,
+                            "max-len": 6,
+                            "min-len": 6
+                        },
+                        {
+                            "type": "unsigned-char",
+                            "format-string": "B",
+                            "offset": 176
+                        }
+                    ]
+                }
+            },
+            "macId6": {
+                "parser-metadata" : {
+                    "data-separator-string": " ",
+                    "number-of-words": 3
+                },
+                "schema": {
+                    "value": [
+                        {
+                            "type": "string",
+                            "format-string": "s",
+                            "offset": 184,
+                            "max-len": 10,
+                            "min-len": 1
+                        },
+                        {
+                            "type": "hex",
+                            "format-string": "Q",
+                            "offset": 194,
+                            "max-len": 6,
+                            "min-len": 6
+                        },
+                        {
+                            "type": "unsigned-char",
+                            "format-string": "B",
+                            "offset": 200
+                        }
+                    ]
+                }
+            },
+            "macId7": {
+                "parser-metadata" : {
+                    "data-separator-string": " ",
+                    "number-of-words": 3
+                },
+                "schema": {
+                    "value": [
+                        {
+                            "type": "string",
+                            "format-string": "s",
+                            "offset": 208,
+                            "max-len": 10,
+                            "min-len": 1
+                        },
+                        {
+                            "type": "hex",
+                            "format-string": "Q",
+                            "offset": 218,
+                            "max-len": 6,
+                            "min-len": 6
+                        },
+                        {
+                            "type": "unsigned-char",
+                            "format-string": "B",
+                            "offset": 224
+                        }
+                    ]
+                }
+            },
+            "data": {
+                "parser-metadata" : {
+                    "data-separator-string": null,
+                    "number-of-words": 1
+                },
+                "schema": {
+                    "value": [
+                        {
+                            "type": "string",
+                            "format-string": "s",
+                            "offset": 264,
+                            "max-len": 80,
+                            "min-len": 1
+                        }
+                    ]
+                }
+            }
+        }
+    },
+    "customer-data-signed": {
+        "allowed-offset-ranges": [[0, 1024]],
+        "data": {
+            "skuNumber": {
+                "parser-metadata" : {
+                    "data-separator-string": "-",
+                    "number-of-words": 4
+                },
+                "schema": {
+                    "version": {
+                        "type": "unsigned-char",
+                        "format-string": "B",
+                        "offset": 24
+                    },
+                    "value": [
+                        {
+                            "type": "decimal",
+                            "format-string": "H",
+                            "offset": 26
+                        },
+                        [
+                            {
+                                "type": "decimal",
+                                "format-string": "I",
+                                "offset": 28
+                            },
+                            {
+                                "type": "char",
+                                "format-string": "c",
+                                "offset": 28,
+                                "max-len": 4,
+                                "min-len": 1
+                            }
+                        ],
+                        {
+                            "type": "decimal",
+                            "format-string": "I",
+                            "offset": 32
+                        },
+                        {
+                            "type": "decimal",
+                            "format-string": "H",
+                            "offset": 36
+                        }
+                    ]
+                }
+            },
+            "skuVersion": {
+                "parser-metadata" : {
+                    "data-separator-string": null,
+                    "number-of-words": 1
+                },
+                "schema": {
+                    "value": [
+                        {
+                            "type": "char",
+                            "format-string": "c",
+                            "offset": 38,
+                            "max-len": 3,
+                            "min-len": 1
+                        }
+                    ]
+                }
+            },
+            "prodInfo": {
+                "parser-metadata" : {
+                    "data-separator-string": "-| ",
+                    "number-of-words": 3
+                },
+                "schema": {
+                    "version": {
+                        "type": "unsigned-char",
+                        "format-string": "B",
+                        "offset": 48
+                    },
+                    "value": [
+                        {
+                        "type": "decimal",
+                        "format-string": "H",
+                        "offset": 50
+                        },
+                        [
+                            {
+                                "type": "decimal",
+                                "format-string": "I",
+                                "offset": 52
+                            },
+                            {
+                                "type": "char",
+                                "format-string": "c",
+                                "offset": 52,
+                                "max-len": 4,
+                                "min-len": 1
+                            }
+                        ],
+                        {
+                            "type": "decimal",
+                            "format-string": "I",
+                            "offset": 56
+                        }
+                    ]
+                }
+            },
+            "sysBomInfo": {
+                "parser-metadata" : {
+                    "data-separator-string": "-| ",
+                    "number-of-words": 5
+                },
+                "schema": {
+                    "version": {
+                        "type": "unsigned-char",
+                        "format-string": "B",
+                        "offset": 72
+                    },
+                    "value": [
+                        {
+                        "type": "decimal",
+                        "format-string": "H",
+                        "offset": 74
+                        },
+                        [
+                            {
+                                "type": "decimal",
+                                "format-string": "I",
+                                "offset": 76
+                            },
+                            {
+                                "type": "char",
+                                "format-string": "c",
+                                "offset": 76,
+                                "max-len": 4,
+                                "min-len": 1
+                            }
+                        ],
+                        {
+                            "type": "decimal",
+                            "format-string": "I",
+                            "offset": 80
+                        },
+                        {
+                            "type": "decimal",
+                            "format-string": "H",
+                            "offset": 84
+                        },
+                        {
+                            "type": "char",
+                            "format-string": "c",
+                            "offset":86,
+                            "min-len": 1,
+                            "max-len": 3
+                        }
+                    ]
+                }
+            },
+            "boardName": {
+                "parser-metadata" : {
+                    "data-separator-string": null,
+                    "number-of-words": 1
+                },
+                "schema": {
+                    "value": [
+                        {
+                            "type": "char",
+                            "format-string": "c",
+                            "offset": 96,
+                            "max-len": 24,
+                            "min-len": 1
+                        }
+                    ]
+                }
+            },
+            "socSkuVersion": {
+                "parser-metadata" : {
+                    "data-separator-string": null,
+                    "number-of-words": 1
+                },
+                "schema": {
+                    "value": [
+                        {
+                            "type": "char",
+                            "format-string": "c",
+                            "offset": 120,
+                            "max-len": 8,
+                            "min-len": 1
+                        }
+                    ]
+                }
+            },
+            "boardSerial": {
+                "parser-metadata" : {
+                    "data-separator-string": null,
+                    "number-of-words": 1
+                },
+                "schema": {
+                    "version": {
+                        "type": "unsigned-char",
+                        "format-string": "B",
+                        "offset": 128
+                    },
+                    "value": [
+                        {
+                            "type": "decimal",
+                            "format-string": "Q",
+                            "offset": 132
+                        }
+                    ]
+                }
+            },
+            "macInUseCount": {
+                "parser-metadata" : {
+                    "data-separator-string": null,
+                    "number-of-words": 1
+                },
+                "schema": {
+                    "value": [
+                        {
+                            "type": "unsigned-char",
+                            "format-string": "B",
+                            "offset": 146
+                        }
+                    ]
+                }
+            },
+            "macId0": {
+                "parser-metadata" : {
+                    "data-separator-string": " ",
+                    "number-of-words": 3
+                },
+                "schema": {
+                    "value": [
+                        {
+                            "type": "string",
+                            "format-string": "s",
+                            "offset": 152,
+                            "max-len": 10,
+                            "min-len": 1
+                        },
+                        {
+                            "type": "hex",
+                            "format-string": "Q",
+                            "offset": 162,
+                            "max-len": 6,
+                            "min-len": 6
+                        },
+                        {
+                            "type": "unsigned-char",
+                            "format-string": "B",
+                            "offset": 168
+                        }
+                    ]
+                }
+            },
+            "macId1": {
+                "parser-metadata" : {
+                    "data-separator-string": " ",
+                    "number-of-words": 3
+                },
+                "schema": {
+                    "value": [
+                        {
+                            "type": "string",
+                            "format-string": "s",
+                            "offset": 176,
+                            "max-len": 10,
+                            "min-len": 1
+                        },
+                        {
+                            "type": "hex",
+                            "format-string": "Q",
+                            "offset": 186,
+                            "max-len": 6,
+                            "min-len": 6
+                        },
+                        {
+                            "type": "unsigned-char",
+                            "format-string": "B",
+                            "offset": 192
+                        }
+                    ]
+                }
+            },
+            "macId2": {
+                "parser-metadata" : {
+                    "data-separator-string": " ",
+                    "number-of-words": 3
+                },
+                "schema": {
+                    "value": [
+                        {
+                            "type": "string",
+                            "format-string": "s",
+                            "offset": 200,
+                            "max-len": 10,
+                            "min-len": 1
+                        },
+                        {
+                            "type": "hex",
+                            "format-string": "Q",
+                            "offset": 210,
+                            "max-len": 6,
+                            "min-len": 6
+                        },
+                        {
+                            "type": "unsigned-char",
+                            "format-string": "B",
+                            "offset": 216
+                        }
+                    ]
+                }
+            },
+            "macId3": {
+                "parser-metadata" : {
+                    "data-separator-string": " ",
+                    "number-of-words": 3
+                },
+                "schema": {
+                    "value": [
+                        {
+                            "type": "string",
+                            "format-string": "s",
+                            "offset": 224,
+                            "max-len": 10,
+                            "min-len": 1
+                        },
+                        {
+                            "type": "hex",
+                            "format-string": "Q",
+                            "offset": 234,
+                            "max-len": 6,
+                            "min-len": 6
+                        },
+                        {
+                            "type": "unsigned-char",
+                            "format-string": "B",
+                            "offset": 240
+                        }
+                    ]
+                }
+            },
+            "macId4": {
+                "parser-metadata" : {
+                    "data-separator-string": " ",
+                    "number-of-words": 3
+                },
+                "schema": {
+                    "value": [
+                        {
+                            "type": "string",
+                            "format-string": "s",
+                            "offset": 248,
+                            "max-len": 10,
+                            "min-len": 1
+                        },
+                        {
+                            "type": "hex",
+                            "format-string": "Q",
+                            "offset": 258,
+                            "max-len": 6,
+                            "min-len": 6
+                        },
+                        {
+                            "type": "unsigned-char",
+                            "format-string": "B",
+                            "offset": 264
+                        }
+                    ]
+                }
+            },
+            "macId5": {
+                "parser-metadata" : {
+                    "data-separator-string": " ",
+                    "number-of-words": 3
+                },
+                "schema": {
+                    "value": [
+                        {
+                            "type": "string",
+                            "format-string": "s",
+                            "offset": 272,
+                            "max-len": 10,
+                            "min-len": 1
+                        },
+                        {
+                            "type": "hex",
+                            "format-string": "Q",
+                            "offset": 282,
+                            "max-len": 6,
+                            "min-len": 6
+                        },
+                        {
+                            "type": "unsigned-char",
+                            "format-string": "B",
+                            "offset": 288
+                        }
+                    ]
+                }
+            },
+            "macId6": {
+                "parser-metadata" : {
+                    "data-separator-string": " ",
+                    "number-of-words": 3
+                },
+                "schema": {
+                    "value": [
+                        {
+                            "type": "string",
+                            "format-string": "s",
+                            "offset": 296,
+                            "max-len": 10,
+                            "min-len": 1
+                        },
+                        {
+                            "type": "hex",
+                            "format-string": "Q",
+                            "offset": 306,
+                            "max-len": 6,
+                            "min-len": 6
+                        },
+                        {
+                            "type": "unsigned-char",
+                            "format-string": "B",
+                            "offset": 312
+                        }
+                    ]
+                }
+            },
+            "macId7": {
+                "parser-metadata" : {
+                    "data-separator-string": " ",
+                    "number-of-words": 3
+                },
+                "schema": {
+                    "value": [
+                        {
+                            "type": "string",
+                            "format-string": "s",
+                            "offset": 320,
+                            "max-len": 10,
+                            "min-len": 1
+                        },
+                        {
+                            "type": "hex",
+                            "format-string": "Q",
+                            "offset": 330,
+                            "max-len": 6,
+                            "min-len": 6
+                        },
+                        {
+                            "type": "unsigned-char",
+                            "format-string": "B",
+                            "offset": 336
+                        }
+                    ]
+                }
+            }
+        }
+    }
+}

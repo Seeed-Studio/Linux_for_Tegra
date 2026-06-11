@@ -1,0 +1,32 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ *
+ * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+ * property and proprietary rights in and to this material, related
+ * documentation and any modifications thereto. Any use, reproduction,
+ * disclosure or distribution of this material and related documentation
+ * without an express license agreement from NVIDIA CORPORATION or
+ * its affiliates is strictly prohibited.
+ */
+
+/ {
+	mb1_bct {
+		boot_device {
+			ufs@0 {
+				max-hs-mode = <4>;
+				max-pwm-mode = <4>;
+				max-active-lanes = <2>;
+				page-align-size = <4096>;
+				enable-hs-mode;
+				//enable-fast-auto-mode;
+				enable-hs-rate-b = <1>;
+				enable-hs-rate-a = <0>;
+				ufs-hs-eq-setting = <0>;
+				/** [7:4] = override_flag, [3:0] = ref_clk value*/
+				/** ref_clk = 1 for 26 MHz, 3 for 52 MHz, others invalid */
+				ufs-dev-ref-clk = <0x11>;
+			};
+		};
+	};
+};

@@ -1,0 +1,28 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ *
+ * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+ * property and proprietary rights in and to this material, related
+ * documentation and any modifications thereto. Any use, reproduction,
+ * disclosure or distribution of this material and related documentation
+ * without an express license agreement from NVIDIA CORPORATION or
+ * its affiliates is strictly prohibited.
+ */
+
+#include "tegra264-p3834-0008-rc00-alt-ecc.dtsi"
+#include "tegra264-p3834-0008-rc01-alt-ecc.dtsi"
+#include "tegra264-p3834-0008-rc02-alt-ecc.dtsi"
+#include "tegra264-p3834-0008-rc03-alt-ecc.dtsi"
+#include "tegra264-p3834-0008-rc04-alt-ecc.dtsi"
+#include "tegra264-p3834-0008-rc05-alt-ecc.dtsi"
+#include "tegra264-p3834-0008-rc06-alt-ecc.dtsi"
+#include "tegra264-p3834-0008-rc07-alt-ecc.dtsi"
+#include "tegra264-p3834-0008-rc08-alt-ecc.dtsi"
+#include "tegra264-p3834-0008-rc09-alt-ecc.dtsi"
+#include "tegra264-p3834-0008-rc10-alt-ecc.dtsi"
+#include "tegra264-p3834-0008-rc11-alt-ecc.dtsi"
+#include "tegra264-p3834-0008-rc12-alt-ecc.dtsi"
+#include "tegra264-p3834-0008-rc13-alt-ecc.dtsi"
+#include "tegra264-p3834-0008-rc14-alt-ecc.dtsi"
+#include "tegra264-p3834-0008-rc15-alt-ecc.dtsi"

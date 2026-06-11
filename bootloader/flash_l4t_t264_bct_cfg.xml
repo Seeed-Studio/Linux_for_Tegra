@@ -1,0 +1,60 @@
+<?xml version="1.0"?>
+<!--
+# SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES.
+#  All rights reserved.
+# SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+#
+# NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+# property and proprietary rights in and to this material, related
+# documentation and any modifications thereto. Any use, reproduction,
+# disclosure or distribution of this material and related documentation
+# without an express license agreement from NVIDIA CORPORATION or
+# its affiliates is strictly prohibited.
+-->
+<!-- Boot BCT cfg -->
+<bct_cfg>
+<brbct_cfg version="01.00.0000">
+    <brbct>br_bct.cfg</brbct>
+    <mb1bct>mb1_cold_boot_bct.cfg</mb1bct>
+    <mb2bct>mb2_cold_boot_bct.cfg</mb2bct>
+    <membct>mem_cold_boot_bct.cfg</membct>
+    <brcommand></brcommand>
+    <device></device>
+    <dev_param></dev_param>
+    <deviceprod></deviceprod>
+    <gpioint></gpioint>
+    <misc></misc>
+    <pinmux></pinmux>
+    <pmic></pmic>
+    <prod></prod>
+    <scr></scr>
+    <sdram></sdram>
+    <uphy></uphy>
+    <wb0sdram></wb0sdram>
+    <pmc></pmc>
+    <mb2bctcfg></mb2bctcfg>
+    <bpmp_mem_cfg></bpmp_mem_cfg>
+    <minratchet></minratchet>
+</brbct_cfg>
+<hpct_cfg version="01.00.0000">
+    <brbct>br_bct.cfg</brbct>
+    <dev_param></dev_param>
+    <sdram></sdram>
+    <bl></bl>
+    <fw></fw>
+    <hpse_bin>hpse_t264.bin</hpse_bin>
+    <hpse_base>hpse_t264.pkg</hpse_base>
+    <raw_bin></raw_bin>
+</hpct_cfg>
+<sbct_cfg version="01.00.0000">
+    <brbct>br_bct.cfg</brbct>
+    <dev_param></dev_param>
+    <sdram></sdram>
+    <bl></bl>
+    <fw></fw>
+    <sb_bin>sb_t264.bin</sb_bin>
+    <sb_base>sb_t264.pkg</sb_base>
+    <raw_bin></raw_bin>
+</sbct_cfg>
+
+</bct_cfg>

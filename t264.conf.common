@@ -1,0 +1,260 @@
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its
+# contributors may be used to endorse or promote products derived from
+# this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+# t264.conf.common: common configurations for "thor platforms"
+
+# Sourced by bash script.
+# shellcheck shell=bash
+# Disable unused variable check. Most of these variables are used in an outer
+# script that sources this file.
+# shellcheck disable=SC2034,SC2154
+
+# Common values and/or defaults across T264 SoC:
+#
+
+source "nv_public_common_board.conf"
+
+process_chip_sku_version()
+{
+	local chip_sku="${1}";
+	local chip_minor_revision_id="${2}";
+	local bootrom_revision_id="${3}";
+	local ramcode="${4}";
+	local fuselevel="${5}";
+	local board_FAB="${6}";
+	declare -A bpmp_fw_binary;
+
+	# shellcheck disable=SC2001
+	bpmp_fw_binary['00']=$(echo "$BPFFILE" | sed -e 's/.*bpmp_t264-\([A-Za-z0-9-]*\)_.*/\1/');
+	bpmp_fw_binary['A3']="TA1080SA-A1";
+	bpmp_fw_binary['A0']="TA1090SA-A1";
+	bpmp_fw_binary['E0']="TE1090M-A1";
+	bpmp_fw_binary['E2']="TE1070M-A1";
+
+	chip_sku="${chip_sku:-${DEFAULT_CHIP_SKU}}"
+
+	if [[ "${chip_sku}" =~ ":" ]]; then
+		chip_SKU=$(echo "${chip_sku}" | awk -F ":" '{print $4}');
+	fi;
+
+	# shellcheck disable=SC2001
+	BPFFILE=$(echo "${BPFFILE}" | sed "s|TA1.*-A1|${bpmp_fw_binary[${chip_SKU}]}|");
+	# shellcheck disable=SC2001
+	BPFFILE=$(echo "${BPFFILE}" | sed "s|TE1.*-A1|${bpmp_fw_binary[${chip_SKU}]}|");
+
+	echo "Chip SKU(${chip_sku}) ramcode(${ramcode}) fuselevel(${fuselevel}) board_FAB(${board_FAB})"
+}
+process_board_version()
+{
+	local board_id="${1}";
+	local board_version="${2}";
+	local board_sku="${3}";
+	local board_revision="${4}";
+	local chiprev="${5}";
+	local platform="${7}";
+	local bootdev="${8}";
+
+	echo "Board ID(${board_id}) version(${board_version}) sku(${board_sku}) revision(${board_revision}) Platform ID($platform) Board Boot Device($bootdev)"
+}
+
+# shellcheck disable=SC2120
+set_uefi_bins() {
+	UEFI_IMAGE="${1:-uefi_t26x_general}"
+	UEFIBL="${UEFI_IMAGE}.bin"
+	TBCFILE="bootloader/uefi_bins/${UEFI_IMAGE}.bin"
+}
+
+# T264 specific internal config
+NV_INTERNAL_T264_BOARD_CONF="nv_internal_t264_board.conf"
+
+# Default fuse level
+if [ -f "${NV_INTERNAL_T264_BOARD_CONF}" ]; then
+	DFLT_FUSELEVEL="fuselevel_production"
+	source "${NV_INTERNAL_T264_BOARD_CONF}"
+fi
+
+CHIPID=0x26;
+# Overlay dts file for L4T UEFI
+OVERLAY_DTB_FILE="L4TConfiguration.dtbo,tegra264-ftpm.dtbo,T264SetFmpImageTypeGuid.dtbo";
+
+#Using UTC earlycon and console
+# Kernel command line when booting the device
+CMDLINE_ADD="mminit_loglevel=4 earlycon=tegra_utc,mmio32,0xc5a0000 console=ttyUTC0,115200 firmware_class.path=/etc/firmware fbcon=map:0 efi=runtime audit=1 audit_backlog_limit=8192 swiotlb=2048"
+# The name of the folder under bootloader/ folder to get the partition table layout and BCT dts file
+target_board="generic";
+# Minimum size of the rootfs partition
+ROOTFSSIZE=55GiB;
+# UEFI and CPU Bootloader variables
+set_uefi_bins
+# Mb2 bootloader binary name
+BOOTLOADER="bootloader/mb2_t264.bin";
+# Trusted OS binary
+TOSFILE="";
+# Arm Trusted Firmware binary
+ATFFW="bootloader/bl31_t264.fip"
+# Encrypted Key Blob binary
+EKSFILE="bootloader/eks_t264.img";
+# Platform security controller - bootloader 1 binary
+PSCBL1FILE="bootloader/psc_bl1_t264_prod.bin";
+# Hardware-protected security environment - bootloader 1 binary
+HPSEBL1FILE="bootloader/hpse_bl1_t264_prod.bin";
+# StrongBox bootloader 1 binary
+SBBL1FILE="bootloader/sb_bl1_t264_prod.bin";
+# Hardware-protected security environment - firmware
+HPSEFW="bootloader/hpsefw_t264_prod.bin";
+# StrongBox firmware
+SBFW="bootloader/sbfw_t264_prod.bin";
+# Platform security controller - firmware
+PSCFW="bootloader/pscfw_t264_prod.bin";
+# Hardware-protected security environment - raw binary
+HPSERAW="bootloader/hpseraw_t264_prod.bin";
+# StrongBox raw binary
+SBRAW="bootloader/sbraw_t264_prod.bin";
+# Trusted OS firmware
+TSECFW="bootloader/tsec_t264_prod.bin";
+# Secure Partition Manager for ATF
+HAFNIUM_FW="bootloader/hafnium_t264.fip";
+# Nvdec firmware
+NVHOSTNVDEC="";
+# Display controller firmware
+DCE="bootloader/display-t264-dce.bin";
+# Camera Engine RCE1-FW binary.
+RCE1FW="bootloader/nv-rce1-t264.bin";
+# MB1 bootloader binary
+MB1FILE="bootloader/mb1_t264_prod.bin";
+# MB2 applet file. should be removed and replaced with APPLET
+SOSFILE="bootloader/applet_t264.bin";
+# MB2 bootloader binary
+MB2BLFILE="bootloader/mb2_t264.bin";
+# XML file to list binaries for mb2 applet
+READINFOFILE="readinfo_t264_min_prod.xml";
+# Camera RCE-FW binary
+CAMERAFW="bootloader/camera-rtcpu-t264-rce.img";
+# Generic suppported fuse xml file
+EMCFUSE="fuse_t264.xml";
+# MB2 applet file. Should be used instead of SOSFILE in the future
+APPLET="";
+#  Always-On (AON) Audio Digital Signal Processor (ADSP) Firmware
+AON_ADSPFW="bootloader/aon-fw_t264.bin";
+#  Always-On (AON) Audio Digital Signal Processor (ADSP) Firmware
+ADSP0FW="bootloader/adsp0-fw_t264.bin";
+#  Always-On (AON) Audio Digital Signal Processor (ADSP) Firmware
+ADSP1FW="bootloader/adsp1-fw_t264.bin";
+# XUSB firmware
+XUSBFILE="bootloader/xusb_t264_prod.bin";
+# GPU FW binary
+IGBFW="bootloader/igbfw_gb10b_gsc_package_prod.bin";
+# SC7 firmware
+WB0BOOT="bootloader/sc7_t264_prod.bin";
+# MB2 Reduced Functionality firmware
+MB2_RF="bootloader/mb2rf_t264.bin";
+# Programmable Vision Accelerator firmware
+PVAFILE="bootloader/nvpva_030.fw"
+# Default name for customer info in BCT. This is present in the case we need to preserver the customer info.
+DFLT_CUSTOMER_INFO="bootloader/default_custinfo.bin"
+# Parameter to enable generating l4t efi partition (esp)
+UEFI_OS_LAUNCHER=1;
+
+# Parameter to include initrd in boot.img
+INITRD_IN_BOOTIMG="yes";
+# Initrd image name
+INITRD="bootloader/l4t_initrd.img";
+
+# BCT config file for coldboot
+COLDBOOT_BCT_CFG="bootloader/flash_l4t_t264_bct_cfg.xml";
+RCMBOOT_BCT_CFG="bootloader/flash_l4t_t264_bct_cfg.xml";
+COLDBOOT_PT_LAYOUT="bootloader/flash_l4t_t264_qspi.xml";
+RCMBOOT_PT_LAYOUT="bootloader/flash_l4t_t264_rcmboot.xml";
+
+# BCT args:
+#
+BCT="";
+BINSARGS="--bins \"";
+
+# BR BCT common dts file
+DEV_PARAMS="tegra264-br-bct-common-l4t.dts";
+# BCT Flags File is a YAML file containing cflags to enable/disable features across all t264 boards in bootloader.
+# To enable/disable board-specific features, add the following BCT preprocessor defines to the board config instead:
+## 1) The preprocessor defines are used during the build of BCT sources files
+##    and are semicolon-separated.
+## 2) The defines in COMMON will apply to RCMBOOT, RCMFLASH, and COLDBOOT.
+## 3) Setting COLDBOOT_BCT_DEFINES will apply to both chain_a and chain_b.
+# COMMON_BCT_DEFINES=""
+# RCMBOOT_BCT_DEFINES=""
+# RCMFLASH_BCT_DEFINES=""
+# COLDBOOT_BCT_DEFINES=""
+BCT_FLAGS_FILE="platform_config_profile.yaml"
+# Booting from chain B
+#DEV_PARAMS_B="tegra264-br-bct-common-l4t.dts";
+
+# BR BCT common dts file for platform detection
+EMC_FUSE_DEV_PARAMS="tegra264-br-bct-diag-boot.dts";
+# MB1 BCT bootrom config file
+BOOTROM_CONFIG="";
+# MB1 BCT device config file
+DEVICE_CONFIG="tegra264-mb1-bct-device-common-l4t.dts";
+# MB1 BCT uphy config file
+UPHY_CONFIG="tegra264-mb1-bct-uphy-lanes-common-l4t.dts"
+#GPIOINT_CONFIG="tegra264-mb1-bct-gpioint-common-l4t.dts";
+
+# Key for signing nvidia firmware
+NVKEY_FILE="bootloader/t234_rsa_prod.key";
+NVENCRYPTKEY_FILE="bootloader/t234_sbk_prod.key";
+
+# Version file for qspi blob
+VERFILENAME="qspi_bootblob_ver.txt";
+
+# Parameters for OTA
+OTA_BOOT_DEVICE="/dev/mtdblock0";
+OTA_GPT_DEVICE="/dev/mtdblock0";
+
+# Fuse bypass xml file
+FBFILE="fuse_bypass_t264.xml";
+# Default chip SKU
+DEFAULT_CHIP_SKU="00:00:00:00";
+# Toggle to trigger unified flash. Can be removed when all current Jetson device are migrated to unified flash.
+_UNIFIED_FLASH=1
+# Default kernel image for flashing process
+_FLASHING_KERNEL="${LDK_DIR}"/unified_flash/tools/flashtools/flashing_kernel/initramfs/t264/boot_flashing.img
+
+# Storage device size
+STORAGE_SIZE_57GiB=$(( 57 * 1024 * 1024 * 1024 ));
+STORAGE_SIZE_234GiB=$(( 234 * 1024 * 1024 * 1024 ));
+# The default internal user storage size is 57GiB
+INT_STORAGE_SIZE="${STORAGE_SIZE_57GiB}";
+# The default external user storage size is 234GiB
+EXT_STORAGE_SIZE="${STORAGE_SIZE_234GiB}";
+
+# Rootfs A/B:
+# shellcheck disable=SC2153
+if [ "${ROOTFS_AB}" == 1 ]; then
+	rootfs_ab=1;
+	val=${ROOTFSSIZE//GiB/}
+	val=$((val/2))
+	ROOTFSSIZE="${val}GiB";
+fi;

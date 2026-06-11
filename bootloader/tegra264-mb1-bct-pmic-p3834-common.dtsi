@@ -1,0 +1,333 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ *
+ * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+ * property and proprietary rights in and to this material, related
+ * documentation and any modifications thereto. Any use, reproduction,
+ * disclosure or distribution of this material and related documentation
+ * without an express license agreement from NVIDIA CORPORATION or
+ * its affiliates is strictly prohibited.
+ */
+/*
+# CFG Version 1.0
+# This File contains the configuration of multiple rails.
+ */
+
+/ {
+	mb1_bct {
+		pmic_config@0 {
+			pmic {
+				cpu {
+					block@0 {
+						i2c-controller;
+						controller-id = <0x5>;
+						slave-addr = <0x46>;
+						reg-data-size = <16>;
+						reg-addr-size = <8>;
+						block-delay = <3>;
+						i2c-transaction-type = <1>; /* command Read-modify-write */
+						commands {
+							command@0 {
+								/* Disable CCL interrupt for LOOP-A (CPU) */
+								reg-addr = <0x42>;
+								mask = <0xFFFF>;
+								value = <0xB208>; //Format: <PEC><VALUE> where PEC = CRC8(<slave-addr><reg-addr><VALUE>)
+							};
+							command@1 {
+								/* Disable CCL interrupt for LOOP-B (SOC) */
+								reg-addr = <0x43>;
+								mask = <0xFFFF>;
+								value = <0xA708>; //Format: <PEC><VALUE> where PEC = CRC8(<slave-addr><reg-addr><VALUE>)
+							};
+							command@2 {
+								/* Disable DCM mode for LOOP-A/B (CPU/SOC) */
+								reg-addr = <0x4B>;
+								mask = <0xFFFF>;
+								value = <0x3700>; //Format: <PEC><VALUE> where PEC = CRC8(<slave-addr><reg-addr><VALUE>)
+							};
+						};
+					};
+					block@1 {
+						mmio;
+						block-delay = <3>; /* 3us */
+						commands {
+							/* Configure CPU_PWR_REQ pin as GPIO and remove tristate */
+							command@0 {
+								reg-addr = <0xac281000>; /* PADCTL_G2_CPU_PWR_REQ_0 */
+								mask = <0x410>; /* GPIO_SF_SEL & TRISTATE*/
+								value = <0x0000>;
+							};
+							/* Configure GPIO_H as output pin */
+							command@1 {
+								reg-addr = <0xac311000>; /* GPIO_H_ENABLE_CONFIG_00_0 */
+								mask = <0x2>; /* IN_OUT */
+								value = <0x2>;
+							};
+							/* Configure GPIO_H output control to driven state */
+							command@2 {
+								reg-addr = <0xac31100c>; /* GPIO_H_OUTPUT_CONTROL_00_0 */
+								mask = <0x1>; /* IN_OUT */
+								value = <0x0>;
+							};
+							/* Configure GPIO_H output value to OUT */
+							command@3 {
+								reg-addr = <0xac311010>; /* GPIO_H_OUTPUT_VALUE_00_0 */
+								mask = <0x1>; /* GPIO_OUT_VAL */
+								value = <0x1>;
+							};
+							/* Enable GPIO_H */
+							command@4 {
+								reg-addr = <0xac311000>; /* GPIO_H_ENABLE_CONFIG_00_0 */
+								mask = <0x1>; /* GPIO_ENABLE */
+								value = <0x1>;
+							};
+							/* CPU_PSI */
+							command@5 {
+								reg-addr = <0xac288000>; /* PADCTL_EDP_SOC_GPIO250_0 */
+								mask = <0xffffffff>; /* reset value with pin set to tristate */
+								value = <0x00203414>;
+							};
+							/* SOC_PSI */
+							command@6 {
+								reg-addr = <0xac288008>; /* PADCTL_EDP_SOC_GPIO251_0 */
+								mask = <0xffffffff>; /* reset value with pin set to tristate */
+								value = <0x00203414>;
+							};
+							/* GPU_PSI */
+							command@7 {
+								reg-addr = <0xac288010>; /* PADCTL_EDP_SOC_GPIO252_0 */
+								mask = <0xffffffff>; /* reset value with pin set to tristate */
+								value = <0x00203414>;
+							};
+						};
+					};
+				};
+				gpu {
+					block@0 {
+						i2c-controller;
+						controller-id = <0x5>;
+						slave-addr = <0x44>;
+						reg-data-size = <16>;
+						reg-addr-size = <8>;
+						block-delay = <3>;
+						i2c-transaction-type = <1>; /* command Read-modify-write */
+						commands {
+							command@0 {
+								/* Disable CCL interrupt for LOOP-A (GPU) */
+								reg-addr = <0x42>;
+								mask = <0xFFFF>;
+								value = <0x6408>; //Format: <PEC><VALUE> where PEC = CRC8(<slave-addr><reg-addr><VALUE>)
+							};
+							command@1 {
+								/* Disable CCL interrupt for LOOP-B (MSS) */
+								reg-addr = <0x43>;
+								mask = <0xFFFF>;
+								value = <0x7108>; //Format: <PEC><VALUE> where PEC = CRC8(<slave-addr><reg-addr><VALUE>)
+							};
+							command@2 {
+								/* Disable DCM mode for LOOP-A/B (GPU/MSS) */
+								reg-addr = <0x4B>;
+								mask = <0xFFFF>;
+								value = <0xE100>; //Format: <PEC><VALUE> where PEC = CRC8(<slave-addr><reg-addr><VALUE>)
+							};
+						};
+					};
+					block@1 {
+						mmio;
+						block-delay = <3>; /* 3us */
+						commands {
+							/* Configure GPU_PWR_REQ pin as GPIO and remove tristate */
+							command@0 {
+								reg-addr = <0xac281008>; /* PADCTL_G2_GPU_PWR_REQ_0 */
+								mask = <0x410>; /* GPIO_SF_SEL & TRISTATE*/
+								value = <0x0000>;
+							};
+							/* Configure GPIO_H as output pin */
+							command@1 {
+								reg-addr = <0xac311020>; /* GPIO_H_ENABLE_CONFIG_01_0 */
+								mask = <0x2>; /* IN_OUT */
+								value = <0x2>;
+							};
+							/* Configure GPIO_H output control to driven state */
+							command@2 {
+								reg-addr = <0xac31102c>; /* GPIO_H_OUTPUT_CONTROL_01_0 */
+								mask = <0x1>; /* IN_OUT */
+								value = <0x0>;
+							};
+							/* Configure GPIO_H output value to OUT */
+							command@3 {
+								reg-addr = <0xac311030>; /* GPIO_H_OUTPUT_VALUE_01_0 */
+								mask = <0x1>; /* GPIO_OUT_VAL */
+								value = <0x0>;
+							};
+							/* Enable GPIO_H */
+							command@4 {
+								reg-addr = <0xac311020>; /* GPIO_H_ENABLE_CONFIG_01_0 */
+								mask = <0x1>; /* GPIO_ENABLE */
+								value = <0x1>;
+							};
+						};
+					};
+				};
+				core {
+					block@0 {
+						i2c-controller;
+						controller-id = <0x5>;
+						slave-addr = <0x78>;
+						reg-data-size = <16>;
+						reg-addr-size = <8>;
+						block-delay = <3>;
+						i2c-transaction-type = <1>; /* command Read-modify-write */
+						commands {
+							command@0 {
+								reg-addr = <0x28>;
+								mask = <0xFFFF>;
+								value = <0x3000>; //Format: <PEC><VALUE> where PEC = CRC8(<slave-addr><reg-addr><VALUE>)
+							};
+						};
+					};
+				};
+				thermal {
+					block@1 {
+						i2c-controller;
+						controller-id = <0x5>;
+						slave-addr = <0x98>; /* 7-bit 4c for TMP451 */
+						reg-data-size = <8>;
+						reg-addr-size = <8>;
+						block-delay = <10>; /* 10us */
+						i2c-transaction-type = <1>; /* command Read-modify-write */
+						commands {
+							command@0 {
+								reg-addr = <0x09>; /* Configuration register write */
+								mask = <0xff>;
+								value = <0x44>;	/* SD mode with extended range */
+							};
+						};
+					};
+					block@2 {
+						i2c-controller;
+						controller-id = <0x5>;
+						slave-addr = <0x98>; /* 7-bit 4c for TMP451 */
+						reg-data-size = <8>;
+						reg-addr-size = <8>;
+						block-delay = <10>; /* 10us */
+						i2c-transaction-type = <2>; /* command Read-verify */
+						commands {
+							command@0 {
+								reg-addr = <0x03>; /* Configuration register read */
+								mask = <0xff>;
+								value = <0x44>;	/* SD mode with extended range */
+							};
+						};
+					};
+					block@3 {
+						i2c-controller;
+						controller-id = <0x5>;
+						slave-addr = <0x98>; /* 7-bit 4c for TMP451 */
+						reg-data-size = <8>;
+						reg-addr-size = <8>;
+						block-delay = <10>; /* 10us */
+						i2c-transaction-type = <0>; /* command Read-modify-write-verify */
+						commands {
+							command@0 {
+								reg-addr = <0x11>; /* Remote temperature offset */
+								mask = <0xff>;
+								value = <0xfd>; /* -2.5C for bias correction */
+							};
+							command@1 {
+								reg-addr = <0x12>; /* Remote temperature offset */
+								mask = <0xff>;
+								value = <0x80>; /* -2.5C for bias correction */
+							};
+							command@2 {
+								reg-addr = <0x19>; /* Remote temperature THERM limit */
+								mask = <0xff>;
+								value = <0xb5>;	/* 117C added with 64 */
+							};
+							command@3 {
+								reg-addr = <0x20>; /* Local Temperature THERM Limit */
+								mask = <0xff>;
+								value = <0xb5>; /* 117C added with 64 */
+							};
+						};
+					};
+					block@4 {
+						i2c-controller;
+						controller-id = <0x5>;
+						slave-addr = <0x98>; /* 7-bit 4c for TMP451 */
+						reg-data-size = <8>;
+						reg-addr-size = <8>;
+						block-delay = <10>; /* 10us */
+						i2c-transaction-type = <1>; /* command Read-modify-write */
+						commands {
+							command@0 {
+								reg-addr = <0x0d>; /* Remote temperature high limit (high byte) */
+								mask = <0xff>;
+								value = <0xb4>;	/* 116C added with 64 */
+							};
+							command@1 {
+								reg-addr = <0x0b>; /* Local temperature high limit */
+								mask = <0xff>;
+								value = <0xb4>;	/* 116C added with 64 */
+							};
+						};
+					};
+					block@5 {
+						i2c-controller;
+						controller-id = <0x5>;
+						slave-addr = <0x98>; /* 7-bit 4c for TMP451 */
+						reg-data-size = <8>;
+						reg-addr-size = <8>;
+						block-delay = <10>; /* 10us */
+						i2c-transaction-type = <2>; /* command Read-verify */
+						commands {
+							command@0 {
+								reg-addr = <0x07>; /* Remote temperature high limit (high byte) */
+								mask = <0xff>;
+								value = <0xb4>;	/* 116C added with 64 */
+							};
+							command@1 {
+								reg-addr = <0x05>; /* Local temperature high limit */
+								mask = <0xff>;
+								value = <0xb4>;	/* 116C added with 64 */
+							};
+						};
+					};
+					block@6 {
+						i2c-controller;
+						controller-id = <0x5>;
+						slave-addr = <0x98>; /* 7-bit 4c for TMP451 */
+						reg-data-size = <8>;
+						reg-addr-size = <8>;
+						block-delay = <10>; /* 10us */
+						i2c-transaction-type = <1>; /* command Read-modify-write */
+						commands {
+							command@0 {
+								reg-addr = <0x09>; /* Configuration register write */
+								mask = <0xff>;
+								value = <0x04>;	/* Continuous mode with extended range */
+							};
+						};
+					};
+					block@7 {
+						i2c-controller;
+						controller-id = <0x5>;
+						slave-addr = <0x98>; /* 7-bit 4c for TMP451 */
+						reg-data-size = <8>;
+						reg-addr-size = <8>;
+						block-delay = <10>; /* 10us */
+						i2c-transaction-type = <2>; /* command Read-verify */
+						commands {
+							command@0 {
+								reg-addr = <0x03>; /* Configuration register read */
+								mask = <0xff>;
+								value = <0x04>;	/* Continuous mode with extended range */
+							};
+						};
+					};
+				};
+			};
+		};
+	};
+};

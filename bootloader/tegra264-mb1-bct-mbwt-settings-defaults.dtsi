@@ -1,0 +1,409 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ *
+ * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+ * property and proprietary rights in and to this material, related
+ * documentation and any modifications thereto. Any use, reproduction,
+ * disclosure or distribution of this material and related documentation
+ * without an express license agreement from NVIDIA CORPORATION or
+ * its affiliates is strictly prohibited.
+ */
+
+/ {
+	mb1_bct {
+		mbwt_settings {
+			vicpc = <0>;
+			host = <0>;
+			ispfalpc = <0>;
+			mll_mpcorer = <0>;
+			ring2 = <0>;
+			miu3 = <0>;
+			miu2 = <0>;
+			miu1 = <0>;
+			miu0 = <0>;
+			rcepc = <0>;
+			apedmapc = <0>;
+			apepc = <0>;
+			aonpc = <0>;
+			bpmppc = <0>;
+			eqospc = <0>;
+			hdapc = <0>;
+			pcie5xa = <0>;
+			pcie4xa = <0>;
+			pcie3xa = <0>;
+			pcie1xa = <0>;
+			pcie0xa = <0>;
+			pcie5x = <0>;
+			pcie4x = <0>;
+			pcie3x = <0>;
+			pcie1x = <0>;
+			qspi0pc = <0>;
+			dcepc = <0>;
+			dispnisopc = <0>;
+			pscpc = <0>;
+			miu9 = <0>;
+			miu8 = <0>;
+			miu7 = <0>;
+			miu6 = <0>;
+			miu5 = <0>;
+			miu4 = <0>;
+			isp2pc = <0>;
+			hostb = <0>;
+			mgbe3pc = <0>;
+			mgbe2pc = <0>;
+			mgbe1pc = <0>;
+			vipc = <0>;
+			pcie2x = <0>;
+			tsecpc = <0>;
+			sepc = <0>;
+			hwpmpc = <0>;
+			pva2pc = <0>;
+			pva1pc = <0>;
+			pva0pc = <0>;
+			vifal1pc = <0>;
+			vi1pc = <0>;
+			ispfal1pc = <0>;
+			mgbepc = <0>;
+			oesppc = <0>;
+			gpcpc = <0>;
+			vifalpc = <0>;
+			xusbdev5wpc = <0>;
+			xusbdev5rpc = <0>;
+			xusbdev1wpc = <0>;
+			xusbdev1rpc = <0>;
+			xusbdevwpc = <0>;
+			xusbdevrpc = <0>;
+			ufspc = <0>;
+			pcie2xa = <0>;
+			ape1pc = <0>;
+			isp0pc = <0>;
+			seu1pc = <0>;
+			sbpc = <0>;
+			seu3pc = <0>;
+			seu2pc = <0>;
+			isp3pc = <0>;
+			isp1pc = <0>;
+			rce1pc = <0>;
+			sdmmcpc = <0>;
+			fsi1pc = <0>;
+			fsi0pc = <0>;
+			mssseqpc = <0>;
+			hostpc = <0>;
+			disppc = <0>;
+			dram_freq_mhz = <0x0>;
+			data@0 { // VICPC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@1 { // HOST
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@2 { // ISPFALPC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@3 { // MLL_MPCORER
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@4 { // RING2
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@5 { // MIU3
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@6 { // MIU2
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@7 { // MIU1
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@8 { // MIU0
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@9 { // RCEPC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@10 { // APEDMAPC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@11 { // APEPC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@12 { // AONPC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@13 { // BPMPPC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@14 { // EQOSPC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@15 { // HDAPC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@16 { // PCIE5XA
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@17 { // PCIE4XA
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@18 { // PCIE3XA
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@19 { // PCIE1XA
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@20 { // PCIE0XA
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@21 { // PCIE5X
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@22 { // PCIE4X
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@23 { // PCIE3X
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@24 { // PCIE1X
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@25 { // QSPI0PC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@26 { // DCEPC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@27 { // DISPNISOPC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@28 { // PSCPC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@29 { // MIU9
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@30 { // MIU8
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@31 { // MIU7
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@32 { // MIU6
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@33 { // MIU5
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@34 { // MIU4
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@35 { // ISP2PC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@36 { // HOSTB
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@37 { // MGBE3PC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@38 { // MGBE2PC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@39 { // MGBE1PC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@40 { // VIPC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@41 { // PCIE2X
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@42 { // TSECPC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@43 { // SEPC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@44 { // HWPMPC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@45 { // PVA2PC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@46 { // PVA1PC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@47 { // PVA0PC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@48 { // VIFAL1PC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@49 { // VI1PC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@50 { // ISPFAL1PC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@51 { // MGBEPC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@52 { // OESPPC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@53 { // GPCPC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@54 { // VIFALPC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@55 { // XUSBDEV5WPC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@56 { // XUSBDEV5RPC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@57 { // XUSBDEV1WPC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@58 { // XUSBDEV1RPC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@59 { // XUSBDEVWPC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@60 { // XUSBDEVRPC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@61 { // UFSPC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@62 { // PCIE2XA
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@63 { // APE1PC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@64 { // ISP0PC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@65 { // SEU1PC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@66 { // SBPC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@67 { // SEU3PC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@68 { // SEU2PC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@69 { // ISP3PC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@70 { // ISP1PC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@71 { // RCE1PC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@72 { // SDMMCPC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@73 { // FSI1PC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@74 { // FSI0PC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@75 { // MSSSEQPC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@76 { // HOSTPC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+			data@77 { // DISPPC
+				target_util = <0x0>;
+				hub_grant_dec = <0x0>;
+			};
+		};
+	};
+};

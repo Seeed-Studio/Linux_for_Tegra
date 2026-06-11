@@ -1,0 +1,57 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ *
+ * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+ * property and proprietary rights in and to this material, related
+ * documentation and any modifications thereto. Any use, reproduction,
+ * disclosure or distribution of this material and related documentation
+ * without an express license agreement from NVIDIA CORPORATION or
+ * its affiliates is strictly prohibited.
+ */
+/dts-v1/;
+
+/ {
+	sdram {
+		mem_cfg_0: mem-cfg@0 {
+		#include "tegra234-mb1-bct-p3701-0002-p3740-0002-sdram-32gb-Micron-lpddr5-204MHz-bct.dtsi"
+		};
+
+	/*	mem_cfg_1: mem-cfg@1 {
+		#include "tegra234-mb1-bct-p3701-0002-p3740-0002-sdram-32gb-Micron-lpddr5-204MHz-bct-ecc.dtsi"
+		};
+
+		mem_cfg_2: mem-cfg@2 {
+		#include "tegra234-mb1-bct-p3701-0002-p3740-0002-sdram-32gb-Micron-lpddr5-204MHz-bct-encr.dtsi"
+		};
+
+		mem_cfg_3: mem-cfg@3 {
+		#include "tegra234-mb1-bct-p3701-0002-p3740-0002-sdram-32gb-Micron-lpddr5-204MHz-bct-ecc-encr.dtsi"
+		};*/
+	};
+};
+
+&mem_cfg_0 {
+#include "tegra234-mem-bct-sw-override-carveout-common.dtsi"
+#include "tegra234-mem-bct-sw-override-carveout-l4t.dtsi"
+#include "tegra234-mem-bct-sw-override-non-carveout-common.dtsi"
+};
+
+/*
+&mem_cfg_1 {
+#include "tegra234-mem-bct-sw-override-carveout-common.dtsi"
+#include "tegra234-mem-bct-sw-override-carveout-l4t.dtsi"
+#include "tegra234-mem-bct-sw-override-non-carveout-common.dtsi"
+};
+
+&mem_cfg_2 {
+#include "tegra234-mem-bct-sw-override-carveout-common.dtsi"
+#include "tegra234-mem-bct-sw-override-carveout-l4t.dtsi"
+#include "tegra234-mem-bct-sw-override-non-carveout-common.dtsi"
+};
+
+&mem_cfg_3 {
+#include "tegra234-mem-bct-sw-override-carveout-common.dtsi"
+#include "tegra234-mem-bct-sw-override-carveout-l4t.dtsi"
+#include "tegra234-mem-bct-sw-override-non-carveout-common.dtsi"
+};*/

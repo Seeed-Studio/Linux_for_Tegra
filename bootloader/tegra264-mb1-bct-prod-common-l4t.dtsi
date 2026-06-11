@@ -1,0 +1,57 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ *
+ * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+ * property and proprietary rights in and to this material, related
+ * documentation and any modifications thereto. Any use, reproduction,
+ * disclosure or distribution of this material and related documentation
+ * without an express license agreement from NVIDIA CORPORATION or
+ * its affiliates is strictly prohibited.
+ */
+/dts-v1/;
+
+/ {
+    prod@0 {
+        addr-mask-data =
+            /* I2C0 */
+            <0xac287004 0x00f0f000 0x0000f000>,
+            <0xac28700c 0x00f0f000 0x0000f000>,
+            /* I2C1 */
+            <0xac287014 0x00f0f000 0x0000f000>,
+            <0xac28701c 0x00f0f000 0x0000f000>,
+            /* I2C2 */
+            <0x8c7a3004 0x00f0f000 0x0000f000>,
+            <0x8c7a300c 0x00f0f000 0x0000f000>,
+            /* I2C4 */
+            <0x8c7a3014 0x00f0f000 0x0000f000>,
+            <0x8c7a301c 0x00f0f000 0x0000f000>,
+            /* SF_PWR_I2C */
+            <0xac2870dc 0x00f0f000 0x0000f000>,
+            <0xac2870d4 0x00f0f000 0x0000f000>,
+            /* I2C8 */
+            <0xac28804c 0x00f0f000 0x0000f000>,
+            <0xac288054 0x00f0f000 0x0000f000>,
+            /* I2C5 */
+            <0xac28805c 0x00f0f000 0x0000f000>,
+            <0xac288064 0x00f0f000 0x0000f000>,
+            /* I2C7 */
+            <0xac2860b4 0x00f0f000 0x0000f000>,
+            <0xac2860bc 0x00f0f000 0x0000f000>,
+            /* I2C3 */
+            <0xac2810b4 0x00f0f000 0x0000f000>,
+            <0xac2810bc 0x00f0f000 0x0000f000>,
+            /* I2C6 */
+            <0xb031400c 0x00f0f000 0x0000f000>,
+            <0xb0314004 0x00f0f000 0x0000f000>,
+            /* I2C9 */
+            <0xac286004 0x00f0f000 0x0000f000>,
+            <0xac28600c 0x00f0f000 0x0000f000>,
+            /* I2C15 */
+            <0xac28202c 0x00f0f000 0x0000f000>,
+            <0xac282034 0x00f0f000 0x0000f000>,
+            /* I2C10 */
+            <0xac28b004 0x00f0f000 0x0000f000>,
+            <0xac28b00c 0x00f0f000 0x0000f000>;
+    };
+};

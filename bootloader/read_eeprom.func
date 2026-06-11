@@ -1,0 +1,68 @@
+#!/bin/bash
+
+# SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: MIT
+#
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the "Software"),
+# to deal in the Software without restriction, including without limitation
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+# DEALINGS IN THE SOFTWARE.
+
+function rcmdump_get_eeprom ()
+{
+    local ret=0;
+    local _chipid="${1}";
+
+    if [ -d rcmdump_blob ]; then
+        pushd rcmdump_blob > /dev/null 2>&1 || exit;
+        if bash rcmdumpcmd.txt; then
+            ./tegrarcm_v2 --chip "${_chipid}" 0 --oem platformdetails eeprom cvm cvm.bin;
+            if [ -f cvm.bin ]; then
+                echo "Successfully retrieved eeprom."
+            else
+                echo "Failed to retrieve eeprom.";
+                ret=1;
+            fi;
+        else
+            echo "Failed to execute rcmdumpcmd.txt.";
+            ret=2;
+        fi;
+        if [ ${ret} != 2 ]; then
+            echo "Setting target to recovery mode";
+            ./tegrarcm_v2 --chip "${_chipid}" 0 --reboot recovery;
+            sleep 1;
+        fi;
+        popd > /dev/null 2>&1 || exit;
+        if [ ${ret} = 0 ]; then
+            cp rcmdump_blob/cvm.bin cvm.bin;
+        fi;
+        rm -rf rcmdump_blob;
+    else
+        echo "Warning: No rcmdump_blob.";
+    fi;
+    return ${ret};
+};
+
+function read_eeprom ()
+{
+    if rcmdump_get_eeprom "${1}"; then
+        echo "";
+        echo "eeprom content:";
+        echo "===============";
+        xxd -g 1 cvm.bin;
+        echo "===============";
+    fi
+}

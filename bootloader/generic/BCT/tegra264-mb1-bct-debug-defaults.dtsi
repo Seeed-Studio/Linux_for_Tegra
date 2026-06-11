@@ -1,0 +1,57 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ *
+ * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+ * property and proprietary rights in and to this material, related
+ * documentation and any modifications thereto. Any use, reproduction,
+ * disclosure or distribution of this material and related documentation
+ * without an express license agreement from NVIDIA CORPORATION or
+ * its affiliates is strictly prohibited.
+ */
+
+/ {
+    mb1_bct {
+        debug {
+			uart_instance = <2>;
+			wdt_period_secs = <10>;
+#ifdef DISABLE_UART_MB1_MB2
+			log_level = <0>;
+#else
+			log_level = <4>;
+#endif
+			enable_wdt = <1>;
+			disable_wdt_globally = <0>;
+			enable_rcm_usb3 = <0>;
+			rcm_usb3_port = <0>;
+			enable_kernel_first_ras = <0>;
+        };
+
+		utc_params {
+#ifdef DISABLE_UTC
+			disable_utc_fifo = <1>;
+			enable_utc = <0>;
+#else
+			disable_utc_fifo = <0>;
+			enable_utc = <1>;
+#ifdef AUTO_BUILD
+	#ifdef UTC_DEFAULT_RX
+			default_rx_client = <UTC_DEFAULT_RX>;
+	#else
+			default_rx_client = <13>;
+	#endif
+#else
+			default_rx_client = <1>;
+#endif
+#endif
+		};
+
+		///////// ECID ///////////
+		ecid {
+			ecid_0 = <0x0>;
+			ecid_1 = <0x0>;
+			ecid_2 = <0x0>;
+			ecid_3 = <0x0>;
+		};
+    };
+};

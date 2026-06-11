@@ -1,0 +1,81 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice, this
+ * list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from
+ * this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+/*
+# CFG Version 1.0
+# This File contains the configuration of multiple rails.
+*/
+/dts-v1/;
+
+#ifdef AUTO_BUILD
+#include "tegrabl_carveout_id.h"
+#include "tegrabl_mb1_bct_defines.h"
+#include "tegra264-mb1-bct-defaults.dtsi"
+#include "tegra264-mb1-bct-carveout-common.dtsi"
+#include "tegra264-mb1-bct-carveout-auto.dtsi"
+#else
+#include "t264_tegrabl_carveout_id.h"
+#include "t264_tegrabl_mb1_bct_defines.h"
+
+#include "tegra264-mb1-bct-defaults.dtsi"
+#include "tegra264-mb1-bct-carveout-common.dtsi"
+#include "tegra264-mb1-bct-carveout-l4t.dtsi"
+#endif
+
+#ifndef ENABLE_CCPLEX_SMMU_PTW
+#include "tegra264-mb1-bct-disable-carveout-smmu-ptw.dtsi"
+#else
+#include "tegra264-mb1-bct-disable-carveout-os.dtsi"
+#endif
+
+
+/ {
+    mb1_bct {
+        non_psc_shared_features {
+            disable_die0_hpse_boot = <0>;
+            disable_die1_hpse_boot = <0>;
+            disable_die0_strongbox_boot = <0>;
+            disable_die1_strongbox_boot = <0>;
+            disable_die0_igpufw_boot = <0>;
+            disable_die1_igpufw_boot = <0>;
+        };
+        debug {
+            uart_instance = <0>;
+        };
+        utc_params {
+            enable_utc = <1>;
+        };
+        carveout {
+            aux_info@CARVEOUT_GPU_COMPTAGS {
+                size = <0x0 0x41200000>; // 1042MB
+            };
+        };
+    };
+};
+

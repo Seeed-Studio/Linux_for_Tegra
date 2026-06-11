@@ -1,0 +1,28 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ *
+ * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+ * property and proprietary rights in and to this material, related
+ * documentation and any modifications thereto. Any use, reproduction,
+ * disclosure or distribution of this material and related documentation
+ * without an express license agreement from NVIDIA CORPORATION or
+ * its affiliates is strictly prohibited.
+ */
+
+#include "tegra264-p3834-0005-rc00-maxn.dtsi"
+#include "tegra264-p3834-0005-rc01-maxn.dtsi"
+#include "tegra264-p3834-0005-rc02-maxn.dtsi"
+#include "tegra264-p3834-0005-rc03-maxn.dtsi"
+#include "tegra264-p3834-0005-rc04-maxn.dtsi"
+#include "tegra264-p3834-0005-rc05-maxn.dtsi"
+#include "tegra264-p3834-0005-rc06-maxn.dtsi"
+#include "tegra264-p3834-0005-rc07-maxn.dtsi"
+#include "tegra264-p3834-0005-rc08-maxn.dtsi"
+#include "tegra264-p3834-0005-rc09-maxn.dtsi"
+#include "tegra264-p3834-0005-rc10-maxn.dtsi"
+#include "tegra264-p3834-0005-rc11-maxn.dtsi"
+#include "tegra264-p3834-0005-rc12-maxn.dtsi"
+#include "tegra264-p3834-0005-rc13-maxn.dtsi"
+#include "tegra264-p3834-0005-rc14-maxn.dtsi"
+#include "tegra264-p3834-0005-rc15-maxn.dtsi"

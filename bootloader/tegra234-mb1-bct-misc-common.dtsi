@@ -1,0 +1,559 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ *
+ * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+ * property and proprietary rights in and to this material, related
+ * documentation and any modifications thereto. Any use, reproduction,
+ * disclosure or distribution of this material and related documentation
+ * without an express license agreement from NVIDIA CORPORATION or
+ * its affiliates is strictly prohibited.
+ */
+
+#include "tegrabl_carveout_id.h"
+#include "tegra234-mb1-bct-carveout-common.dtsi"
+
+/ {
+    misc {
+        num_boot_gpios = <2>;
+        enable_vpr_resize = <0>;
+        disable_sc7 = <1>;
+        disable_fuse_visibility = <0>;
+        disable_mb2_glitch_protection = <0>;
+        carveout_alloc_direction = <1>;
+        enable_dram_error_injection = <0>;
+        enable_nvdec = <1>;
+        enable_tsec = <1>;
+        disable_l2_tz_encryption_regeneration = <0>;
+        disable_vpr_encryption_regeneration = <0>;
+        enable_tz_encryption = <1>;
+        enable_vpr_encryption = <1>;
+        enable_permissive_ccplex_firewalls = <0>;
+        axi_ap_virtual_client = <1>;
+        uphy_ufs_enable_rate_a = <0>;
+#ifdef ENABLE_SAMSUNG_UFS
+        tx_drv_amp_sel7 = <0x15>;
+        tx_drv_post_sel0 = <0xA>;
+#else
+        tx_drv_amp_sel7 = <0x11>;
+        tx_drv_post_sel0 = <0x0>;
+#endif
+#ifdef ENABLE_SCF_TRACKER
+        enable_scf_tracker = <1>;
+#else
+        enable_scf_tracker = <0>;
+#endif
+        disable_scpm_reset = <0>;
+        disable_pod_reset = <0>;
+        keep_xusb_pd_up = <1>;
+        enable_nsdram_encryption = <1>;
+        enable_blanket_nsdram_carveout = <1>;
+        enable_early_error_reporting = <1>;
+
+#ifdef ENABLE_SKIP_ECID_CHECK
+        disable_debug_ecid_check = <1>;
+#else
+        disable_debug_ecid_check = <0>;
+#endif
+        ///////// ECID HASH ///////
+#ifdef HASH_OF_CHIP_ECID
+        ecid_hash = [HASH_OF_CHIP_ECID];
+#else
+        ecid_hash = [00];
+#endif
+        cpu {
+            ////////// cpu variables //////////
+            ccplex_platform_features = <0x0 0x00000000>;
+            cmu_misc_ctrl = <0x0>;
+            min_adc_fuse_rev = <0x1>;
+            cpu_vmon = <0x0087f001>; // vmon field in WP0 payload
+#ifdef ENABLE_CCPLEX_DCLS
+            num_clusters_2core_pair_lockstep = <0x3>;
+#else
+            num_clusters_2core_pair_lockstep = <0x0>;
+#endif
+            num_clusters_1core_pair_lockstep = <0x0>;
+            cluster_misc_ctrl@0 {
+                value = <0x90>;
+            };
+            cluster_misc_ctrl@1 {
+                value = <0x90>;
+            };
+            cluster_misc_ctrl@2 {
+                value = <0x90>;
+            };
+            pllx_data {
+                pllx_refclk_khz = <0x9600>;
+                dsu_hpll_base = <0x40203401>;
+                dsu_hpll_misc_0 = <0x40480000>;
+                dsu_hpll_misc_1 = <0x0>;
+                dsu_hpll_misc_2 = <0x1f720f05>;
+                dsu_hpll_misc_3 = <0x4>;
+                dsu_hpll_misc_4 = <0x5cb0000>;
+                dsu_hpll_misc_5 = <0x0>;
+                dsu_hpll_misc_7 = <0x0>;
+                cpu_hpll_base = <0x40203401>;
+                cpu_hpll_misc_0 = <0x40480000>;
+                cpu_hpll_misc_1 = <0x0>;
+                cpu_hpll_misc_2 = <0x1f720f05>;
+                cpu_hpll_misc_3 = <0x4>;
+                cpu_hpll_misc_4 = <0x5cb0000>;
+                cpu_hpll_misc_5 = <0x0>;
+                cpu_hpll_misc_7 = <0x0>;
+            };
+            nafll_data@0 {
+                dsu_nafll_skp_coeff = <0xff2f0000>;
+                dsu_nafll_skp_ctrl = <0x25>;
+                dsu_nafll_coeff = <0xd9010003>;
+                dsu_nafll_cfg1 = <0x00000010>;
+                dsu_nafll_cfg2 = <0x30a0c0d>;
+                dsu_nafll_cfg3 = <0x0>;
+                dsu_nafll_ctrl1 = <0xc>;
+                dsu_nafll_ctrl2 = <0xf250000>;
+                cpu_nafll_skp_coeff = <0xff2f0000>;
+                cpu_nafll_skp_ctrl = <0x25>;
+                cpu_nafll_coeff = <0xd9010003>;
+                cpu_nafll_cfg1 = <0x00000010>;
+                cpu_nafll_cfg2 = <0x30a0c0d>;
+                cpu_nafll_cfg3 = <0x0>;
+                cpu_nafll_ctrl1 = <0xc>;
+                cpu_nafll_ctrl2 = <0xf250000>;
+            };
+            nafll_data@1 {
+                dsu_nafll_skp_coeff = <0xff2f0000>;
+                dsu_nafll_skp_ctrl = <0x25>;
+                dsu_nafll_coeff = <0xd9010003>;
+                dsu_nafll_cfg1 = <0x00000010>;
+                dsu_nafll_cfg2 = <0x30a0c0d>;
+                dsu_nafll_cfg3 = <0x0>;
+                dsu_nafll_ctrl1 = <0xc>;
+                dsu_nafll_ctrl2 = <0xf250000>;
+                cpu_nafll_skp_coeff = <0xff2f0000>;
+                cpu_nafll_skp_ctrl = <0x25>;
+                cpu_nafll_coeff = <0xd9010003>;
+                cpu_nafll_cfg1 = <0x00000010>;
+                cpu_nafll_cfg2 = <0x30a0c0d>;
+                cpu_nafll_cfg3 = <0x0>;
+                cpu_nafll_ctrl1 = <0xc>;
+                cpu_nafll_ctrl2 = <0xf250000>;
+            };
+            nafll_data@2 {
+                dsu_nafll_skp_coeff = <0xff2f0000>;
+                dsu_nafll_skp_ctrl = <0x25>;
+                dsu_nafll_coeff = <0xd9010003>;
+                dsu_nafll_cfg1 = <0x00000010>;
+                dsu_nafll_cfg2 = <0x30a0c0d>;
+                dsu_nafll_cfg3 = <0x0>;
+                dsu_nafll_ctrl1 = <0xc>;
+                dsu_nafll_ctrl2 = <0xf250000>;
+                cpu_nafll_skp_coeff = <0xff2f0000>;
+                cpu_nafll_skp_ctrl = <0x25>;
+                cpu_nafll_coeff = <0xd9010003>;
+                cpu_nafll_cfg1 = <0x00000010>;
+                cpu_nafll_cfg2 = <0x30a0c0d>;
+                cpu_nafll_cfg3 = <0x0>;
+                cpu_nafll_ctrl1 = <0xc>;
+                cpu_nafll_ctrl2 = <0xf250000>;
+            };
+
+            clock_sel_data {
+                cpu_burst_policy = <0xf>;
+                dsu_burst_policy = <0xf>;
+            };
+            avfs_data {
+                avfs_refclk_khz = <0x9600>;
+                cpu_lut_sw_freq_req = <0x4ec>;
+                dsu_lut_sw_freq_req = <0x4ec>;
+                scratch_freq_defaults@0{
+                    value = <0x9d>;
+                };
+                scratch_freq_defaults@1{
+                    value = <0x9d>;
+                };
+                scratch_freq_defaults@2{
+                    value = <0x9d>;
+                };
+            };
+        };
+
+        //////// Clock data ///////////
+        clock {
+            bpmp_cpu_nic_clk_divisor = <0>;
+            bpmp_apb_clk_divisor = <0>;
+            axi_cbb_clk_divisor = <0>;
+            tz_se_clk_divisor = <1>;
+            aon_apb_clk_divisor = <0>;
+            switch_cbb_clk_plc2 = <1>;
+            switch_bpmp_clk_nafll = <1>;
+            switch_scfclk_to_pllhub = <0>;
+            bpmp_vmon_enable = <0>;
+            bpmp_nafll {
+               coeff_mdiv = <0x3>;
+               coeff_pdev = <0x1>;
+               coeff_fll_frug_fast = <0xd>;
+               coeff_fll_frug_main = <0x9>;
+               cfg2_fll_init = <0xd>;
+               cfg2_fll_ctrl_ldmem = <0xc>;
+               cfg2_fll_switch_ldmem = <0xa>;
+               lut_sw_freq_req_sw_override_ndiv = <0x3>;
+               lut_sw_freq_req_ndiv = <0x20>;
+               cfg1_vfgain = <0x0>;
+            };
+        };
+
+        ///////// Debug data //////////
+        debug {
+            uart_instance = <2>;
+            wdt_period_secs = <0>;
+#if defined(DISABLE_UART_MB1_MB2) || defined(DISABLE_UART_MB1_MB2_WITH_SPE)
+            log_level = <0>;
+#else
+            log_level = <4>;
+#endif
+            uart8_usb_port_sel = <0>;
+            usb2_nvjtag = <0>;
+            swd_usb_port_sel = <0>;
+            switch_bootchain = <0>;
+            reset_to_recovery = <1>;
+            enable_wdt = <0>;
+            disable_wdt_globally = <0>;
+        };
+
+        ///////// FMON ////////////
+        fmon {
+            osc_threshold_low = <0x30E>; // 16 bit wide
+            osc_threshold_high = <0x375>; // 16 bit wide
+            pmc_threshold_low = <0x51B>; // 16 bit wide
+            pmc_threshold_high = <0x6FF>; // 16 bit wide
+            fsi_threshold_low = <0x25E>; // 16 bit wide
+            fsi_threshold_high = <0x2A5>; // 16 bit wide
+        };
+
+        ///////// VMON ///////////
+        vmon {
+            vrefo_calib_override = <0>;
+            vrefo_min_rev_threshold = <1>;
+            vrefo_calib_val = <0>;
+            min_adc_fuse_rev = <1>;
+            vdd_soc {
+                soc_vmon_config@0 { // SKU = INT
+                    sku_info = <0x0>;
+                    vmin_threshold = <0x1D>;
+                    vmax_threshold = <0x69>;
+                };
+                soc_vmon_config@1 { // SKU = TA990SA, TE992M
+                    sku_info = <0x90>;
+                    vmin_threshold = <0x1D>;
+                    vmax_threshold = <0x69>;
+                };
+                soc_vmon_config@2 { // SKU = TA975SA
+                    sku_info = <0x97>;
+                    vmin_threshold = <0x1D>;
+                    vmax_threshold = <0x69>;
+                };
+                soc_vmon_config@3 { // SKU = TE990M
+                    sku_info = <0xD0>;
+                    vmin_threshold = <0x17>;
+                    vmax_threshold = <0x76>;
+                };
+                soc_vmon_config@4 { // SKU = TE980M(Orin NX)
+                    sku_info = <0xD3>;
+                    vmin_threshold = <0x1A>;
+                    vmax_threshold = <0x76>;
+                };
+                soc_vmon_config@5 { // SKU = TA979SA, TA985SA
+                    sku_info = <0x92>;
+                    vmin_threshold = <0x1D>;
+                    vmax_threshold = <0x69>;
+                };
+                soc_vmon_config@6 { // SKU = TE985M
+                    sku_info = <0xD2>;
+                    vmin_threshold = <0x17>;
+                    vmax_threshold = <0x76>;
+                };
+                soc_vmon_config@7 { // SKU = TE970M
+                    sku_info = <0xD4>;
+                    vmin_threshold = <0x1A>;
+                    vmax_threshold = <0x76>;
+                };
+                soc_vmon_config@8 { // SKU = TE960M
+                    sku_info = <0xD5>;
+                    vmin_threshold = <0x1A>;
+                    vmax_threshold = <0x76>;
+                };
+                soc_vmon_config@9 { // SKU = TE950M
+                    sku_info = <0xD6>;
+                    vmin_threshold = <0x1A>;
+                    vmax_threshold = <0x76>;
+                };
+                soc_vmon_config@10 { // SKU = TA983SA
+                    sku_info = <0x94>;
+                    vmin_threshold = <0x1D>;
+                    vmax_threshold = <0x69>;
+                };
+                soc_vmon_config@11 { // SKU = TA977SA(Orin N variant 2:FSI merged with core rails)
+                    sku_info = <0x96>;
+                    vmin_threshold = <0x39>;
+                    vmax_threshold = <0x75>;
+                };
+                soc_vmon_config@12 { // SKU = TA987SA(Orin-Y)
+                    sku_info = <0x91>;
+                    vmin_threshold = <0x1D>;
+                    vmax_threshold = <0x69>;
+                };
+            };
+            vdd_cpu {
+                cpu_vmon_config@0 {  // SKU = INT
+                    sku_info = <0x0>;
+                    vmin_threshold = <0x17>;
+                    vmax_threshold = <0x6D>;
+                };
+                cpu_vmon_config@1 { // SKU = TA990SA, TE992M
+                    sku_info = <0x90>;
+                    vmin_threshold = <0x17>;
+                    vmax_threshold = <0x6D>;
+                };
+                cpu_vmon_config@2 { // SKU = TA975SA
+                    sku_info = <0x97>;
+                    vmin_threshold = <0x17>;
+                    vmax_threshold = <0x6D>;
+                };
+                cpu_vmon_config@3 { // SKU = TE990M
+                    sku_info = <0xD0>;
+                    vmin_threshold = <0x14>;
+                    vmax_threshold = <0x7B>;
+                };
+                cpu_vmon_config@4 { // SKU = TE980M(Orin NX)
+                    sku_info = <0xD3>;
+                    vmin_threshold = <0x15>;
+                    vmax_threshold = <0x7B>;
+                };
+                cpu_vmon_config@5 { // SKU = TA979SA, TA985SA
+                    sku_info = <0x92>;
+                    vmin_threshold = <0x17>;
+                    vmax_threshold = <0x6D>;
+                };
+                cpu_vmon_config@6 { // SKU = TE985M
+                    sku_info = <0xD2>;
+                    vmin_threshold = <0x14>;
+                    vmax_threshold = <0x7B>;
+                };
+                cpu_vmon_config@7 { // SKU = TE970M
+                    sku_info = <0xD4>;
+                    vmin_threshold = <0x15>;
+                    vmax_threshold = <0x7B>;
+                };
+                cpu_vmon_config@8 { // SKU = TE960M
+                    sku_info = <0xD5>;
+                    vmin_threshold = <0x15>;
+                    vmax_threshold = <0x7B>;
+                };
+                cpu_vmon_config@9 { // SKU = TE950M
+                    sku_info = <0xD6>;
+                    vmin_threshold = <0x15>;
+                    vmax_threshold = <0x7B>;
+                };
+                cpu_vmon_config@10 { // SKU = TA983SA
+                    sku_info = <0x94>;
+                    vmin_threshold = <0x17>;
+                    vmax_threshold = <0x6D>;
+                };
+                cpu_vmon_config@11 { // SKU = TA977SA(Orin N variant 2: FSI merged with core rails)
+                    sku_info = <0x96>;
+                    vmin_threshold = <0x39>;
+                    vmax_threshold = <0x75>;
+                };
+                cpu_vmon_config@12 { // SKU = TA987SA(Orin-Y)
+                    sku_info = <0x91>;
+                    vmin_threshold = <0x17>;
+                    vmax_threshold = <0x6D>;
+                };
+            };
+        };
+
+        ///////// SOCTHERM ///////////
+        soctherm {
+            max_chip_limit = <0x69>;
+            min_chip_limit = <0xFFFFFFE4>;
+            bjt_offsets {
+                bjt_config@0 { // SKU = INT
+                    sku_info = <0>;
+                    bjt25 = <0>;
+                    bjt26 = <0>;
+                    bjt27 = <0>;
+                    bjt28 = <0>;
+                    bjt29 = <0>;
+                    bjt30 = <0>;
+                };
+#if defined(POWER_PROFILE_983_D_01) // 37W
+                bjt_config@1 { // SKU = TA983
+                    sku_info = <0x94>;
+                    bjt25 = <0x80>; /* 4 */
+                    bjt26 = <0xc8>; /* 6.25 */
+                    bjt27 = <0xb0>; /* 5.5 */
+                    bjt28 = <0xb0>; /* 5.5 */
+                    bjt29 = <0x90>; /* 4.5 */
+                    bjt30 = <0x98>; /* 4.75 */
+                };
+#elif defined(POWER_PROFILE_983_D_02) // 70W
+                bjt_config@1 { // SKU = TA983
+                    sku_info = <0x94>;
+                    bjt25 = <0xa0>; /* 5 */
+                    bjt26 = <0x130>; /* 9.5 */
+                    bjt27 = <0x118>; /* 8.75 */
+                    bjt28 = <0x110>; /* 8.5 */
+                    bjt29 = <0x98>; /* 4.75 */
+                    bjt30 = <0xd8>; /* 6.75 */
+                };
+#endif
+#if defined(POWER_PROFILE_977_D_01) // 23W
+                bjt_config@2 { // SKU = TA977
+                    sku_info = <0x96>;
+                    bjt25 = <0x70>; /* 3.5 */
+                    bjt26 = <0x88>; /* 4.25 */
+                    bjt27 = <0x78>; /* 3.75 */
+                    bjt28 = <0xa0>; /* 5 */
+                    bjt29 = <0x80>; /* 4 */
+                    bjt30 = <0x90>; /* 4.5 */
+                };
+#elif defined(POWER_PROFILE_977_D_02) // 47W
+                bjt_config@2 { // SKU = TA977
+                    sku_info = <0x96>;
+                    bjt25 = <0xa0>; /* 5 */
+                    bjt26 = <0xc8>; /* 6.25 */
+                    bjt27 = <0xc0>; /* 6 */
+                    bjt28 = <0x138>; /* 9.75 */
+                    bjt29 = <0xe0>; /* 7 */
+                    bjt30 = <0x118>; /* 8.75 */
+                };
+#endif
+#if defined(POWER_PROFILE_979_D_01_02) // 58W
+                bjt_config@3 { // SKU = TA979
+                    sku_info = <0x92>;
+                    bjt25 = <0x80>; /* 4 */
+                    bjt26 = <0xf0>; /* 7.5 */
+                    bjt27 = <0xd8>; /* 6.75 */
+                    bjt28 = <0x170>; /* 11.5 */
+                    bjt29 = <0x130>; /* 9.5 */
+                    bjt30 = <0x138>; /* 9.75 */
+                };
+#endif
+#if defined(POWER_PROFILE_990_S_D_01)
+                bjt_config@4 { // SKU = TA990
+                    sku_info = <0x90>;
+                    bjt25 = <0x80>; /* 4 */
+                    bjt26 = <0xe0>; /* 7 */
+                    bjt27 = <0xc0>; /* 6 */
+                    bjt28 = <0x120>; /* 9 */
+                    bjt29 = <0xe8>; /* 7.25 */
+                    bjt30 = <0x100>; /* 8 */
+                };
+#elif defined(POWER_PROFILE_990_D_02) || defined(POWER_PROFILE_990_D_04) || \
+      defined(POWER_PROFILE_990_D_05)
+                bjt_config@4 { // SKU = TA990
+                    sku_info = <0x90>;
+                    bjt25 = <0xb0>; /* 5.5 */
+                    bjt26 = <0x128>; /* 9.25 */
+                    bjt27 = <0x110>; /* 8.5 */
+                    bjt28 = <0x158>; /* 10.75 */
+                    bjt29 = <0xc0>; /* 6 */
+                    bjt30 = <0x128>; /* 9.25 */
+                };
+#elif defined(POWER_PROFILE_990_D_03) // 47W
+                bjt_config@4 { // SKU = TA990
+                    sku_info = <0x90>;
+                    bjt25 = <0x98>; /* 4.75 */
+                    bjt26 = <0xd0>; /* 6.5 */
+                    bjt27 = <0x98>; /* 4.75 */
+                    bjt28 = <0x108>; /* 8.25 */
+                    bjt29 = <0xc8>; /* 6.25 */
+                    bjt30 = <0x100>; /* 8 */
+                };
+#endif
+#if defined(POWER_PROFILE_987_D_02) || defined(POWER_PROFILE_987_S_03) // Orin-Y
+                bjt_config@5 { // SKU = TA987SA
+                    sku_info = <0x91>;
+                    bjt25 = <0x98>; /* 4.75 */
+                    bjt26 = <0x120>; /* 9 */
+                    bjt27 = <0x118>; /* 8.75 */
+                    bjt28 = <0x180>; /* 12 */
+                    bjt29 = <0xb8>; /* 5.75 */
+                    bjt30 = <0x130>; /* 9.5 */
+                };
+#endif
+            };
+        };
+
+        ///////// ECID ///////////
+#if defined(CHIP_ECID_0) && defined(CHIP_ECID_1) && defined(CHIP_ECID_2) && defined(CHIP_ECID_3)
+        ecid {
+           ecid_0 = <CHIP_ECID_0>;
+           ecid_1 = <CHIP_ECID_1>;
+           ecid_2 = <CHIP_ECID_2>;
+           ecid_3 = <CHIP_ECID_3>;
+       };
+#else
+       ecid {
+           ecid_0 = <0x0>;
+           ecid_1 = <0x0>;
+           ecid_2 = <0x0>;
+           ecid_3 = <0x0>;
+       };
+#endif
+
+        ///////// MBWT ///////////
+        mbwt_settings {
+            ape = <0>;
+            axiap = <0>;
+            nvdec_rd = <0>;
+            nvdec_wr = <0>;
+            nvjpg = <0>;
+            nvjpg1 = <0>;
+            xusb_d_rd = <0>;
+            xusb_d_wr = <0>;
+            xusb_h_rd = <0>;
+            xusb_h_wr = <0>;
+            dram_freq_mhz = <0x0>;
+            data@0 { // APE
+                target_util = <0x0>;
+                hub_grant_dec = <0x0>;
+            };
+            data@1 { // DFD/AXIAP
+                target_util = <0x0>;
+                hub_grant_dec = <0x0>;
+            };
+            data@2 { // NVDEC:Read
+                target_util = <0x0>;
+                hub_grant_dec = <0x0>;
+            };
+            data@3 { // NVDEC:Write
+                target_util = <0x0>;
+                hub_grant_dec = <0x0>;
+            };
+            data@4 { // NVJPG
+                target_util = <0x0>;
+                hub_grant_dec = <0x0>;
+            };
+            data@5 { // NVJPG1
+                target_util = <0x0>;
+                hub_grant_dec = <0x0>;
+            };
+            data@6 { // XUSB-D:Read
+                target_util = <0x0>;
+                hub_grant_dec = <0x0>;
+            };
+            data@7 { // XUSB-D:Write
+                target_util = <0x0>;
+                hub_grant_dec = <0x0>;
+            };
+            data@8 { // XUSB-H:Read
+                target_util = <0x0>;
+                hub_grant_dec = <0x0>;
+            };
+            data@9 { // XUSB-H:Write
+                target_util = <0x0>;
+                hub_grant_dec = <0x0>;
+            };
+        };
+    };
+};

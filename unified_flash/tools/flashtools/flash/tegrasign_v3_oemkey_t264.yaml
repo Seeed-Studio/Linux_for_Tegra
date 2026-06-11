@@ -1,0 +1,702 @@
+#
+# SPDX-FileCopyrightText: Copyright (c) 2024 - 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+#
+# NVIDIA Corporation and its licensors retain all intellectual property
+# and proprietary rights in and to this software, related documentation
+# and any modifications thereto.  Any use, reproduction, disclosure or
+# distribution of this software and related documentation without an express
+# license agreement from NVIDIA Corporation is strictly prohibited.
+#
+{"DER_OEM":
+    {
+    "0x260":   # This is to be moved to tegrasign_v3_oem.yaml when chip info can exposed
+        {
+            "AES" : {
+                "SBK" :
+                {
+                    "Plain" : "753aafbeab213322ef0f8cecc805d1b086e252953dfb3cac215a778f68cb5a72",
+                    #"Plain" : "0000000000000000000000000000000000000000000000000000000000000000",
+                },
+                "SBK_HPSE" :
+                {
+                    "Plain" : "753aafbeab213322ef0f8cecc805d1b086e252953dfb3cac215a778f68cb5a72",
+                    #"Plain" : "0000000000000000000000000000000000000000000000000000000000000000",
+                },
+                "SBK_SB" :
+                {
+                    "Plain" : "753aafbeab213322ef0f8cecc805d1b086e252953dfb3cac215a778f68cb5a72",
+                    #"Plain" : "0000000000000000000000000000000000000000000000000000000000000000",
+                },
+            },
+
+            "KDK" : {
+                "SBK_BCT_KDK" :
+                {
+                    "KDK" : "SBK",
+                    "Label" : "BCTB",
+                },
+                "SBK_HPSE_BCT_KDK" :
+                {
+                    "KDK" : "SBK_HPSE",
+                    "Label" : "HPCT",
+                },
+                "SBK_SB_BCT_KDK" :
+                {
+                    "KDK" : "SBK_SB",
+                    "Label" : "SBCT",
+                },
+                "SBK_MB1BCT_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "MBCT",
+                },
+                "SBK_MB2BCT_KDK" :
+                {
+                    "KDK" : "SBK",
+                    "Label" : "MBC2",
+                },
+                "SBK_MEMBCT0_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "MEM0",
+                },
+                "SBK_MEMBCT1_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "MEM1",
+                },
+                "SBK_MEMBCT2_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "MEM2",
+                },
+                "SBK_MEMBCT3_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "MEM3",
+                },
+                "SBK_MEMBCT4_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "MEM4",
+                },
+                "SBK_MEMBCT5_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "MEM5",
+                },
+                "SBK_MEMBCT6_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "MEM6",
+                },
+                "SBK_MEMBCT7_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "MEM7",
+                },
+                "SBK_MEMDTB0_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "MDT0",
+                },
+                "SBK_MEMDTB1_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "MDT1",
+                },
+                "SBK_MEMDTB2_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "MDT2",
+                },
+                "SBK_MEMDTB3_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "MDT3",
+                },
+                "SBK_MEMDTB4_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "MDT4",
+                },
+                "SBK_MEMDTB5_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "MDT5",
+                },
+                "SBK_MEMDTB6_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "MDT6",
+                },
+                "SBK_MEMDTB7_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "MDT7",
+                },
+                "SBK_MB1_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "MB1B",
+                },
+                "SBK_MB2_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "MB2B",
+                },
+                "SBK_MB2_RF_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "MB2R",
+                },
+                "SBK_SC7_RF_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "WB0B",
+                },
+                "SBK_BL1_KDK" :
+                {
+                    "KDK" : "SBK",
+                    "Label" : "PSCB",
+                },
+                "SBK_HPSE_BL1_KDK" :
+                {
+                    "KDK" : "SBK_HPSE",
+                    "Label" : "HPLD",
+                },
+                "SBK_SB_BL1_KDK" :
+                {
+                    "KDK" : "SBK_SB",
+                    "Label" : "SBLD",
+                },
+                "SBK_HPSE_OM_KDK" :
+                {
+                    "KDK" : "SBK_HPSE_NVMB_KDK", # SBK_HPSE_NVMB_KDK
+                    "Label" : "HPOM",
+                },
+                "SBK_SB_OM_KDK" :
+                {
+                    "KDK" : "SBK_HPSE_NVMB_KDK", # SBK_SB_NVMB_KDK
+                    "Label" : "SBOM",
+                },
+                "SBK_HPSE_PCT_KDK" :
+                {
+                    "KDK" : "SBK_HPSE_NVMB_KDK", # SBK_SB_NVMB_KDK
+                    "Label" : "HPCF",
+                },
+                "SBK_SB_PCT_KDK" :
+                {
+                    "KDK" : "SBK_HPSE_NVMB_KDK", # SBK_SB_NVMB_KDK
+                    "Label" : "SBCF",
+                },
+                "SBK_PSCFW_PKG_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "PFWP",
+                },
+             # NVMB  KDK  #
+                "SBK_NVMB_KDK" :
+                {
+                    "KDK" : "SBK",
+                    "Label" : "BL1_",
+                    "HexLabel": True
+                },
+                "SBK_FW_KDK" :
+                {
+                    "KDK"    : "SBK_NVMB_KDK",
+                    "Label"  : "FW__",
+                    "HexLabel": True
+                },
+                "SBK_HPSE_NVMB_KDK" :
+                {
+                    "KDK" : "SBK_HPSE",
+                    "Label" : "BL1_",
+                    "HexLabel": True
+                },
+                "SBK_SB_NVMB_KDK" :
+                {
+                    "KDK" : "SBK_SB",
+                    "Label" : "BL1_",
+                    "HexLabel": True
+                },
+                "SBK_TZ_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                },
+                "SBK_GP_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                },
+                "SBK_GP_TOSB_KDK" :
+                {
+                    "KDK" : "SBK_GP_KDK",
+                },
+
+             # MCE  KDK  #
+                "SBK_MCE_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "MTSM",
+                },
+             # BPMP-FW  KDK  #
+                "SBK_BPMP_FW_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "BPMF",
+                },
+             # BPMP-MB2  KDK  #
+                "SBK_BPMP_MB2_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "MB2A",
+                },
+                "SBK_BPMP_DTB_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "BPMD",
+                },
+             # BPMP-IST FW KDK  #
+                "SBK_BPMP_IST_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "BIST",
+                },
+             # CCPLEX_IST  KDK  #
+                "SBK_CCPLEX_IST_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "CIUC",
+                },
+             # IST_UCODE  KDK  #
+                "SBK_IST_UCODE_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "ISTU",
+                },
+             # IST_CONFIG  KDK  #
+                "SBK_IST_CONFIG_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "ISTC",
+                },
+             # IST_VECTOR  KDK  #
+                "SBK_IST_VECTOR_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "OITV",
+                },
+
+                "SBK_TSEC_KDK" :
+                {
+                    "KDK" : "SBK_FW_KDK",
+                    "Label" : "TSEC",
+                },
+                "SBK_IGPU_KDK" :
+                {
+                    "KDK" : "SBK_NVMB_KDK",
+                    "Label" : "GBFW",
+                },
+             # APE  KDK  #
+                "SBK_APE_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "APEF",
+                },
+                "SBK_APE1_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "APE1",
+                },
+                "SBK_AON_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "AONF",
+                },
+             # ATF  KDK  #
+                "SBK_ATF_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "BL31",
+                },
+
+             # CPU BOOTLOADER  KDK  #
+                "SBK_CPU_BL_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "CPBL",
+                },
+             # DCE  KDK  #
+                "SBK_DCE_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "DCEF",
+                },
+             # EKS  KDK  #
+                "SBK_EKS_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "EKSB",
+                },
+             # FSI  KDK  #
+                "SBK_FSI_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "FSIF",
+                },
+             # MEM-DTB  KDK  #
+                "SBK_MEM_DTB_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "MEMD",
+                },
+                "SBK_PVA_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "PVAF",
+                },
+                "SBK_RCE_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "RCEF",
+                },
+                "SBK_RCE1_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "RC1F",
+                },
+                "SBK_RCDT_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "RCDT",
+                },
+                 "SBK_RIST_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "RTID",
+                },
+                "SBK_SEC_FW_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "SECP",
+                },
+                "SBK_SEC_HV_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "BL32",
+                },
+             # XUSB  KDK  #
+                "SBK_XUSB_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "XUSB",
+                },
+             # KRNL KDK    (for hypervisor)#
+                "SBK_HV_KRNL_KDK" :
+                {
+                    "KDK" : "SBK_TZ_KDK",
+                    "Label" : "KRNL",
+                },
+             # PL_KRNL KDK (for PL)#
+                "SBK_PL_KRNL_KDK" :
+                {
+                    "KDK" : "SBK_GP_KDK",
+                    "Label" : "KRNL",
+                },
+             # QB_RAMD KDK#
+                "SBK_QB_RAMD_KDK" :
+                {
+                    "KDK" : "SBK_GP_KDK",
+                    "Label" : "RAMD",
+                },
+             # QB_OSDT KDK#
+                "SBK_QB_OSDT_KDK" :
+                {
+                    "KDK" : "SBK_GP_KDK",
+                    "Label" : "OSDT",
+                },
+
+            },
+
+            "DK" : {
+                "SBK_BCT_DK" :
+                {
+                    "KDK" : "SBK_BCT_KDK",
+                },
+                "SBK_HPSE_BCT_DK" :
+                {
+                    "KDK" : "SBK_HPSE_BCT_KDK",
+                },
+                "SBK_SB_BCT_DK" :
+                {
+                    "KDK" : "SBK_SB_BCT_KDK",
+                },
+                "SBK_MB1BCT_DK" :
+                {
+                    "KDK" : "SBK_MB1BCT_KDK",
+                },
+                "SBK_MB2BCT_DK" :
+                {
+                    "KDK" : "SBK_MB2BCT_KDK",
+                },
+                "SBK_MEMBCT0_DK" :
+                {
+                    "KDK" : "SBK_MEMBCT0_KDK",
+                },
+                "SBK_MEMBCT1_DK" :
+                {
+                    "KDK" : "SBK_MEMBCT1_KDK",
+                },
+                "SBK_MEMBCT2_DK" :
+                {
+                    "KDK" : "SBK_MEMBCT2_KDK",
+                },
+                "SBK_MEMBCT3_DK" :
+                {
+                    "KDK" : "SBK_MEMBCT3_KDK",
+                },
+                "SBK_MEMBCT4_DK" :
+                {
+                    "KDK" : "SBK_MEMBCT4_KDK",
+                },
+                "SBK_MEMBCT5_DK" :
+                {
+                    "KDK" : "SBK_MEMBCT5_KDK",
+                },
+                "SBK_MEMBCT6_DK" :
+                {
+                    "KDK" : "SBK_MEMBCT6_KDK",
+                },
+                "SBK_MEMBCT7_DK" :
+                {
+                    "KDK" : "SBK_MEMBCT7_KDK",
+                },
+                "SBK_MEMDTB0_DK" :
+                {
+                    "KDK" : "SBK_MEMDTB0_KDK",
+                },
+                "SBK_MEMDTB1_DK" :
+                {
+                    "KDK" : "SBK_MEMDTB1_KDK",
+                },
+                "SBK_MEMDTB2_DK" :
+                {
+                    "KDK" : "SBK_MEMDTB2_KDK",
+                },
+                "SBK_MEMDTB3_DK" :
+                {
+                    "KDK" : "SBK_MEMDTB3_KDK",
+                },
+                "SBK_MEMDTB4_DK" :
+                {
+                    "KDK" : "SBK_MEMDTB4_KDK",
+                },
+                "SBK_MEMDTB5_DK" :
+                {
+                    "KDK" : "SBK_MEMDTB5_KDK",
+                },
+                "SBK_MEMDTB6_DK" :
+                {
+                    "KDK" : "SBK_MEMDTB6_KDK",
+                },
+                "SBK_MEMDTB7_DK" :
+                {
+                    "KDK" : "SBK_MEMDTB7_KDK",
+                },
+                "SBK_BL1_DK" :
+                {
+                    "KDK" : "SBK_BL1_KDK",
+                },
+                "SBK_HPSE_BL1_DK" :
+                {
+                    "KDK" : "SBK_HPSE_BL1_KDK",
+                },
+                "SBK_SB_BL1_DK" :
+                {
+                    "KDK" : "SBK_SB_BL1_KDK",
+                },
+                "SBK_HPSE_OM_DK" :
+                {
+                    "KDK" : "SBK_HPSE_OM_KDK",
+                },
+                "SBK_SB_OM_DK" :
+                {
+                    "KDK" : "SBK_SB_OM_KDK",
+                },
+                "SBK_HPSE_PCT_DK" :
+                {
+                    "KDK" : "SBK_HPSE_PCT_KDK",
+                },
+                "SBK_SB_PCT_DK" :
+                {
+                    "KDK" : "SBK_SB_PCT_KDK",
+                },
+                "SBK_MB1_DK" :
+                {
+                    "KDK" : "SBK_MB1_KDK",
+                },
+                "SBK_MB2_DK" :
+                {
+                    "KDK" : "SBK_MB2_KDK",
+                },
+                "SBK_MB2_RF_DK" :
+                {
+                    "KDK" : "SBK_MB2_RF_KDK",
+                },
+                "SBK_SC7_RF_DK" :
+                {
+                    "KDK" : "SBK_SC7_RF_KDK",
+                },
+                "SBK_PSCFW_PKG_DK" :
+                {
+                    "KDK" : "SBK_PSCFW_PKG_KDK",
+                },
+             # MCE  DK  #
+                "SBK_MCE_DK" :
+                {
+                    "KDK" : "SBK_MCE_KDK",
+                },
+             # BPMP  DK  #
+                "SBK_BPMP_FW_DK" :
+                {
+                    "KDK" : "SBK_BPMP_FW_KDK",
+                },
+             # BPMP-MB2  DK  #
+                "SBK_BPMP_MB2_DK" :
+                {
+                    "KDK" : "SBK_BPMP_MB2_KDK",
+                },
+
+             # BPMP-DTB  DK  #
+                "SBK_BPMP_DTB_DK" :
+                {
+                    "KDK" : "SBK_BPMP_DTB_KDK",
+                },
+             # BPMP-IST FW DK  #
+                "SBK_BPMP_IST_DK" :
+                {
+                    "KDK" : "SBK_BPMP_IST_KDK",
+                },
+             # CCPLEX_IST  DK  #
+                "SBK_CCPLEX_IST_DK" :
+                {
+                    "KDK" : "SBK_CCPLEX_IST_KDK",
+                },
+             # IST_UCODE   DK  #
+                "SBK_IST_UCODE_DK" :
+                {
+                    "KDK" : "SBK_IST_UCODE_KDK",
+                },
+             # IST_CONFIG   DK  #
+                "SBK_IST_CONFIG_DK" :
+                {
+                    "KDK" : "SBK_IST_CONFIG_KDK",
+                },
+             # IST_Test Vector  DK  #
+                "SBK_IST_VECTOR_DK" :
+                {
+                    "KDK" : "SBK_IST_VECTOR_KDK",
+                },
+
+                "SBK_TSEC_DK" :
+                {
+                    "KDK" : "SBK_TSEC_KDK",
+                },
+                "SBK_IGPU_DK" :
+                {
+                    "KDK" : "SBK_IGPU_KDK",
+                },
+             # MB2-loaded:  #
+                "SBK_APE_DK" :
+                {
+                    "KDK" : "SBK_APE_KDK",
+                },
+                "SBK_APE1_DK" :
+                {
+                    "KDK" : "SBK_APE1_KDK",
+                },
+                "SBK_AON_DK" :
+                {
+                    "KDK" : "SBK_AON_KDK",
+                },
+               "SBK_ATF_DK" :
+                {
+                    "KDK" : "SBK_ATF_KDK",
+                },
+                "SBK_CPU_BL_DK" :
+                {
+                    "KDK" : "SBK_CPU_BL_KDK",
+                },
+                "SBK_EKS_DK" :
+                {
+                    "KDK" : "SBK_EKS_KDK",
+                },
+                "SBK_DCE_DK" :
+                {
+                    "KDK" : "SBK_DCE_KDK",
+                },
+                "SBK_FSI_DK" :
+                {
+                    "KDK" : "SBK_FSI_KDK",
+                },
+               "SBK_MEM_DTB_DK" :
+                {
+                    "KDK" : "SBK_MEM_DTB_KDK",
+                },
+               "SBK_PVA_DK" :
+                {
+                    "KDK" : "SBK_PVA_KDK",
+                },
+                "SBK_RCE_DK" :
+                {
+                    "KDK" : "SBK_RCE_KDK",
+                },
+                "SBK_RCE1_DK" :
+                {
+                    "KDK" : "SBK_RCE1_KDK",
+                },
+                "SBK_RCDT_DK" :
+                {
+                    "KDK" : "SBK_RCDT_KDK",
+                },
+               "SBK_RIST_DK" :
+                {
+                    "KDK" : "SBK_RIST_KDK",
+                },
+               "SBK_SEC_FW_DK" :
+                {
+                    "KDK" : "SBK_SEC_FW_KDK",
+                },
+               "SBK_SEC_HV_DK" :
+                {
+                    "KDK" : "SBK_SEC_HV_KDK",
+                },
+                "SBK_XUSB_DK" :
+                {
+                    "KDK" : "SBK_XUSB_KDK",
+                },
+             # HV_KRNL DK    (for hypervisor) #
+                "SBK_HV_KRNL_DK" :
+                {
+                    "KDK" : "SBK_HV_KRNL_KDK",
+                },
+             # PL_KRNL DK (for PL)#
+                "SBK_PL_KRNL_DK" :
+                {
+                    "KDK" : "SBK_PL_KRNL_KDK",
+                },
+             # QB_RAMD DK#
+                "SBK_QB_RAMD_DK" :
+                {
+                    "KDK" : "SBK_QB_RAMD_KDK",
+                },
+             # QB_OSDT DK#
+                "SBK_QB_OSDT_DK" :
+                {
+                    "KDK" : "SBK_QB_OSDT_KDK",
+                },
+            }
+        },
+    },
+}

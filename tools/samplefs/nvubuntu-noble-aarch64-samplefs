@@ -1,0 +1,4 @@
+DISTRO="ubuntu"
+VERSION="noble"
+EABI="aarch64"
+BASE_URL="https://cdimage.ubuntu.com/ubuntu-base/releases/24.04/release/ubuntu-base-24.04.3-base-arm64.tar.gz"
