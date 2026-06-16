@@ -1,29 +1,75 @@
 #!/bin/bash
-# do_copy.sh - deploy the freshly built kernel Image and device-tree blobs
-# into ../kernel/ so that flash.sh / l4t_initrd_flash.sh pick them up.
-#
-# Combined from the R36.5.0 (Orin / tegra234) and R38.4.0 (Thor / tegra264)
-# do_copy.sh, adapted to the JP7.2 (L4T r39) build output layout:
-#   - device trees : kernel_out/build/nvidia-public/devicetree/generic-dtbs/
-#                    (r36/r38 used kernel_out/kernel-devicetree/generic-dts/dtbs/)
-#   - kernel Image : kernel_out/kernel/kernel-noble/arch/arm64/boot/Image
-#                    (r36 used kernel-jammy-src; JP7 uses kernel-noble)
-#
-# nvbuild.sh produces device trees for every supported board (both tegra234
-# and tegra264) in one run, so we copy all produced .dtb/.dtbo here; flash.sh
-# selects the one matching the board .conf at flash time. Missing files are
-# tolerated so a partial / single-SoC build does not abort this script.
 
-DTB_SRC="./kernel_out/build/nvidia-public/devicetree/generic-dtbs"
-DTB_DST="../kernel/dtb"
-IMG_SRC="./kernel_out/kernel/kernel-noble/arch/arm64/boot/Image"
-IMG_DST="../kernel/Image"
+# Thor (tegra264) carrier board device trees - from R38.4.0
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra264-p4071-0000+p3834-0008-nv.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra264-p4071-0000+p3834-0008-recomputer-carrier.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra264-p4071-0000+p3834-0000-recomputer-carrier.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra264-p4071-camera-maxim-3g-overlay.dtbo ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra264-p4071-camera-maxim-6g-overlay.dtbo ../kernel/dtb/
 
-mkdir -p "$DTB_DST"
+# Orin (tegra234) carrier board device trees + overlays - from R36.5.0
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j501x-0000+p3701-0004-reserver.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j501x-0000+p3701-0005-reserver.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j501x-0000+p3701-0000-reserver.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-p3737-0000+p3701-0000-seeed.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-p3737-0000+p3701-0004-seeed.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-p3737-0000+p3701-0005-seeed.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j501x-0000+p3701-0004-reserver-gmsl.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j501x-0000+p3701-0005-reserver-gmsl.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j501x-0000+p3701-0000-reserver-gmsl.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j401-p3768-0000+p3767-0000-recomputer.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j401-p3768-0000+p3767-0001-recomputer.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j401-p3768-0000+p3767-0003-recomputer.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j401-p3768-0000+p3767-0004-recomputer.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j401-p3768-0000+p3767-0000-reserver-indu.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j401-p3768-0000+p3767-0001-reserver-indu.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j401-p3768-0000+p3767-0003-reserver-indu.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j401-p3768-0000+p3767-0004-reserver-indu.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j201-p3768-0000+p3767-0000-recomputer-indu.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j201-p3768-0000+p3767-0001-recomputer-indu.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j201-p3768-0000+p3767-0003-recomputer-indu.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j201-p3768-0000+p3767-0004-recomputer-indu.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j40mini-p3768-0000+p3767-0000-recomputer.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j40mini-p3768-0000+p3767-0001-recomputer.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j40mini-p3768-0000+p3767-0003-recomputer.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j40mini-p3768-0000+p3767-0004-recomputer.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j401-p3768-0000+p3767-0000-recomputer-super.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j401-p3768-0000+p3767-0001-recomputer-super.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j401-p3768-0000+p3767-0003-recomputer-super.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j401-p3768-0000+p3767-0004-recomputer-super.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j401-p3768-0000+p3767-0000-recomputer-robo.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j401-p3768-0000+p3767-0001-recomputer-robo.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j401-p3768-0000+p3767-0003-recomputer-robo.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j401-p3768-0000+p3767-0004-recomputer-robo.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-p3767-camera-p3768-imx219-dual-seeed.dtbo ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-p3767-camera-p3768-imx219-quad-seeed.dtbo ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-p3767-camera-p3768-imx477-dual-seeed.dtbo ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-p3767-camera-p3768-imx219-imx477.dtbo ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-p3767-camera-p3768-imx477-imx219.dtbo ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-seeed-gmsl2x4-3g-overlay.dtbo ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-seeed-gmsl1x4-6g-overlay.dtbo ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-seeed-gmsl1x4-3g-overlay.dtbo ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-seeed-gmsl2x1x4-3g-overlay.dtbo ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-seeed-gmsl2x1x4-6g-overlay.dtbo ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-seeed-orbbec-335lg-overlay.dtbo ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-seeed-gmsl2x4-orbbec-335lg-overlay.dtbo ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-seeed-gmsl-recomputer-robo-3g-overlay.dtbo ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-seeed-gmsl-recomputer-robo-6g-overlay.dtbo ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j401-p3768-0000+p3767-0000-recomputer-robo-gmsl.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j401-p3768-0000+p3767-0001-recomputer-robo-gmsl.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j401-p3768-0000+p3767-0003-recomputer-robo-gmsl.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j401-p3768-0000+p3767-0004-recomputer-robo-gmsl.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j401-p3768-0000+p3767-0000-recomputer-rugged.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j401-p3768-0000+p3767-0001-recomputer-rugged.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j401-p3768-0000+p3767-0003-recomputer-rugged.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j401-p3768-0000+p3767-0004-recomputer-rugged.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j501x-0000+p3701-0000-recomputer-mini.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j501x-0000+p3701-0004-recomputer-mini.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j501x-0000+p3701-0005-recomputer-mini.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j501x-0000+p3701-0000-recomputer-robo.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j501x-0000+p3701-0004-recomputer-robo.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j501x-0000+p3701-0005-recomputer-robo.dtb ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-dcb-p3701-0000-hdmi.dtbo ../kernel/dtb/
 
-# board device trees + overlays (Thor t264 and Orin t234)
-cp -f "$DTB_SRC"/*.dtb  "$DTB_DST"/ 2>/dev/null || true
-cp -f "$DTB_SRC"/*.dtbo "$DTB_DST"/ 2>/dev/null || true
-
-# kernel Image
-cp -f "$IMG_SRC" "$IMG_DST"
+# kernel Image (JP7 uses kernel-noble; was kernel-jammy-src on r36)
+cp  ./kernel_out/kernel/kernel-noble/arch/arm64/boot/Image ../kernel/Image
