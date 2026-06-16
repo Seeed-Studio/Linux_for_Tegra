@@ -1,0 +1,65 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+/dts-v1/;
+
+#include "tegra234-j401-p3768-0000+p3767-recomputer-robo-common.dts"
+//#include "tegra234-camera-quad-g300-overlay.dts"
+// #include "tegra234-camera-quad-isx031c-overlay.dts"
+
+
+#define CAM0_RST_L	TEGRA234_AON_GPIO(CC, 3)
+#define CAM0_PWDN   TEGRA234_MAIN_GPIO(H, 6)
+#define MFP9 TEGRA234_MAIN_GPIO(AC, 0)
+#define MFP10  TEGRA234_MAIN_GPIO(Z, 7)
+
+/ {
+        compatible = "nvidia,p3768-0000+p3767-0001-super", "nvidia,p3767-0001", "nvidia,tegra234";
+        model = "NVIDIA Jetson Orin Nano Seeed recomputer classic Robotics";
+
+        leds {
+                compatible = "gpio-leds";
+                led1: led1 {
+                        label = "led1";
+                        gpios = <&gpio_xten 6 GPIO_ACTIVE_HIGH>;
+                        default-state = "on";
+                };
+        };
+        bus@0 {
+			/* GPIO configuration */
+			gpio@2200000 {
+				camera-control-output-high {
+					gpio-hog;
+					output-high;
+					gpios = <CAM0_PWDN 0 MFP9 0 MFP10 0>;
+					label = "cam0-pwdn", "mfp9", "mfp10";
+				};
+			};
+
+		gpio@c2f0000 {
+			camera-control-output-high2 {
+				gpio-hog;
+				output-high;
+				gpios = <CAM0_RST_L 0>;
+				label = "cam0-rst";
+			};
+		};   
+
+		i2c@3180000 {
+			status = "okay";
+			mux_cam_i2c: cam_i2cmux@70 {
+				compatible = "nxp,pca9548";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0x70>;
+				idle-state = <0>;
+				i2c@0{
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <0>;
+				};
+			}; 
+		};
+            
+     };
+};
