@@ -520,7 +520,7 @@ generate_flash_initrd()
 		cp "${ROOTFS_DIR}/usr/sbin/e2fsck" "${working_dir}/initrd/usr/sbin"
 		cp "${ROOTFS_DIR}/usr/sbin/dumpe2fs" "${working_dir}/initrd/usr/sbin"
 		cp "${ROOTFS_DIR}/usr/sbin/nvluks-srv-app" "${working_dir}/initrd/usr/sbin"
-		mkdir  "${working_dir}/initrd/usr/share/misc/"
+		mkdir -p "${working_dir}/initrd/usr/share/misc/"
 		cp "${ROOTFS_DIR}/usr/share/misc/magic.mgc" "${working_dir}/initrd/usr/share/misc/"
 		cp "${ROOTFS_DIR}/lib/aarch64-linux-gnu/libsmartcols.so.1" "${working_dir}/initrd/lib/aarch64-linux-gnu"
 		cp "${ROOTFS_DIR}/usr/lib/aarch64-linux-gnu/libbsd.so.0" "${working_dir}/initrd/usr/lib/aarch64-linux-gnu/libbsd.so.0"
