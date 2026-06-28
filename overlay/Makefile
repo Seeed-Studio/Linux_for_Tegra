@@ -83,6 +83,7 @@ dtbo-y += tegra234-seeed-gmsl2x1x4-3g-overlay.dtbo
 dtbo-y += tegra234-seeed-gmsl2x1x4-6g-overlay.dtbo
 dtbo-y += tegra234-seeed-gmsl-recomputer-robo-3g-overlay.dtbo
 dtbo-y += tegra234-seeed-gmsl-recomputer-robo-6g-overlay.dtbo
+dtbo-y += tegra234-stereolabs-zedx-overlay.dtbo
 
 # Board-specific overlay: inject #define based on CONFIG variable
 # Get absolute path of the overlay directory

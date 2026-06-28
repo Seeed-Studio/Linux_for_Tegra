@@ -1,0 +1,71 @@
+// SPDX-License-Identifier: GPL-2.0-only
+
+/*
+ * Board-level configuration for tegra234-stereolabs-zedx-overlay.dts.
+ *
+ * Add future boards here with a new CONFIG_* block and keep camera topology in
+ * the shared overlay unless the GMSL camera layout itself changes.
+ */
+
+#if !defined(CONFIG_RECOMPUTER_ROBO_AGX_ORIN_J501X)
+#define CONFIG_RECOMPUTER_ROBO_AGX_ORIN_J501X
+#endif
+
+#if defined(CONFIG_RECOMPUTER_ROBO_AGX_ORIN_J501X)
+
+#define ZEDX_OVERLAY_NAME	"Stereolabs ZED X for reComputer J501 Robo"
+
+#define CAM0_RST_L		TEGRA234_MAIN_GPIO(H, 3)
+#define CAM0_PWDN		TEGRA234_MAIN_GPIO(H, 6)
+#define CAM0_VDD		14
+
+#define TEGRA_ZEDX_GMSL_I2C	i2c@3190000
+#define ZEDX_DSER_PWR_GPIO	<&gpio CAM0_PWDN GPIO_ACTIVE_HIGH>
+
+#define ZEDX_DEVNAME_LEFT0	"zedx 3-0028"
+#define ZEDX_DEVNAME_RIGHT0	"zedx 3-0020"
+#define ZEDX_DEVNAME_ONE_GS1	"zedx 3-0011"
+#define ZEDX_DEVNAME_ONE_GS2	"zedx 3-0012"
+#define ZEDX_DEVNAME_LEFT1	"zedx 3-0038"
+#define ZEDX_DEVNAME_RIGHT1	"zedx 3-0030"
+
+#define ZEDX_PROC_LEFT0		"/proc/device-tree/bus@0/i2c@3190000/zedx_left_0@28"
+#define ZEDX_PROC_RIGHT0	"/proc/device-tree/bus@0/i2c@3190000/zedx_right_0@20"
+#define ZEDX_PROC_ONE_GS1	"/proc/device-tree/bus@0/i2c@3190000/zedxone_gs_1@11"
+#define ZEDX_PROC_ONE_GS2	"/proc/device-tree/bus@0/i2c@3190000/zedxone_gs_2@12"
+#define ZEDX_PROC_LEFT1		"/proc/device-tree/bus@0/i2c@3190000/zedx_left_1@38"
+#define ZEDX_PROC_RIGHT1	"/proc/device-tree/bus@0/i2c@3190000/zedx_right_1@30"
+
+#define BOARD_GPIO_SETUP \
+	gpio@2200000 { \
+		camera-control-output-high1 { \
+			gpio-hog; \
+			output-high; \
+			gpios = <CAM0_RST_L 0 CAM0_PWDN 0>; \
+			label = "cam0-rst", "cam0-pwdn"; \
+		}; \
+	}; \
+	i2c@3160000 { \
+		gpio_xten@21 { \
+			CAM0_VDD { \
+				gpio-hog; \
+				gpios = <CAM0_VDD GPIO_ACTIVE_HIGH>; \
+				output-high; \
+				line-name = "CAM0_VDD"; \
+			}; \
+		}; \
+	};
+
+#define BOARD_GPIOS_SET \
+	cam0_vdd { \
+		compatible = "regulator-fixed"; \
+		regulator-name = "cam0-vdd"; \
+		gpio = <&gpio_xten CAM0_VDD GPIO_ACTIVE_HIGH>; \
+		enable-active-high; \
+		regulator-boot-on; \
+		regulator-always-on; \
+	};
+
+#else
+#error "No board configuration selected for tegra234-stereolabs-zedx-overlay.dts"
+#endif
