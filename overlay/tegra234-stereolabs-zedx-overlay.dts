@@ -1389,9 +1389,9 @@
 					};
 
 					/* GMSL 3, PHY d, port-index 7 */
-					zedx_left7: zedx_left_7@49 {
+					zedx_left7: zedx_left_7@14 {
 						compatible = "stereolabs,zedx";
-						reg = <0x49>;
+						reg = <0x14>;
 
 						ZED_ORIN_CLKS
 
@@ -1413,7 +1413,7 @@
 							port@0 {
 								reg = <0>;
 								zedx_ar0234_out14: endpoint {
-									vc-id = <3>;
+									vc-id = <2>;
 									port-index = <7>;
 									opt-csi-port = "f";
 									bus-width = <NUM_LANES>;
