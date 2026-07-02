@@ -333,7 +333,7 @@
 						reg = <8>;
 						zedx_vi_in8: endpoint {
 							vc-id = <0>;
-							port-index = <5>;
+							port-index = <4>;
 							bus-width = <NUM_LANES>;
 							remote-endpoint = <&zedx_csi_out8>;
 						};
@@ -343,7 +343,7 @@
 						reg = <9>;
 						zedx_vi_in9: endpoint {
 							vc-id = <1>;
-							port-index = <5>;
+							port-index = <4>;
 							bus-width = <NUM_LANES>;
 							remote-endpoint = <&zedx_csi_out9>;
 						};
@@ -352,8 +352,8 @@
 					port@10 {
 						reg = <10>;
 						zedx_vi_in10: endpoint {
-							vc-id = <1>;
-							port-index = <5>;
+							vc-id = <2>;
+							port-index = <4>;
 							bus-width = <NUM_LANES>;
 							remote-endpoint = <&zedx_csi_out10>;
 						};
@@ -362,8 +362,8 @@
 					port@11 {
 						reg = <11>;
 						zedx_vi_in11: endpoint {
-							vc-id = <1>;
-							port-index = <5>;
+							vc-id = <3>;
+							port-index = <4>;
 							bus-width = <NUM_LANES>;
 							remote-endpoint = <&zedx_csi_out11>;
 						};
@@ -372,7 +372,7 @@
 					port@12 {
 						reg = <12>;
 						zedx_vi_in12: endpoint {
-							vc-id = <2>;
+							vc-id = <0>;
 							port-index = <5>;
 							bus-width = <NUM_LANES>;
 							remote-endpoint = <&zedx_csi_out12>;
@@ -382,7 +382,7 @@
 					port@13 {
 						reg = <13>;
 						zedx_vi_in13: endpoint {
-							vc-id = <3>;
+							vc-id = <1>;
 							port-index = <5>;
 							bus-width = <NUM_LANES>;
 							remote-endpoint = <&zedx_csi_out13>;
@@ -413,10 +413,10 @@
 					ZEDX_ONE_GS_VI_PORT(1, 17, 0, 1)
 					ZEDX_ONE_GS_VI_PORT(2, 18, 0, 2)
 					ZEDX_ONE_GS_VI_PORT(3, 19, 0, 3)
-					ZEDX_ONE_GS_VI_PORT(4, 20, 0, 5)
-					ZEDX_ONE_GS_VI_PORT(5, 21, 1, 5)
-					ZEDX_ONE_GS_VI_PORT(6, 22, 2, 5)
-					ZEDX_ONE_GS_VI_PORT(7, 23, 3, 5)
+					ZEDX_ONE_GS_VI_PORT(4, 20, 0, 4)
+					ZEDX_ONE_GS_VI_PORT(5, 21, 2, 4)
+					ZEDX_ONE_GS_VI_PORT(6, 22, 0, 5)
+					ZEDX_ONE_GS_VI_PORT(7, 23, 2, 5)
 
 				};
 			};
@@ -1070,7 +1070,7 @@
 
 					/* ---- sensor nodes (all channel = "b") ---- */
 
-					/* GMSL 0, shared output PHY c, VC0 */
+					/* GMSL 0, PHY e, Orin Port4, VI Stream4, VC0/VC1 */
 					zedx_left4: zedx_left_4@28 {
 						compatible = "stereolabs,zedx";
 						reg = <0x28>;
@@ -1087,7 +1087,7 @@
 						has-eeprom;
 						eeprom-addr = <0x54>;
 
-						AR0234_MODES("0", "serial_g", "0")
+						AR0234_MODES("0", "serial_e", "0")
 
 						ports {
 							#address-cells = <1>;
@@ -1097,7 +1097,7 @@
 								zedx_ar0234_out8: endpoint {
 									vc-id = <0>;
 									port-index = <4>;
-									opt-csi-port = "c";
+									opt-csi-port = "e";
 									bus-width = <NUM_LANES>;
 									i2c-cc = <0>;
 									remote-endpoint = <&zedx_csi_in8>;
@@ -1122,7 +1122,7 @@
 						has-eeprom;
 						eeprom-addr = <0x54>;
 
-						AR0234_MODES("1", "serial_g", "0")
+						AR0234_MODES("1", "serial_e", "0")
 
 						ports {
 							#address-cells = <1>;
@@ -1132,7 +1132,7 @@
 								zedx_ar0234_out9: endpoint {
 									vc-id = <1>;
 									port-index = <4>;
-									opt-csi-port = "c";
+									opt-csi-port = "e";
 									bus-width = <NUM_LANES>;
 									i2c-cc = <0>;
 									remote-endpoint = <&zedx_csi_in9>;
@@ -1157,7 +1157,7 @@
 						has-eeprom;
 						eeprom-addr = <0x56>;
 
-						AR0234_MODES("0", "serial_g", "0")
+						AR0234_MODES("0", "serial_e", "0")
 
 						ports {
 							#address-cells = <1>;
@@ -1167,7 +1167,7 @@
 								zedxone_gs_out4: endpoint {
 									vc-id = <0>;
 									port-index = <4>;
-									opt-csi-port = "c";
+									opt-csi-port = "e";
 									bus-width = <NUM_LANES>;
 									i2c-cc = <0>;
 									remote-endpoint = <&zedxone_gs_csi_in4>;
@@ -1176,7 +1176,7 @@
 						};
 					};
 
-					/* GMSL 1, shared output PHY c, VC1 */
+					/* GMSL 1 workaround: route via known-good PHY e/Orin Port4, VI Stream4, VC2/VC3 */
 					zedx_left5: zedx_left_5@38 {
 						compatible = "stereolabs,zedx";
 						reg = <0x38>;
@@ -1193,7 +1193,7 @@
 						has-eeprom;
 						eeprom-addr = <0x54>;
 
-						AR0234_MODES("1", "serial_g", "0")
+						AR0234_MODES("2", "serial_e", "0")
 
 						ports {
 							#address-cells = <1>;
@@ -1201,9 +1201,9 @@
 							port@0 {
 								reg = <0>;
 								zedx_ar0234_out10: endpoint {
-									vc-id = <1>;
-									port-index = <5>;
-									opt-csi-port = "c";
+									vc-id = <2>;
+									port-index = <4>;
+									opt-csi-port = "e";
 									bus-width = <NUM_LANES>;
 									i2c-cc = <0>;
 									remote-endpoint = <&zedx_csi_in10>;
@@ -1228,7 +1228,7 @@
 						has-eeprom;
 						eeprom-addr = <0x54>;
 
-						AR0234_MODES("1", "serial_g", "0")
+						AR0234_MODES("3", "serial_e", "0")
 
 						ports {
 							#address-cells = <1>;
@@ -1236,9 +1236,9 @@
 							port@0 {
 								reg = <0>;
 								zedx_ar0234_out11: endpoint {
-									vc-id = <1>;
-									port-index = <5>;
-									opt-csi-port = "c";
+									vc-id = <3>;
+									port-index = <4>;
+									opt-csi-port = "e";
 									bus-width = <NUM_LANES>;
 									i2c-cc = <0>;
 									remote-endpoint = <&zedx_csi_in11>;
@@ -1263,7 +1263,7 @@
 						has-eeprom;
 						eeprom-addr = <0x56>;
 
-						AR0234_MODES("1", "serial_g", "0")
+						AR0234_MODES("2", "serial_e", "0")
 
 						ports {
 							#address-cells = <1>;
@@ -1271,9 +1271,9 @@
 							port@0 {
 								reg = <0>;
 								zedxone_gs_out5: endpoint {
-									vc-id = <1>;
-									port-index = <5>;
-									opt-csi-port = "c";
+									vc-id = <2>;
+									port-index = <4>;
+									opt-csi-port = "e";
 									bus-width = <NUM_LANES>;
 									i2c-cc = <0>;
 									remote-endpoint = <&zedxone_gs_csi_in5>;
@@ -1282,7 +1282,7 @@
 						};
 					};
 
-					/* GMSL 2, shared output PHY c, VC2/VC3 */
+					/* GMSL 2, PHY c, Orin Port6, VI Stream5, VC0/VC1 */
 					zedx_left6: zedx_left_6@48 {
 						compatible = "stereolabs,zedx";
 						reg = <0x48>;
@@ -1299,7 +1299,7 @@
 						has-eeprom;
 						eeprom-addr = <0x54>;
 
-						AR0234_MODES("2", "serial_g", "0")
+						AR0234_MODES("0", "serial_g", "0")
 
 						ports {
 							#address-cells = <1>;
@@ -1307,7 +1307,7 @@
 							port@0 {
 								reg = <0>;
 								zedx_ar0234_out12: endpoint {
-									vc-id = <2>;
+									vc-id = <0>;
 									port-index = <6>;
 									opt-csi-port = "c";
 									bus-width = <NUM_LANES>;
@@ -1334,7 +1334,7 @@
 						has-eeprom;
 						eeprom-addr = <0x54>;
 
-						AR0234_MODES("3", "serial_g", "0")
+						AR0234_MODES("1", "serial_g", "0")
 
 						ports {
 							#address-cells = <1>;
@@ -1342,7 +1342,7 @@
 							port@0 {
 								reg = <0>;
 								zedx_ar0234_out13: endpoint {
-									vc-id = <3>;
+									vc-id = <1>;
 									port-index = <6>;
 									opt-csi-port = "c";
 									bus-width = <NUM_LANES>;
@@ -1369,7 +1369,7 @@
 						has-eeprom;
 						eeprom-addr = <0x56>;
 
-						AR0234_MODES("2", "serial_g", "0")
+						AR0234_MODES("0", "serial_g", "0")
 
 						ports {
 							#address-cells = <1>;
@@ -1377,7 +1377,7 @@
 							port@0 {
 								reg = <0>;
 								zedxone_gs_out6: endpoint {
-									vc-id = <2>;
+									vc-id = <0>;
 									port-index = <6>;
 									opt-csi-port = "c";
 									bus-width = <NUM_LANES>;
@@ -1388,7 +1388,7 @@
 						};
 					};
 
-					/* GMSL 3, PHY d, port-index 7 */
+					/* GMSL 3 workaround: route via known-good PHY c/Orin Port6, VI Stream5, VC2/VC3 */
 					zedx_left7: zedx_left_7@14 {
 						compatible = "stereolabs,zedx";
 						reg = <0x14>;
@@ -1414,8 +1414,8 @@
 								reg = <0>;
 								zedx_ar0234_out14: endpoint {
 									vc-id = <2>;
-									port-index = <7>;
-									opt-csi-port = "f";
+									port-index = <6>;
+									opt-csi-port = "c";
 									bus-width = <NUM_LANES>;
 									i2c-cc = <0>;
 									remote-endpoint = <&zedx_csi_in14>;
@@ -1449,8 +1449,8 @@
 								reg = <0>;
 								zedx_ar0234_out15: endpoint {
 									vc-id = <3>;
-									port-index = <7>;
-									opt-csi-port = "f";
+									port-index = <6>;
+									opt-csi-port = "c";
 									bus-width = <NUM_LANES>;
 									i2c-cc = <0>;
 									remote-endpoint = <&zedx_csi_in15>;
@@ -1475,7 +1475,7 @@
 						has-eeprom;
 						eeprom-addr = <0x56>;
 
-						AR0234_MODES("3", "serial_g", "0")
+						AR0234_MODES("2", "serial_g", "0")
 
 						ports {
 							#address-cells = <1>;
@@ -1483,9 +1483,9 @@
 							port@0 {
 								reg = <0>;
 								zedxone_gs_out7: endpoint {
-									vc-id = <3>;
-									port-index = <7>;
-									opt-csi-port = "f";
+									vc-id = <2>;
+									port-index = <6>;
+									opt-csi-port = "c";
 									bus-width = <NUM_LANES>;
 									i2c-cc = <0>;
 									remote-endpoint = <&zedxone_gs_csi_in7>;
@@ -1775,11 +1775,11 @@
 								#size-cells = <0>;
 								port@0 {
 									reg = <0>;
-								zedx_csi_in8: endpoint@8 {
-									port-index = <6>;
-									bus-width = <NUM_LANES>;
+									zedx_csi_in8: endpoint@8 {
+										port-index = <4>;
+										bus-width = <NUM_LANES>;
 										remote-endpoint = <&zedx_ar0234_out8>;
-								};
+									};
 								};
 								port@1 {
 									reg = <1>;
@@ -1798,7 +1798,7 @@
 								port@0 {
 									reg = <0>;
 									zedx_csi_in9: endpoint@9 {
-										port-index = <6>;
+										port-index = <4>;
 										bus-width = <NUM_LANES>;
 										remote-endpoint = <&zedx_ar0234_out9>;
 									};
@@ -1819,11 +1819,11 @@
 								#size-cells = <0>;
 								port@0 {
 									reg = <0>;
-								zedx_csi_in10: endpoint@10 {
-									port-index = <6>;
-									bus-width = <NUM_LANES>;
+									zedx_csi_in10: endpoint@10 {
+										port-index = <4>;
+										bus-width = <NUM_LANES>;
 										remote-endpoint = <&zedx_ar0234_out10>;
-								};
+									};
 								};
 								port@1 {
 									reg = <1>;
@@ -1842,7 +1842,7 @@
 								port@0 {
 									reg = <0>;
 									zedx_csi_in11: endpoint@11 {
-										port-index = <6>;
+										port-index = <4>;
 										bus-width = <NUM_LANES>;
 										remote-endpoint = <&zedx_ar0234_out11>;
 									};
@@ -1948,8 +1948,8 @@
 						ZEDX_ONE_GS_CSI_CHANNEL(1, 17, 1)
 						ZEDX_ONE_GS_CSI_CHANNEL(2, 18, 2)
 						ZEDX_ONE_GS_CSI_CHANNEL(3, 19, 3)
-						ZEDX_ONE_GS_CSI_CHANNEL(4, 20, 6)
-						ZEDX_ONE_GS_CSI_CHANNEL(5, 21, 6)
+						ZEDX_ONE_GS_CSI_CHANNEL(4, 20, 4)
+						ZEDX_ONE_GS_CSI_CHANNEL(5, 21, 4)
 						ZEDX_ONE_GS_CSI_CHANNEL(6, 22, 6)
 						ZEDX_ONE_GS_CSI_CHANNEL(7, 23, 6)
 
