@@ -11,6 +11,7 @@
 #include "tegra234-stereolabs-zedx-config.dtsi"
 
 #define NUM_LANES	2
+#define NUM_LANES_B	4
 
 #define STR(x) #x
 #define XSTR(x) STR(x)
@@ -21,14 +22,14 @@
 	clock-names = "extperiph1", "pllp_grtba"; \
 	mclk = "extperiph1";
 
-#define AR0234_MODES(VC_ID, OPT_CSI_SERIAL, LANE_POLARITY) \
+#define AR0234_MODES_LANES_CLK(VC_ID, OPT_CSI_SERIAL, LANE_POLARITY, LANES, SERDES_PIX_CLK) \
 	physical_w = "15.0"; \
 	physical_h = "12.5"; \
 	post_crop_frame_drop = "0"; \
 	use_sensor_mode_id = "true"; \
 	mode0 { \
 		mclk_khz = "24000"; \
-		num_lanes = XSTR(NUM_LANES); \
+		num_lanes = XSTR(LANES); \
 		tegra_sinterface = OPT_CSI_SERIAL; \
 		lane_polarity = LANE_POLARITY; \
 		vc_id = VC_ID; \
@@ -46,7 +47,7 @@
 		inherent_gain = "1"; \
 		mclk_multiplier = "3.01"; \
 		pix_clk_hz = "229500000"; \
-		serdes_pix_clk_hz = "299000000"; \
+		serdes_pix_clk_hz = SERDES_PIX_CLK; \
 		gain_factor = "100"; \
 		min_gain_val = "100"; \
 		max_gain_val = "1600"; \
@@ -68,7 +69,7 @@
 	}; \
 	mode1 { \
 		mclk_khz = "24000"; \
-		num_lanes = XSTR(NUM_LANES); \
+		num_lanes = XSTR(LANES); \
 		tegra_sinterface = OPT_CSI_SERIAL; \
 		lane_polarity = LANE_POLARITY; \
 		vc_id = VC_ID; \
@@ -86,7 +87,7 @@
 		inherent_gain = "1"; \
 		mclk_multiplier = "3.01"; \
 		pix_clk_hz = "229500000"; \
-		serdes_pix_clk_hz = "299000000"; \
+		serdes_pix_clk_hz = SERDES_PIX_CLK; \
 		gain_factor = "100"; \
 		min_gain_val = "100"; \
 		max_gain_val = "1600"; \
@@ -108,7 +109,7 @@
 	}; \
 	mode2 { \
 		mclk_khz = "24000"; \
-		num_lanes = XSTR(NUM_LANES); \
+		num_lanes = XSTR(LANES); \
 		tegra_sinterface = OPT_CSI_SERIAL; \
 		lane_polarity = LANE_POLARITY; \
 		vc_id = VC_ID; \
@@ -126,7 +127,7 @@
 		inherent_gain = "1"; \
 		mclk_multiplier = "3.01"; \
 		pix_clk_hz = "229500000"; \
-		serdes_pix_clk_hz = "299000000"; \
+		serdes_pix_clk_hz = SERDES_PIX_CLK; \
 		gain_factor = "100"; \
 		min_gain_val = "100"; \
 		max_gain_val = "1600"; \
@@ -148,7 +149,7 @@
 	}; \
 	mode3 { \
 		mclk_khz = "24000"; \
-		num_lanes = XSTR(NUM_LANES); \
+		num_lanes = XSTR(LANES); \
 		tegra_sinterface = OPT_CSI_SERIAL; \
 		lane_polarity = LANE_POLARITY; \
 		vc_id = VC_ID; \
@@ -166,7 +167,7 @@
 		inherent_gain = "1"; \
 		mclk_multiplier = "3.01"; \
 		pix_clk_hz = "229500000"; \
-		serdes_pix_clk_hz = "299000000"; \
+		serdes_pix_clk_hz = SERDES_PIX_CLK; \
 		gain_factor = "100"; \
 		min_gain_val = "100"; \
 		max_gain_val = "1600"; \
@@ -186,6 +187,12 @@
 		default_exp_time = "13000"; \
 		embedded_metadata_height = "0"; \
 	};
+
+#define AR0234_MODES(VC_ID, OPT_CSI_SERIAL, LANE_POLARITY) \
+	AR0234_MODES_LANES_CLK(VC_ID, OPT_CSI_SERIAL, LANE_POLARITY, NUM_LANES, "299000000")
+
+#define AR0234_MODES_B(VC_ID, OPT_CSI_SERIAL, LANE_POLARITY) \
+	AR0234_MODES_LANES_CLK(VC_ID, OPT_CSI_SERIAL, LANE_POLARITY, NUM_LANES_B, "598000000")
 
 #define ZEDX_CAMERA_MODULE(ID, BADGE, POSITION, DEVNAME, PROC_DEV_TREE) \
 	module##ID { \
@@ -210,6 +217,17 @@
 		}; \
 	};
 
+#define ZEDX_ONE_GS_VI_PORT_B(ID, REG_ID, VC_ID, VI_PORT_INDEX) \
+	port@REG_ID { \
+		reg = <REG_ID>; \
+		zedxone_gs_vi_in##ID: endpoint { \
+			vc-id = <VC_ID>; \
+			port-index = <VI_PORT_INDEX>; \
+			bus-width = <NUM_LANES_B>; \
+			remote-endpoint = <&zedxone_gs_csi_out##ID>; \
+		}; \
+	};
+
 #define ZEDX_ONE_GS_CSI_CHANNEL(ID, REG_ID, CSI_PORT_INDEX) \
 	channel@REG_ID { \
 		reg = <REG_ID>; \
@@ -221,6 +239,29 @@
 				zedxone_gs_csi_in##ID: endpoint@0 { \
 					port-index = <CSI_PORT_INDEX>; \
 					bus-width = <NUM_LANES>; \
+					remote-endpoint = <&zedxone_gs_out##ID>; \
+				}; \
+			}; \
+			port@1 { \
+				reg = <1>; \
+				zedxone_gs_csi_out##ID: endpoint@1 { \
+					remote-endpoint = <&zedxone_gs_vi_in##ID>; \
+				}; \
+			}; \
+		}; \
+	};
+
+#define ZEDX_ONE_GS_CSI_CHANNEL_B(ID, REG_ID, CSI_PORT_INDEX) \
+	channel@REG_ID { \
+		reg = <REG_ID>; \
+		ports { \
+			#address-cells = <1>; \
+			#size-cells = <0>; \
+			port@0 { \
+				reg = <0>; \
+				zedxone_gs_csi_in##ID: endpoint@0 { \
+					port-index = <CSI_PORT_INDEX>; \
+					bus-width = <NUM_LANES_B>; \
 					remote-endpoint = <&zedxone_gs_out##ID>; \
 				}; \
 			}; \
@@ -334,7 +375,7 @@
 						zedx_vi_in8: endpoint {
 							vc-id = <0>;
 							port-index = <4>;
-							bus-width = <NUM_LANES>;
+							bus-width = <NUM_LANES_B>;
 							remote-endpoint = <&zedx_csi_out8>;
 						};
 					};
@@ -344,7 +385,7 @@
 						zedx_vi_in9: endpoint {
 							vc-id = <1>;
 							port-index = <4>;
-							bus-width = <NUM_LANES>;
+							bus-width = <NUM_LANES_B>;
 							remote-endpoint = <&zedx_csi_out9>;
 						};
 					};
@@ -354,7 +395,7 @@
 						zedx_vi_in10: endpoint {
 							vc-id = <2>;
 							port-index = <4>;
-							bus-width = <NUM_LANES>;
+							bus-width = <NUM_LANES_B>;
 							remote-endpoint = <&zedx_csi_out10>;
 						};
 					};
@@ -364,7 +405,7 @@
 						zedx_vi_in11: endpoint {
 							vc-id = <3>;
 							port-index = <4>;
-							bus-width = <NUM_LANES>;
+							bus-width = <NUM_LANES_B>;
 							remote-endpoint = <&zedx_csi_out11>;
 						};
 					};
@@ -374,7 +415,7 @@
 						zedx_vi_in12: endpoint {
 							vc-id = <0>;
 							port-index = <5>;
-							bus-width = <NUM_LANES>;
+							bus-width = <NUM_LANES_B>;
 							remote-endpoint = <&zedx_csi_out12>;
 						};
 					};
@@ -384,7 +425,7 @@
 						zedx_vi_in13: endpoint {
 							vc-id = <1>;
 							port-index = <5>;
-							bus-width = <NUM_LANES>;
+							bus-width = <NUM_LANES_B>;
 							remote-endpoint = <&zedx_csi_out13>;
 						};
 					};
@@ -394,7 +435,7 @@
 						zedx_vi_in14: endpoint {
 							vc-id = <2>;
 							port-index = <5>;
-							bus-width = <NUM_LANES>;
+							bus-width = <NUM_LANES_B>;
 							remote-endpoint = <&zedx_csi_out14>;
 						};
 					};
@@ -404,7 +445,7 @@
 						zedx_vi_in15: endpoint {
 							vc-id = <3>;
 							port-index = <5>;
-							bus-width = <NUM_LANES>;
+							bus-width = <NUM_LANES_B>;
 							remote-endpoint = <&zedx_csi_out15>;
 						};
 					};
@@ -413,10 +454,10 @@
 					ZEDX_ONE_GS_VI_PORT(1, 17, 0, 1)
 					ZEDX_ONE_GS_VI_PORT(2, 18, 0, 2)
 					ZEDX_ONE_GS_VI_PORT(3, 19, 0, 3)
-					ZEDX_ONE_GS_VI_PORT(4, 20, 0, 4)
-					ZEDX_ONE_GS_VI_PORT(5, 21, 2, 4)
-					ZEDX_ONE_GS_VI_PORT(6, 22, 0, 5)
-					ZEDX_ONE_GS_VI_PORT(7, 23, 2, 5)
+					ZEDX_ONE_GS_VI_PORT_B(4, 20, 0, 4)
+					ZEDX_ONE_GS_VI_PORT_B(5, 21, 2, 4)
+					ZEDX_ONE_GS_VI_PORT_B(6, 22, 0, 5)
+					ZEDX_ONE_GS_VI_PORT_B(7, 23, 2, 5)
 
 				};
 			};
@@ -1070,7 +1111,7 @@
 
 					/* ---- sensor nodes (all channel = "b") ---- */
 
-					/* GMSL 0, PHY e, Orin Port4, VI Stream4, VC0/VC1 */
+					/* GMSL 0, 4-lane output B, Orin Port4, VI Stream4, VC0/VC1 */
 					zedx_left4: zedx_left_4@28 {
 						compatible = "stereolabs,zedx";
 						reg = <0x28>;
@@ -1087,7 +1128,7 @@
 						has-eeprom;
 						eeprom-addr = <0x54>;
 
-						AR0234_MODES("0", "serial_e", "0")
+						AR0234_MODES_B("0", "serial_e", "0")
 
 						ports {
 							#address-cells = <1>;
@@ -1097,8 +1138,8 @@
 								zedx_ar0234_out8: endpoint {
 									vc-id = <0>;
 									port-index = <4>;
-									opt-csi-port = "e";
-									bus-width = <NUM_LANES>;
+									opt-csi-port = "b";
+									bus-width = <NUM_LANES_B>;
 									i2c-cc = <0>;
 									remote-endpoint = <&zedx_csi_in8>;
 								};
@@ -1122,7 +1163,7 @@
 						has-eeprom;
 						eeprom-addr = <0x54>;
 
-						AR0234_MODES("1", "serial_e", "0")
+						AR0234_MODES_B("1", "serial_e", "0")
 
 						ports {
 							#address-cells = <1>;
@@ -1132,8 +1173,8 @@
 								zedx_ar0234_out9: endpoint {
 									vc-id = <1>;
 									port-index = <4>;
-									opt-csi-port = "e";
-									bus-width = <NUM_LANES>;
+									opt-csi-port = "b";
+									bus-width = <NUM_LANES_B>;
 									i2c-cc = <0>;
 									remote-endpoint = <&zedx_csi_in9>;
 								};
@@ -1157,7 +1198,7 @@
 						has-eeprom;
 						eeprom-addr = <0x56>;
 
-						AR0234_MODES("0", "serial_e", "0")
+						AR0234_MODES_B("0", "serial_e", "0")
 
 						ports {
 							#address-cells = <1>;
@@ -1167,8 +1208,8 @@
 								zedxone_gs_out4: endpoint {
 									vc-id = <0>;
 									port-index = <4>;
-									opt-csi-port = "e";
-									bus-width = <NUM_LANES>;
+									opt-csi-port = "b";
+									bus-width = <NUM_LANES_B>;
 									i2c-cc = <0>;
 									remote-endpoint = <&zedxone_gs_csi_in4>;
 								};
@@ -1176,7 +1217,7 @@
 						};
 					};
 
-					/* GMSL 1 workaround: route via known-good PHY e/Orin Port4, VI Stream4, VC2/VC3 */
+					/* GMSL 1, 4-lane output B, Orin Port4, VI Stream4, VC2/VC3 */
 					zedx_left5: zedx_left_5@38 {
 						compatible = "stereolabs,zedx";
 						reg = <0x38>;
@@ -1193,7 +1234,7 @@
 						has-eeprom;
 						eeprom-addr = <0x54>;
 
-						AR0234_MODES("2", "serial_e", "0")
+						AR0234_MODES_B("2", "serial_e", "0")
 
 						ports {
 							#address-cells = <1>;
@@ -1203,8 +1244,8 @@
 								zedx_ar0234_out10: endpoint {
 									vc-id = <2>;
 									port-index = <4>;
-									opt-csi-port = "e";
-									bus-width = <NUM_LANES>;
+									opt-csi-port = "b";
+									bus-width = <NUM_LANES_B>;
 									i2c-cc = <0>;
 									remote-endpoint = <&zedx_csi_in10>;
 								};
@@ -1228,7 +1269,7 @@
 						has-eeprom;
 						eeprom-addr = <0x54>;
 
-						AR0234_MODES("3", "serial_e", "0")
+						AR0234_MODES_B("3", "serial_e", "0")
 
 						ports {
 							#address-cells = <1>;
@@ -1238,8 +1279,8 @@
 								zedx_ar0234_out11: endpoint {
 									vc-id = <3>;
 									port-index = <4>;
-									opt-csi-port = "e";
-									bus-width = <NUM_LANES>;
+									opt-csi-port = "b";
+									bus-width = <NUM_LANES_B>;
 									i2c-cc = <0>;
 									remote-endpoint = <&zedx_csi_in11>;
 								};
@@ -1263,7 +1304,7 @@
 						has-eeprom;
 						eeprom-addr = <0x56>;
 
-						AR0234_MODES("2", "serial_e", "0")
+						AR0234_MODES_B("2", "serial_e", "0")
 
 						ports {
 							#address-cells = <1>;
@@ -1273,8 +1314,8 @@
 								zedxone_gs_out5: endpoint {
 									vc-id = <2>;
 									port-index = <4>;
-									opt-csi-port = "e";
-									bus-width = <NUM_LANES>;
+									opt-csi-port = "b";
+									bus-width = <NUM_LANES_B>;
 									i2c-cc = <0>;
 									remote-endpoint = <&zedxone_gs_csi_in5>;
 								};
@@ -1282,7 +1323,7 @@
 						};
 					};
 
-					/* GMSL 2, PHY c, Orin Port6, VI Stream5, VC0/VC1 */
+					/* GMSL 2, 4-lane output A, Orin Port6, VI Stream5, VC0/VC1 */
 					zedx_left6: zedx_left_6@48 {
 						compatible = "stereolabs,zedx";
 						reg = <0x48>;
@@ -1299,7 +1340,7 @@
 						has-eeprom;
 						eeprom-addr = <0x54>;
 
-						AR0234_MODES("0", "serial_g", "0")
+						AR0234_MODES_B("0", "serial_g", "0")
 
 						ports {
 							#address-cells = <1>;
@@ -1309,8 +1350,8 @@
 								zedx_ar0234_out12: endpoint {
 									vc-id = <0>;
 									port-index = <6>;
-									opt-csi-port = "c";
-									bus-width = <NUM_LANES>;
+									opt-csi-port = "a";
+									bus-width = <NUM_LANES_B>;
 									i2c-cc = <0>;
 									remote-endpoint = <&zedx_csi_in12>;
 								};
@@ -1334,7 +1375,7 @@
 						has-eeprom;
 						eeprom-addr = <0x54>;
 
-						AR0234_MODES("1", "serial_g", "0")
+						AR0234_MODES_B("1", "serial_g", "0")
 
 						ports {
 							#address-cells = <1>;
@@ -1344,8 +1385,8 @@
 								zedx_ar0234_out13: endpoint {
 									vc-id = <1>;
 									port-index = <6>;
-									opt-csi-port = "c";
-									bus-width = <NUM_LANES>;
+									opt-csi-port = "a";
+									bus-width = <NUM_LANES_B>;
 									i2c-cc = <0>;
 									remote-endpoint = <&zedx_csi_in13>;
 								};
@@ -1369,7 +1410,7 @@
 						has-eeprom;
 						eeprom-addr = <0x56>;
 
-						AR0234_MODES("0", "serial_g", "0")
+						AR0234_MODES_B("0", "serial_g", "0")
 
 						ports {
 							#address-cells = <1>;
@@ -1379,8 +1420,8 @@
 								zedxone_gs_out6: endpoint {
 									vc-id = <0>;
 									port-index = <6>;
-									opt-csi-port = "c";
-									bus-width = <NUM_LANES>;
+									opt-csi-port = "a";
+									bus-width = <NUM_LANES_B>;
 									i2c-cc = <0>;
 									remote-endpoint = <&zedxone_gs_csi_in6>;
 								};
@@ -1388,7 +1429,7 @@
 						};
 					};
 
-					/* GMSL 3 workaround: route via known-good PHY c/Orin Port6, VI Stream5, VC2/VC3 */
+					/* GMSL 3, 4-lane output A, Orin Port6, VI Stream5, VC2/VC3 */
 					zedx_left7: zedx_left_7@14 {
 						compatible = "stereolabs,zedx";
 						reg = <0x14>;
@@ -1405,7 +1446,7 @@
 						has-eeprom;
 						eeprom-addr = <0x54>;
 
-						AR0234_MODES("2", "serial_g", "0")
+						AR0234_MODES_B("2", "serial_g", "0")
 
 						ports {
 							#address-cells = <1>;
@@ -1415,8 +1456,8 @@
 								zedx_ar0234_out14: endpoint {
 									vc-id = <2>;
 									port-index = <6>;
-									opt-csi-port = "c";
-									bus-width = <NUM_LANES>;
+									opt-csi-port = "a";
+									bus-width = <NUM_LANES_B>;
 									i2c-cc = <0>;
 									remote-endpoint = <&zedx_csi_in14>;
 								};
@@ -1440,7 +1481,7 @@
 						has-eeprom;
 						eeprom-addr = <0x54>;
 
-						AR0234_MODES("3", "serial_g", "0")
+						AR0234_MODES_B("3", "serial_g", "0")
 
 						ports {
 							#address-cells = <1>;
@@ -1450,8 +1491,8 @@
 								zedx_ar0234_out15: endpoint {
 									vc-id = <3>;
 									port-index = <6>;
-									opt-csi-port = "c";
-									bus-width = <NUM_LANES>;
+									opt-csi-port = "a";
+									bus-width = <NUM_LANES_B>;
 									i2c-cc = <0>;
 									remote-endpoint = <&zedx_csi_in15>;
 								};
@@ -1475,7 +1516,7 @@
 						has-eeprom;
 						eeprom-addr = <0x56>;
 
-						AR0234_MODES("2", "serial_g", "0")
+						AR0234_MODES_B("2", "serial_g", "0")
 
 						ports {
 							#address-cells = <1>;
@@ -1485,8 +1526,8 @@
 								zedxone_gs_out7: endpoint {
 									vc-id = <2>;
 									port-index = <6>;
-									opt-csi-port = "c";
-									bus-width = <NUM_LANES>;
+									opt-csi-port = "a";
+									bus-width = <NUM_LANES_B>;
 									i2c-cc = <0>;
 									remote-endpoint = <&zedxone_gs_csi_in7>;
 								};
@@ -1777,7 +1818,7 @@
 									reg = <0>;
 									zedx_csi_in8: endpoint@8 {
 										port-index = <4>;
-										bus-width = <NUM_LANES>;
+										bus-width = <NUM_LANES_B>;
 										remote-endpoint = <&zedx_ar0234_out8>;
 									};
 								};
@@ -1799,7 +1840,7 @@
 									reg = <0>;
 									zedx_csi_in9: endpoint@9 {
 										port-index = <4>;
-										bus-width = <NUM_LANES>;
+										bus-width = <NUM_LANES_B>;
 										remote-endpoint = <&zedx_ar0234_out9>;
 									};
 								};
@@ -1821,7 +1862,7 @@
 									reg = <0>;
 									zedx_csi_in10: endpoint@10 {
 										port-index = <4>;
-										bus-width = <NUM_LANES>;
+										bus-width = <NUM_LANES_B>;
 										remote-endpoint = <&zedx_ar0234_out10>;
 									};
 								};
@@ -1843,7 +1884,7 @@
 									reg = <0>;
 									zedx_csi_in11: endpoint@11 {
 										port-index = <4>;
-										bus-width = <NUM_LANES>;
+										bus-width = <NUM_LANES_B>;
 										remote-endpoint = <&zedx_ar0234_out11>;
 									};
 								};
@@ -1865,7 +1906,7 @@
 									reg = <0>;
 									zedx_csi_in12: endpoint@12 {
 										port-index = <6>;
-										bus-width = <NUM_LANES>;
+										bus-width = <NUM_LANES_B>;
 										remote-endpoint = <&zedx_ar0234_out12>;
 									};
 								};
@@ -1887,7 +1928,7 @@
 									reg = <0>;
 									zedx_csi_in13: endpoint@13 {
 										port-index = <6>;
-										bus-width = <NUM_LANES>;
+										bus-width = <NUM_LANES_B>;
 										remote-endpoint = <&zedx_ar0234_out13>;
 									};
 								};
@@ -1909,7 +1950,7 @@
 									reg = <0>;
 									zedx_csi_in14: endpoint@14 {
 										port-index = <6>;
-										bus-width = <NUM_LANES>;
+										bus-width = <NUM_LANES_B>;
 										remote-endpoint = <&zedx_ar0234_out14>;
 									};
 								};
@@ -1931,7 +1972,7 @@
 									reg = <0>;
 									zedx_csi_in15: endpoint@15 {
 										port-index = <6>;
-										bus-width = <NUM_LANES>;
+										bus-width = <NUM_LANES_B>;
 										remote-endpoint = <&zedx_ar0234_out15>;
 									};
 								};
@@ -1948,10 +1989,10 @@
 						ZEDX_ONE_GS_CSI_CHANNEL(1, 17, 1)
 						ZEDX_ONE_GS_CSI_CHANNEL(2, 18, 2)
 						ZEDX_ONE_GS_CSI_CHANNEL(3, 19, 3)
-						ZEDX_ONE_GS_CSI_CHANNEL(4, 20, 4)
-						ZEDX_ONE_GS_CSI_CHANNEL(5, 21, 4)
-						ZEDX_ONE_GS_CSI_CHANNEL(6, 22, 6)
-						ZEDX_ONE_GS_CSI_CHANNEL(7, 23, 6)
+						ZEDX_ONE_GS_CSI_CHANNEL_B(4, 20, 4)
+						ZEDX_ONE_GS_CSI_CHANNEL_B(5, 21, 4)
+						ZEDX_ONE_GS_CSI_CHANNEL_B(6, 22, 6)
+						ZEDX_ONE_GS_CSI_CHANNEL_B(7, 23, 6)
 
 					};
 				};
