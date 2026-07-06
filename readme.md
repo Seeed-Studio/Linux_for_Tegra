@@ -48,7 +48,7 @@ sudo tar xpf Tegra_Linux_Sample-Root-Filesystem_r39.2.0_aarch64.tbz2 -C Linux_fo
 
 ```
 cd Linux_for_Tegra/source/
-./source_sync.sh -t jetson_39.2
+./source_sync.sh -t jetson_39.2.0
 ```
 
 4. Clone this repo and overwrite the original source code.
