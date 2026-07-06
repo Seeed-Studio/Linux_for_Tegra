@@ -1,0 +1,56 @@
+Build NvSciIpc KMD for DRIVE x86
+================================
+
+1) install kernel header package
+sudo apt-get install linux-headers-`uname -r`
+
+check version of desktop using "uname -r" command.
+kernel version must be 5.4.0+.
+
+2) link common header files (NVIDIA internal dev only)
+export NVSCIIPC_INCLUDE=${PWD}/../../../include
+ln -s ${NVSCIIPC_INCLUDE}/linux ./
+ln -s ${NVSCIIPC_INCLUDE}/uapi ./
+
+3) build
+make -C /lib/modules/`uname -r`/build M=${PWD} modules
+
+4) install NvSciIpc KMD
+sudo make -C /lib/modules/`uname -r`/build M=${PWD} modules_install
+sudo depmod -a
+
+nvsciipc.ko will be installed in /lib/modules/`uname -r`/updates/nvsciipc.ko
+
+[NOTE] If kernel module installation is failed by missing signing key, follow steps below
+
+** create x509.genkey
+echo -e "[ req ] \n\
+default_bits = 4096 \n\
+distinguished_name = req_distinguished_name \n\
+prompt = no \n\
+x509_extensions = myexts \n\
+\n\
+[ req_distinguished_name ] \n\
+CN = Modules \n\
+\n\
+[ myexts ] \n\
+basicConstraints=critical,CA:FALSE \n\
+keyUsage=digitalSignature \n\
+subjectKeyIdentifier=hash \n\
+authorityKeyIdentifier=keyid" > x509.genkey
+
+** generate signing key
+openssl req -new -nodes -utf8 -sha512 -days 36500 -batch -x509 -config x509.genkey -outform DER -out signing_key.x509 -keyout signing_key.pem
+
+** move signing key to kernel module folder of desktop
+sudo mv signing_key.* /lib/modules/`uname -r`/build/certs/
+
+5) clean
+make -C /lib/modules/`uname -r`/build M=${PWD} clean
+
+6) load NvSciIpc KMD
+You can load NvSciIpc KMD during desktop boot.
+sudo vi /etc/modules-load.d/modules.conf
+add "nvsciipc" to this file
+
+For manual loading KMD, do "sudo insmod nvsciipc.ko"

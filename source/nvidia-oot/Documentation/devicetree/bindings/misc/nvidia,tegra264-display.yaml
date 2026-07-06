@@ -1,0 +1,543 @@
+# Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/display@8808c00000/nvidia,tegra264-display.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Nvidia Tegra Display Driver
+
+maintainers:
+  - Mihir Pradeep Garude
+
+description: |
+     The compatibility = nvidia,tegra264-display is mentioned in the following drivers
+        - For DisplayServer <TOP>/display/drivers/drivers/
+        - For OpenRM <TOP>/gpu/drv/
+
+     The following nodes use this compatibility
+        - /display@8808c00000
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra264-display
+
+  required:
+    - compatible
+
+properties:
+
+    power-domains:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x1
+                  maximum: 0x1
+
+    nvidia,num-dpaux-instance:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x4
+        maximum: 0x4
+
+    nvidia,bpmp:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+
+    reg-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - nvdisplay
+                - dpaux0
+                - hdacodec
+                - mipical
+                - vdisp
+
+
+    reg:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Registers are given by a tuple of two values:
+                - register address:
+                - register block size.
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x81
+                  maximum: 0x88
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x8c00000
+                  maximum: 0x89840000
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0xfff
+                  maximum: 0x1fffff
+
+    interrupt-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - nvdisplay
+                - dpaux0
+                - dpaux1
+                - dpaux2
+                - dpaux3
+                - hdacodec
+                - vdisp
+
+
+    interrupts:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Interrupts are give by a tuple of 3 values:
+                - interrupt specifier (GIC_SPI = 0, GIC_PPI = 1)
+                  definitions in dt-bindings/interrupt-controller/arm-gic.h
+                - interrupt number
+                - trigger type (rising edge, falling edge, both, etc)
+                  definitions in dt-bindings/interrupt-controller/irq.h
+        items:
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0xf7
+                  maximum: 0x101
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x4
+                  maximum: 0x4
+
+    clocks:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Clocks are given by a tuple of 2 values:
+                - Phandle to the device
+                - Clock ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x1
+                  maximum: 0x1d3
+
+    clock-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - nvdisplayhub_clk
+                - nvdisplay_disp_clk
+                - nvdisplay_p0_clk
+                - nvdisplay_p1_clk
+                - nvdisplay_p2_clk
+                - nvdisplay_p3_clk
+                - nvdisplay_p4_clk
+                - nvdisplay_p5_clk
+                - nvdisplay_p6_clk
+                - nvdisplay_p7_clk
+                - fuse_clk
+                - sppll0_clkouta_clk
+                - sppll0_clkoutb_clk
+                - sppll0_clkoutpn_clk
+                - sppll1_clkoutpn_clk
+                - sppll0_div27_clk
+                - sppll1_div27_clk
+                - vpll0_clk
+                - vpll1_clk
+                - vpll2_clk
+                - vpll3_clk
+                - vpll4_clk
+                - vpll5_clk
+                - vpll6_clk
+                - vpll7_clk
+                - rg0_clk
+                - rg1_clk
+                - rg2_clk
+                - rg3_clk
+                - rg4_clk
+                - rg5_clk
+                - rg6_clk
+                - rg7_clk
+                - disppll_clk
+                - pre_sor0_clk
+                - pre_sor1_clk
+                - pre_sor2_clk
+                - pre_sor3_clk
+                - dp_link_ref_clk
+                - dp_linkb_ref_clk
+                - dp_linkc_ref_clk
+                - dp_linkd_ref_clk
+                - sor_linka_input_clk
+                - sor_linkb_input_clk
+                - sor_linkc_input_clk
+                - sor_linkd_input_clk
+                - sor_linka_afifo_clk
+                - sor_linkb_afifo_clk
+                - sor_linkc_afifo_clk
+                - sor_linkd_afifo_clk
+                - sor0_clk
+                - sor1_clk
+                - sor2_clk
+                - sor3_clk
+                - sor_pad_input_clk
+                - sor_padb_input_clk
+                - sor_padc_input_clk
+                - sor_padd_input_clk
+                - sor0_pad_clk
+                - sor1_pad_clk
+                - sor2_pad_clk
+                - sor3_pad_clk
+                - sf0_clk
+                - sf1_clk
+                - sf2_clk
+                - sf3_clk
+                - sf4_clk
+                - sf5_clk
+                - sf6_clk
+                - sf7_clk
+                - sor0_ref_pll_clk
+                - sor1_ref_pll_clk
+                - sor2_ref_pll_clk
+                - sor3_ref_pll_clk
+                - sor0_ref_clk
+                - sor1_ref_clk
+                - sor2_ref_clk
+                - sor3_ref_clk
+                - osc_clk
+                - dsc_clk
+                - maud_clk
+                - aza_2xbit_clk
+                - disp_root
+                - vpllx_sor0_muxed_clk
+                - vpllx_sor1_muxed_clk
+                - vpllx_sor2_muxed_clk
+                - vpllx_sor3_muxed_clk
+                - sf0_sor_clk
+                - sf1_sor_clk
+                - sf2_sor_clk
+                - sf3_sor_clk
+                - sf4_sor_clk
+                - sf5_sor_clk
+                - sf6_sor_clk
+                - sf7_sor_clk
+                - dpaux0_clk
+                - emc_clk
+
+
+    nvidia,disp-sw-soc-chip-id:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x2650
+        maximum: 0x2650
+
+    resets:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Resets are given by a tuple of 2 values:
+                - Phandle to the device
+                - Reset ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x8
+                  maximum: 0x1f
+
+    reset-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - dpaux0_reset
+                - hdacodec_reset
+
+
+    interconnects:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 3
+            maxItems: 3
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x182
+                  maximum: 0x182
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+
+    interconnect-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - read-1
+
+    non-coherent:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+    iso_sid:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x900
+        maximum: 0x900
+
+    niso_sid:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x901
+        maximum: 0x901
+
+required:
+    - compatible
+    - reg
+    - interrupt-names
+    - interrupts
+    - clocks
+    - clock-names
+    - resets
+    - reset-names
+    - iommus
+
+examples:
+    - |
+        display@8808c00000 {
+            compatible = "nvidia,tegra264-display";
+            power-domains = <&bpmp TEGRA264_POWER_DOMAIN_DISP>;
+            nvidia,num-dpaux-instance = <0x00000004>;
+            nvidia,bpmp = <&bpmp>;
+            reg-names = "nvdisplay, dpaux0, hdacodec, mipical, vdisp";
+            reg = <0x88 0x8c00000 0x00 0x1fffff>,
+                  <0x88 0x9680000 0x00 0x7ffff>,
+                  <0x88 0x9101000 0x00 0xfff>,
+                  <0x81 0x89840000 0x00 0xffff>,
+                  <0x88 0x8d00000 0x00 0x00010000>;
+            interrupt-names = "nvdisplay, dpaux0, dpaux1, dpaux2, dpaux3, hdacodec, vdisp";
+            interrupts = <GIC_SPI 256 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 247 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 248 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 249 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 250 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 252 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 257 IRQ_TYPE_LEVEL_HIGH>;
+            clocks = <&bpmp TEGRA264_CLK_HUB>,
+                     <&bpmp TEGRA264_CLK_DISP>,
+                     <&bpmp TEGRA264_CLK_RG0_DIV>,
+                     <&bpmp TEGRA264_CLK_RG1_DIV>,
+                     <&bpmp TEGRA264_CLK_RG2_DIV>,
+                     <&bpmp TEGRA264_CLK_RG3_DIV>,
+                     <&bpmp TEGRA264_CLK_RG4_DIV>,
+                     <&bpmp TEGRA264_CLK_RG5_DIV>,
+                     <&bpmp TEGRA264_CLK_RG6_DIV>,
+                     <&bpmp TEGRA264_CLK_RG7_DIV>,
+                     <&bpmp TEGRA264_CLK_FUSE>,
+                     <&bpmp TEGRA264_CLK_SPPLL0_CLKOUT1A>,
+                     <&bpmp TEGRA264_CLK_SPPLL0_CLKOUT2A>,
+                     <&bpmp TEGRA264_CLK_SPPLL0_CLKOUT270>,
+                     <&bpmp TEGRA264_CLK_SPPLL1_CLKOUT270>,
+                     <&bpmp TEGRA264_CLK_SPPLL0_CLKOUT100>,
+                     <&bpmp TEGRA264_CLK_SPPLL1_CLKOUT100>,
+                     <&bpmp TEGRA264_CLK_VPLL0>,
+                     <&bpmp TEGRA264_CLK_VPLL1>,
+                     <&bpmp TEGRA264_CLK_VPLL2>,
+                     <&bpmp TEGRA264_CLK_VPLL3>,
+                     <&bpmp TEGRA264_CLK_VPLL4>,
+                     <&bpmp TEGRA264_CLK_VPLL5>,
+                     <&bpmp TEGRA264_CLK_VPLL6>,
+                     <&bpmp TEGRA264_CLK_VPLL7>,
+                     <&bpmp TEGRA264_CLK_RG0>,
+                     <&bpmp TEGRA264_CLK_RG1>,
+                     <&bpmp TEGRA264_CLK_RG2>,
+                     <&bpmp TEGRA264_CLK_RG3>,
+                     <&bpmp TEGRA264_CLK_RG4>,
+                     <&bpmp TEGRA264_CLK_RG5>,
+                     <&bpmp TEGRA264_CLK_RG6>,
+                     <&bpmp TEGRA264_CLK_RG7>,
+                     <&bpmp TEGRA264_CLK_DISPPLL>,
+                     <&bpmp TEGRA264_CLK_PRE_SOR0>,
+                     <&bpmp TEGRA264_CLK_PRE_SOR1>,
+                     <&bpmp TEGRA264_CLK_PRE_SOR2>,
+                     <&bpmp TEGRA264_CLK_PRE_SOR3>,
+                     <&bpmp TEGRA264_CLK_DP_LINKA_REF>,
+                     <&bpmp TEGRA264_CLK_DP_LINKB_REF>,
+                     <&bpmp TEGRA264_CLK_DP_LINKC_REF>,
+                     <&bpmp TEGRA264_CLK_DP_LINKD_REF>,
+                     <&bpmp TEGRA264_CLK_SOR_LINKA_INPUT>,
+                     <&bpmp TEGRA264_CLK_SOR_LINKB_INPUT>,
+                     <&bpmp TEGRA264_CLK_SOR_LINKC_INPUT>,
+                     <&bpmp TEGRA264_CLK_SOR_LINKD_INPUT>,
+                     <&bpmp TEGRA264_CLK_SOR_LINKA_AFIFO>,
+                     <&bpmp TEGRA264_CLK_SOR_LINKB_AFIFO>,
+                     <&bpmp TEGRA264_CLK_SOR_LINKC_AFIFO>,
+                     <&bpmp TEGRA264_CLK_SOR_LINKD_AFIFO>,
+                     <&bpmp TEGRA264_CLK_SOR0>,
+                     <&bpmp TEGRA264_CLK_SOR1>,
+                     <&bpmp TEGRA264_CLK_SOR2>,
+                     <&bpmp TEGRA264_CLK_SOR3>,
+                     <&bpmp TEGRA264_CLK_LINKA_SYM>,
+                     <&bpmp TEGRA264_CLK_LINKB_SYM>,
+                     <&bpmp TEGRA264_CLK_LINKC_SYM>,
+                     <&bpmp TEGRA264_CLK_LINKD_SYM>,
+                     <&bpmp TEGRA264_CLK_SOR0_PAD>,
+                     <&bpmp TEGRA264_CLK_SOR1_PAD>,
+                     <&bpmp TEGRA264_CLK_SOR2_PAD>,
+                     <&bpmp TEGRA264_CLK_SOR3_PAD>,
+                     <&bpmp TEGRA264_CLK_SF0>,
+                     <&bpmp TEGRA264_CLK_SF1>,
+                     <&bpmp TEGRA264_CLK_SF2>,
+                     <&bpmp TEGRA264_CLK_SF3>,
+                     <&bpmp TEGRA264_CLK_SF4>,
+                     <&bpmp TEGRA264_CLK_SF5>,
+                     <&bpmp TEGRA264_CLK_SF6>,
+                     <&bpmp TEGRA264_CLK_SF7>,
+                     <&bpmp TEGRA264_CLK_SOR0_PLL_REF>,
+                     <&bpmp TEGRA264_CLK_SOR1_PLL_REF>,
+                     <&bpmp TEGRA264_CLK_SOR2_PLL_REF>,
+                     <&bpmp TEGRA264_CLK_SOR3_PLL_REF>,
+                     <&bpmp TEGRA264_CLK_SOR0_REF>,
+                     <&bpmp TEGRA264_CLK_SOR1_REF>,
+                     <&bpmp TEGRA264_CLK_SOR2_REF>,
+                     <&bpmp TEGRA264_CLK_SOR3_REF>,
+                     <&bpmp TEGRA264_CLK_OSC>,
+                     <&bpmp TEGRA264_CLK_DSC>,
+                     <&bpmp TEGRA264_CLK_MAUD>,
+                     <&bpmp TEGRA264_CLK_AZA_2XBIT>,
+                     <&bpmp TEGRA264_CLK_DISP_ROOT>,
+                     <&bpmp TEGRA264_CLK_VPLLX_SOR0_MUXED>,
+                     <&bpmp TEGRA264_CLK_VPLLX_SOR1_MUXED>,
+                     <&bpmp TEGRA264_CLK_VPLLX_SOR2_MUXED>,
+                     <&bpmp TEGRA264_CLK_VPLLX_SOR3_MUXED>,
+                     <&bpmp TEGRA264_CLK_SF0_SOR>,
+                     <&bpmp TEGRA264_CLK_SF1_SOR>,
+                     <&bpmp TEGRA264_CLK_SF2_SOR>,
+                     <&bpmp TEGRA264_CLK_SF3_SOR>,
+                     <&bpmp TEGRA264_CLK_SF4_SOR>,
+                     <&bpmp TEGRA264_CLK_SF5_SOR>,
+                     <&bpmp TEGRA264_CLK_SF6_SOR>,
+                     <&bpmp TEGRA264_CLK_SF7_SOR>,
+                     <&bpmp TEGRA264_CLK_DPAUX>,
+                     <&bpmp TEGRA264_CLK_EMC>;
+            clock-names = "nvdisplayhub_clk",
+                          "nvdisplay_disp_clk",
+                          "nvdisplay_p0_clk",
+                          "nvdisplay_p1_clk",
+                          "nvdisplay_p2_clk",
+                          "nvdisplay_p3_clk",
+                          "nvdisplay_p4_clk",
+                          "nvdisplay_p5_clk",
+                          "nvdisplay_p6_clk",
+                          "nvdisplay_p7_clk",
+                          "fuse_clk",
+                          "sppll0_clkouta_clk",
+                          "sppll0_clkoutb_clk",
+                          "sppll0_clkoutpn_clk",
+                          "sppll1_clkoutpn_clk",
+                          "sppll0_div27_clk",
+                          "sppll1_div27_clk",
+                          "vpll0_clk",
+                          "vpll1_clk",
+                          "vpll2_clk",
+                          "vpll3_clk",
+                          "vpll4_clk",
+                          "vpll5_clk",
+                          "vpll6_clk",
+                          "vpll7_clk",
+                          "rg0_clk",
+                          "rg1_clk",
+                          "rg2_clk",
+                          "rg3_clk",
+                          "rg4_clk",
+                          "rg5_clk",
+                          "rg6_clk",
+                          "rg7_clk",
+                          "disppll_clk",
+                          "pre_sor0_clk",
+                          "pre_sor1_clk",
+                          "pre_sor2_clk",
+                          "pre_sor3_clk",
+                          "dp_link_ref_clk",
+                          "dp_linkb_ref_clk",
+                          "dp_linkc_ref_clk",
+                          "dp_linkd_ref_clk",
+                          "sor_linka_input_clk",
+                          "sor_linkb_input_clk",
+                          "sor_linkc_input_clk",
+                          "sor_linkd_input_clk",
+                          "sor_linka_afifo_clk",
+                          "sor_linkb_afifo_clk",
+                          "sor_linkc_afifo_clk",
+                          "sor_linkd_afifo_clk",
+                          "sor0_clk",
+                          "sor1_clk",
+                          "sor2_clk",
+                          "sor3_clk",
+                          "sor_pad_input_clk",
+                          "sor_padb_input_clk",
+                          "sor_padc_input_clk",
+                          "sor_padd_input_clk",
+                          "sor0_pad_clk",
+                          "sor1_pad_clk",
+                          "sor2_pad_clk",
+                          "sor3_pad_clk",
+                          "sf0_clk",
+                          "sf1_clk",
+                          "sf2_clk",
+                          "sf3_clk",
+                          "sf4_clk",
+                          "sf5_clk",
+                          "sf6_clk",
+                          "sf7_clk",
+                          "sor0_ref_pll_clk",
+                          "sor1_ref_pll_clk",
+                          "sor2_ref_pll_clk",
+                          "sor3_ref_pll_clk",
+                          "sor0_ref_clk",
+                          "sor1_ref_clk",
+                          "sor2_ref_clk",
+                          "sor3_ref_clk",
+                          "osc_clk",
+                          "dsc_clk",
+                          "maud_clk",
+                          "aza_2xbit_clk",
+                          "disp_root",
+                          "vpllx_sor0_muxed_clk",
+                          "vpllx_sor1_muxed_clk",
+                          "vpllx_sor2_muxed_clk",
+                          "vpllx_sor3_muxed_clk",
+                          "sf0_sor_clk",
+                          "sf1_sor_clk",
+                          "sf2_sor_clk",
+                          "sf3_sor_clk",
+                          "sf4_sor_clk",
+                          "sf5_sor_clk",
+                          "sf6_sor_clk",
+                          "sf7_sor_clk",
+                          "dpaux0_clk",
+                          "emc_clk";
+            nvidia,disp-sw-soc-chip-id = <0x2650>;
+            resets = <&bpmp TEGRA264_RESET_DPAUX>,
+                     <&bpmp TEGRA264_RESET_HDACODEC>;
+            reset-names = "dpaux0_reset, hdacodec_reset";
+            interconnects = <&mc TEGRA264_MEMORY_CLIENT_DISPR &emc>;
+            interconnect-names = "read-1";
+            status = "disabled";
+            iommus = <&smmu3_mmu 0x900>;
+            non-coherent;
+        };

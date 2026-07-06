@@ -1,0 +1,30 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-2-Clause
+
+Tegra HV Net Kernel Driver
+
+The tegra_hv_net kernel driver provides Inter-VM based networking.
+
+Required properties:
+--------------------
+- compatible: should be nvidia,tegra-hv-net
+- status: property is used to enable or disable the interface
+- ivc: property links to the queue entry made in PCT platform_config.h
+       here the second element should be the index of the IVC queue declared in .queues field
+- carrier-retry-delay-msecs: Delay in milliseconds between attempts to restore
+                             network carrier when IVC write channel becomes unavailable.
+                             When the hypervisor IVC channel cannot accept writes
+                             (e.g., peer VM restart, channel reset), the driver will retry
+                             checking channel availability after this delay.
+                             Default is 1000ms if not specified.
+
+Example:
+--------
+	tegra_hv_net@0 {
+		compatible = "nvidia,tegra-hv-net";
+		status = "okay";
+		ivc = <&tegra_hv 410>;
+                carrier-retry-delay-msecs = <2000>; /* 2 seconds */
+	};
+
+This sets the hv0 interface backed by IVC queue 410.

@@ -1,0 +1,146 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/watchdog@8110000/nvidia,tegra-wdt-t264.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Tegra Watchdog Driver
+
+maintainers:
+  - Suresh Mangipudi
+
+description: |
+     the compatability = nvidia,tegra-wdt-t264 is mentioned in the following drivers
+        - <TOP>/kernel/nvidia-oot/drivers/watchdog/watchdog-tegra-t18x.c
+
+     The following nodes use this compatibility
+        - /bus@0/watchdog@8110000
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra-wdt-t264
+
+  required:
+    - compatible
+
+properties:
+
+    reg:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Registers are given by a tuple of two values:
+                - register address:
+                - register block size.
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x8000000
+                  maximum: 0x8110000
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x10000
+                  maximum: 0x10000
+
+    interrupts:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Interrupts are give by a tuple of 3 values:
+                - interrupt specifier (GIC_SPI = 0, GIC_PPI = 1)
+                  definitions in dt-bindings/interrupt-controller/arm-gic.h
+                - interrupt number
+                - trigger type (rising edge, falling edge, both, etc)
+                  definitions in dt-bindings/interrupt-controller/irq.h
+        items:
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x305
+                  maximum: 0x308
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x4
+                  maximum: 0x4
+
+    nvidia,watchdog-index:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0x0
+
+    nvidia,timer-index:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0x0
+
+    nvidia,shared-interrupt:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0x0
+
+    timeout-sec:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x78
+        maximum: 0x78
+
+    nvidia,wdt-error-threshold:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x5
+        maximum: 0x5
+
+    nvidia,extend-watchdog-suspend:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+    nvidia,disable-debug-reset:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+    nvidia,disable-por-reset:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+required:
+    - compatible
+    - reg
+    - interrupts
+
+examples:
+    - |
+        watchdog@8110000 {
+            compatible = "nvidia,tegra-wdt-t264";
+            reg = <0x0 0x08110000 0x0 0x10000>,
+                  <0x0 0x08010000 0x0 0x10000>,
+                  <0x0 0x08000000 0x0 0x10000>;
+            interrupts = <GIC_SPI 773 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 774 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 775 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 776 IRQ_TYPE_LEVEL_HIGH>;
+            nvidia,watchdog-index = <0>;
+            nvidia,timer-index = <0>;
+            nvidia,shared-interrupt = <0>;
+            timeout-sec = <120>;
+            nvidia,wdt-error-threshold = <5>;
+            nvidia,extend-watchdog-suspend;
+            nvidia,disable-debug-reset;
+            nvidia,disable-por-reset;
+            status = "disabled";
+        };

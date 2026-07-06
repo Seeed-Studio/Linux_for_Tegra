@@ -1,0 +1,231 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/SS_ErrorReportingConfig/nvidia,tegra-SafetyServiceConfig.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Nvidia Safety Service Configuration
+
+maintainers:
+  - Rahul Bedarkar
+
+description: |
+     The following nodes use this compatibility
+        - /SS_ErrorReportingConfig
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra-SafetyServiceConfig
+
+  required:
+    - compatible
+
+properties:
+
+    SEC_Threshold_count:
+        description: Number of entries in EC Threshold List.
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0x19f
+
+    SEC_Threshold:
+        description: |
+            List of EC threshold for error codes pertaining to
+            corrected EC errors. Each entry should be formatted as
+            <Threshold_Value ErrCode>.
+        $ref: "/schemas/types.yaml#/definitions/uint32-array"
+        items:
+            minItems: 0x0
+            maxItems: 0x19f
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0xff
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x5fff
+
+    Disable_EC_count:
+        description: Number of entries in the disabling ec error list.
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0x19f
+
+    Disable_EC:
+        description: |
+            List of error collator errors to be disabled. Each entry should be
+            formatted as <ErrorCode ECIndex>, where ErrorCode is for the HSM error
+            which is connected to the EC where error needs to be disabled, and
+            EC_Index is the index of the EC error to be disabled.
+        $ref: "/schemas/types.yaml#/definitions/uint32-array"
+        items:
+            minItems: 0x0
+            maxItems: 0x19f
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x5fff
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x800
+
+    List_of_ErrCode_to_disable_error_count:
+        description: Number of Error Codes in the disable list.
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0x539
+
+    List_of_ErrCode_to_disable_error:
+        description: |
+            List of Error Codes (corresponding to HSM error lines) for which error
+            detection and SOC pin assertion need to be disabled completely.
+        $ref: "/schemas/types.yaml#/definitions/uint32-array"
+        items:
+            minItems: 0x0
+            maxItems: 0x539
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x5fff
+
+    List_of_ErrCode_to_disable_SOC_Err_Pin_count:
+        description: Number of Error codes in the disable SOC_Err_Pin list.
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0x310
+
+    List_of_ErrCode_to_disable_SOC_Err_Pin:
+        description: |
+            List of Error codes for which SOC pin assertion from HSM needs to be
+            disabled while error detection remains enabled.
+        $ref: "/schemas/types.yaml#/definitions/uint32-array"
+        items:
+            minItems: 0x0
+            maxItems: 0x310
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x5fff
+
+    HSM_Timer_enable:
+        description: |
+            Enables or disables the HSM timer functionality.
+            0: Disabled, 1: Enabled
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0x1
+
+    HSM_Timer:
+        description: |
+            Timeout period (in microseconds) after which SOC error pin will be asserted.
+            This is used only when HSM_Timer_enable is set to 1.
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x1
+        maximum: 0xffff
+
+    Sw_Errors_count:
+        description: Number of software errors to be disabled.
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0x1e
+
+    Sw_Errors:
+        description: |
+            List of software errors to disable. Each entry should be formatted as
+            <reporter_id error_code>, where reporter_id is the ID of the software
+            component reporting the error and error_code is the specific error to disable.
+        $ref: "/schemas/types.yaml#/definitions/uint32-array"
+        items:
+            minItems: 0x0
+            maxItems: 0x1e
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x8000
+                  maximum: 0x8301
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0xffffffff
+
+    TSC_MON_Enable:
+        description: |
+            Enables or disables the Time Stamp Counter (TSC) monitoring.
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0x1
+
+    TSC_MON_Drift_Threshold:
+        description: |
+            Threshold value for TSC drift detection.
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x1
+        maximum: 0x9c4
+
+    TSC_MON_Debounce_Delay:
+        description: |
+            Debounce delay value (in microseconds) for TSC monitoring.
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0x4e20
+
+    TSC_MON_Sync_Timeout:
+        description: |
+            Timeout value (in microseconds) for TSC synchronization operations.
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0x7530
+
+required:
+    - compatible
+
+examples:
+    - |
+        SS_ErrorReportingConfig{
+            compatible = "nvidia,tegra-SafetyServiceConfig";
+            status = "okay";
+            SEC_Threshold_count = <0>;
+            SEC_Threshold = <>;
+            Disable_EC_count = <0>;
+            Disable_EC = <>;
+            List_of_ErrCode_to_disable_error_count = <0>;
+            List_of_ErrCode_to_disable_error = <>;
+            List_of_ErrCode_to_disable_SOC_Err_Pin_count = <0>;
+            List_of_ErrCode_to_disable_SOC_Err_Pin = <>;
+            HSM_Timer_enable = <0>;
+            HSM_Timer = <>;
+            Sw_Errors_count = <1>;
+            Sw_Errors = <0x8120 0x00000030>;
+            TSC_MON_Enable = <0>;
+        };
+    - |
+        SS_ErrorReportingConfig{
+            compatible = "nvidia,tegra-SafetyServiceConfig";
+            status = "okay";
+            SEC_Threshold_count = <1>;
+            SEC_Threshold = <0x45 0x00002daa>;
+            Disable_EC_count = <1>;
+            Disable_EC = <0x28cb 0x2>;
+            List_of_ErrCode_to_disable_error_count = <1>;
+            List_of_ErrCode_to_disable_error = <0x00001805>;
+            List_of_ErrCode_to_disable_SOC_Err_Pin_count = <1>;
+            List_of_ErrCode_to_disable_SOC_Err_Pin = <0x00001805>;
+            HSM_Timer_enable = <1>;
+            HSM_Timer = <0x1000>;
+            Sw_Errors_count = <1>;
+            Sw_Errors = <0x8120 0x00000030>;
+            TSC_MON_Enable = <1>;
+        };

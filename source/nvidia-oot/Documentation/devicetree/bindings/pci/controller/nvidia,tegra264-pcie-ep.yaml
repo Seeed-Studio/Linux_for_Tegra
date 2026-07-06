@@ -1,0 +1,230 @@
+# Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/pcie-ep@a808420000/nvidia,tegra264-pcie-ep.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: NVIDIA Tegra264 PCIe EP controller driver
+
+maintainers:
+  - Manikanta Madireddy
+
+description: |
+     the compatability = nvidia,tegra264-pcie-ep is mentioned in the following drivers
+        - <TOP>/kernel/nvidia-oot/drivers/pci/controller/pcie-tegra264-ep.c
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra264-pcie-ep
+
+  required:
+    - compatible
+
+properties:
+
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra264-pcie-ep
+
+    reg:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Registers are given by a tuple of two values:
+                - register address:
+                - register block size.
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0xa8
+                  maximum: 0xc8
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x8420000
+                  maximum: 0x80000000
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x8
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x10000
+
+    reg-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - xal
+                - xal-ep-dm
+                - xtl-ep-pri
+                - xtl-ep-cfg
+                - xdma
+                - xpl
+                - addr_space
+
+
+    interrupts:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Interrupts are give by a tuple of 3 values:
+                - interrupt specifier (GIC_SPI = 0, GIC_PPI = 1)
+                  definitions in dt-bindings/interrupt-controller/arm-gic.h
+                - interrupt number
+                - trigger type (rising edge, falling edge, both, etc)
+                  definitions in dt-bindings/interrupt-controller/irq.h
+        items:
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x392
+                  maximum: 0x3ad
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x4
+                  maximum: 0x4
+
+    interrupt-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - intr
+
+
+    '#address-cells':
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x3
+        maximum: 0x3
+
+    '#size-cells':
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x2
+        maximum: 0x2
+
+    pinctrl-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - default
+
+
+    pinctrl-0:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x1d
+        maximum: 0x1d
+
+    reset-gpios:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 3
+            maxItems: 3
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0xb
+                  maximum: 0x1b
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x1
+                  maximum: 0x1
+
+    iommus:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x20000
+                  maximum: 0x50000
+
+    dma-coherent:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+    msi-parent:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x120000
+                  maximum: 0x150000
+
+    linux,pci-domain:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x2
+        maximum: 0x5
+
+    nvidia,bpmp:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x2
+                  maximum: 0x5
+
+    numa-node-id:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0x0
+
+    nvidia,pex-prsnt-gpios:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x1
+        maximum: 0x1e
+
+required:
+    - compatible
+    - reg
+    - interrupts
+    - interrupt-names
+
+examples:
+    - |
+        pcie-ep@a808420000 {
+            status = "disabled";
+            compatible = "nvidia,tegra264-pcie-ep";
+            reg = <0xa8 0x08420000 0x0 0x00004000>,
+                  <0xa8 0x08500000 0x0 0x00001000>,
+                  <0xa8 0x08510000 0x0 0x00001000>,
+                  <0xa8 0x08511000 0x0 0x00001000>,
+                  <0xa8 0x08520000 0x0 0x00010000>,
+                  <0xa8 0x08430000 0x0 0x00010000>,
+                  <0xb0 0x80000000 0x8 0x00000000>;
+            reg-names = "xal, xal-ep-dm, xtl-ep-pri, xtl-ep-cfg, xdma, xpl, addr_space";
+            interrupts = <GIC_SPI 0x392 IRQ_TYPE_LEVEL_HIGH>;
+            interrupt-names = "intr";
+            #address-cells = <0x3>;
+            #size-cells = <0x2>;
+            pinctrl-names = "default";
+            pinctrl-0 = <&pex_rst_c2_in_state>;
+            reset-gpios = <&gpio_uphy TEGRA264_UPHY_GPIO(B3) GPIO_ACTIVE_LOW>;
+            iommus = <&smmu1_mmu 0x20000>;
+            dma-coherent;
+            msi-parent = <&its 0x120000>;
+            linux,pci-domain = <0x2>;
+            nvidia,bpmp = <&bpmp 0x2>;
+            numa-node-id = <0x0>;
+        };

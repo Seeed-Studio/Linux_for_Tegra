@@ -1,0 +1,139 @@
+# Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/tegra_nvlog_oops/nvidia,tegra-nvlog-oops-storage.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: NvLog crash dump storage driver for Tegra Hypervisor
+
+maintainers:
+  - NVIDIA Corporation
+
+description: |
+     The compatibility "nvidia,tegra-nvlog-oops-storage" is used by the following driver:
+        - <TOP>/kernel/nvidia-oot/drivers/block/tegra_oops_nvlog/tegra_oops_nvlog.c
+
+     This driver captures and stores kernel crash data (panic/oops) through NVIDIA's NvLog
+     logging framework using a raw binary protocol. It operates exclusively in crash context
+     when the kernel panics or encounters an oops, writing raw compressed data directly to
+     hypervisor shared memory for subsequent processing by the NvLog Server.
+
+     Key features:
+     - Executes only during kernel panic/oops (not during normal operation)
+     - Captures KMSG (kernel messages) data from pstore framework
+     - Writes raw binary data to circular buffer (no message formatting)
+     - NvLog Server reads raw data and handles message wrapping
+     - Uses ARM64-safe operations for crash context reliability
+     - Implements circular buffer protocol with metadata tracking
+
+     Important limitation:
+     During kernel panic, ONLY KMSG data is sent by the pstore framework. Console,
+     FTRACE, and PMSG data are NOT available during panic due to the unstable state
+     of the kernel. This driver is optimized for this single-purpose operation.
+
+     Raw Binary Protocol:
+     The driver writes to a circular buffer with an 8-element u64 metadata array:
+     - [0]: Signature (0xDEADBEEFDEADBEEF)
+     - [1]: Data start offset
+     - [2]: Read offset (consumer position)
+     - [3]: Write offset (producer position)
+     - [5]: Total bytes written
+     - [7]: End tag (set to 1 when dump complete)
+
+     The following device tree nodes use this compatibility:
+        - /tegra_nvlog_oops##
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra-nvlog-oops-storage
+
+  required:
+    - compatible
+
+properties:
+
+    pstore_max_reason:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x2
+        maximum: 0x2
+        description: |
+            Crash capture threshold (KMSG_DUMP_* values from kmsg_dump.h).
+            Fixed at KMSG_DUMP_OOPS (value = 2) to capture PANIC and OOPS events.
+            This driver only activates during kernel crashes.
+
+    pstore_kmsg_size:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x1000
+        maximum: 0x100000
+        description: |
+            Buffer size for kernel panic messages and stack traces.
+            Default is 64KB (0x10000). Should be aligned to block boundaries.
+            The pstore framework provides compressed data (DBGC format) which
+            the driver writes as raw binary to the circular buffer.
+
+    nvlog_kmsg_entity_id:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0xC000
+        maximum: 0xFFFF
+        description: |
+            Entity ID for kernel panic messages and stack traces.
+            This identifies the KMSG crash data for routing by NvLog infrastructure.
+            Entity ID format: [15:14]=0xC (mark), [13:8]=Entity, [7:0]=Sub-Entity
+
+            Common KMSG entity IDs:
+            - 0xC001: GOS0 (Primary VM) kernel panic dumps
+            - 0xC201: GOS1 (Secondary VM) kernel panic dumps
+            - 0xC401: GOS2 kernel panic dumps
+            - 0xC601: GOS3 kernel panic dumps
+
+    nvlog_mempool_id:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 150
+        maximum: 200
+        description: |
+            Hypervisor shared memory pool ID for crash data storage.
+
+            Common crash storage configuration:
+            - 153: NVLOG_SERVER_M_153 (designated for pstore/crash dumps)
+
+            The crash data is written as raw binary to this mempool's circular
+            buffer during panic. The NvLog Server reads this raw data and wraps
+            it in NvLogMsg_t format for storage.
+
+required:
+    - compatible
+    - nvlog_kmsg_entity_id
+    - nvlog_mempool_id
+
+examples:
+    - |
+        /* Standard crash dump configuration */
+        tegra_nvlog_oops {
+            compatible = "nvidia,tegra-nvlog-oops-storage";
+            status = "okay";
+
+            /* Crash data storage mempool */
+            nvlog_mempool_id = <153>;              /* NVLOG_SERVER_M_153 for crash dumps */
+
+            /* Entity ID for kernel panic dumps (only KMSG sent during panic) */
+            nvlog_kmsg_entity_id = <0xC001>;       /* GOS0 kernel panic messages */
+
+            /* pstore configuration */
+            pstore_kmsg_size = <0x10000>;          /* 64KB for KMSG buffer */
+            pstore_max_reason = <2>;               /* KMSG_DUMP_OOPS threshold */
+        };

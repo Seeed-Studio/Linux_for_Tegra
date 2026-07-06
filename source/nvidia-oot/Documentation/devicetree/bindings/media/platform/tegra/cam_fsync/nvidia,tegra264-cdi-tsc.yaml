@@ -1,0 +1,89 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/tsc_sig_gen@c230000/nvidia,tegra264-cdi-tsc.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Cam Fsync Driver
+
+maintainers:
+  - Mohit Ingale
+
+description: |
+     the compatability = nvidia,tegra264-cdi-tsc is mentioned in the following drivers
+        - <TOP>/kernel/nvidia-oot/drivers/media/platform/tegra/cam_fsync/cam_fsync.c
+
+     The following nodes use this compatibility
+        - /tsc_sig_gen@c230000
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra264-cdi-tsc
+
+  required:
+    - compatible
+
+properties:
+
+    reg:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Registers are given by a tuple of two values:
+                - register address:
+                - register block size.
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0xc230000
+                  maximum: 0xc230000
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x18
+                  maximum: 0x18
+
+    '#address-cells':
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x1
+        maximum: 0x1
+
+    '#size-cells':
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x1
+        maximum: 0x1
+
+required:
+    - compatible
+    - reg
+
+examples:
+    - |
+        tsc_sig_gen@c230000 {
+            compatible = "nvidia,tegra264-cam-cdi-tsc";
+            ranges = <0x0 0x0 0xc230000 0x10000>;
+            reg = <0x0 0xc230000 0x0 0x18>;
+            #address-cells = <1>;
+            #size-cells = <1>;
+            status = "disabled";
+        };

@@ -1,0 +1,226 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/tegra_soc_hwpm@1604000/nvidia,t264-soc-hwpm.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Nvidia Tegra SOC-HWPM
+
+maintainers:
+  - Besar Wicaksono
+  - Vasuki Shankar
+
+description: |
+     The following nodes use this compatibility
+        - /bus@0/tegra_soc_hwpm@1604000
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,t264-soc-hwpm
+
+  required:
+    - compatible
+
+properties:
+
+    dma-coherent:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+    reg:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Registers are given by a tuple of two values:
+                - register address:
+                - register block size.
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0xa8
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x1600000
+                  maximum: 0x8160f000
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x1000
+                  maximum: 0x2000
+
+    clocks:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Clocks are given by a tuple of 2 values:
+                - Phandle to the device
+                - Clock ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0xc
+                  maximum: 0xcd
+
+    clock-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - la
+                - parent
+
+
+    resets:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Resets are given by a tuple of 2 values:
+                - Phandle to the device
+                - Reset ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0xa
+                  maximum: 0x14
+
+    reset-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - la
+                - hwpm
+
+
+    iommus:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            iommus are given by a tuple of 2 values:
+                - Phandle to the device
+                - Device ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0xe00
+                  maximum: 0xe00
+
+required:
+    - compatible
+    - reg
+    - clocks
+    - clock-names
+    - resets
+    - reset-names
+    - iommus
+
+examples:
+    - |
+        tegra_soc_hwpm@1604000 {
+            compatible = "nvidia,t264-soc-hwpm";
+            dma-coherent;
+            reg = <0x00 0x01600000 0x0 0x1000>,
+                  <0x00 0x01604000 0x0 0x1000>,
+                  <0x00 0x14100000 0x0 0x1000>,
+                  <0x00 0x14110000 0x0 0x1000>,
+                  <0x00 0x14120000 0x0 0x1000>,
+                  <0x00 0x14130000 0x0 0x1000>,
+                  <0x00 0x14140000 0x0 0x1000>,
+                  <0x00 0x14150000 0x0 0x1000>,
+                  <0x00 0x14160000 0x0 0x1000>,
+                  <0x00 0x14170000 0x0 0x1000>,
+                  <0x00 0x14180000 0x0 0x1000>,
+                  <0x00 0x14190000 0x0 0x1000>,
+                  <0x00 0x141a0000 0x0 0x1000>,
+                  <0x00 0x141b0000 0x0 0x1000>,
+                  <0x00 0x141c0000 0x0 0x1000>,
+                  <0x00 0x141d0000 0x0 0x1000>,
+                  <0x81 0x01600000 0x0 0x1000>,
+                  <0x81 0x01601000 0x0 0x1000>,
+                  <0x81 0x01602000 0x0 0x1000>,
+                  <0x81 0x01603000 0x0 0x1000>,
+                  <0x81 0x01604000 0x0 0x1000>,
+                  <0x81 0x01605000 0x0 0x1000>,
+                  <0x81 0x01606000 0x0 0x1000>,
+                  <0x81 0x01607000 0x0 0x1000>,
+                  <0x81 0x01608000 0x0 0x1000>,
+                  <0x81 0x01609000 0x0 0x1000>,
+                  <0x81 0x0160a000 0x0 0x1000>,
+                  <0x81 0x0160b000 0x0 0x1000>,
+                  <0x81 0x0160c000 0x0 0x1000>,
+                  <0x81 0x0160d000 0x0 0x1000>,
+                  <0x81 0x0160e000 0x0 0x1000>,
+                  <0x81 0x0160f000 0x0 0x1000>,
+                  <0x81 0x01621000 0x0 0x1000>,
+                  <0x81 0x01622000 0x0 0x1000>,
+                  <0x81 0x01623000 0x0 0x1000>,
+                  <0x81 0x01624000 0x0 0x1000>,
+                  <0x81 0x01625000 0x0 0x1000>,
+                  <0x81 0x01626000 0x0 0x1000>,
+                  <0x81 0x01627000 0x0 0x1000>,
+                  <0x81 0x01628000 0x0 0x1000>,
+                  <0x81 0x01629000 0x0 0x1000>,
+                  <0x81 0x0162a000 0x0 0x1000>,
+                  <0x81 0x0162b000 0x0 0x1000>,
+                  <0x81 0x0162c000 0x0 0x1000>,
+                  <0x81 0x0162d000 0x0 0x1000>,
+                  <0x81 0x0162e000 0x0 0x1000>,
+                  <0x81 0x0162f000 0x0 0x1000>,
+                  <0x81 0x01630000 0x0 0x1000>,
+                  <0x81 0x01631000 0x0 0x1000>,
+                  <0x81 0x01632000 0x0 0x1000>,
+                  <0x81 0x0163e000 0x0 0x1000>,
+                  <0x81 0x0163f000 0x0 0x1000>,
+                  <0x81 0x01642000 0x0 0x1000>,
+                  <0x81 0x01643000 0x0 0x1000>,
+                  <0x81 0x01644000 0x0 0x1000>,
+                  <0x81 0x01645000 0x0 0x1000>,
+                  <0x81 0x01646000 0x0 0x1000>,
+                  <0x81 0x01647000 0x0 0x1000>,
+                  <0x81 0x0164b000 0x0 0x1000>,
+                  <0x81 0x0164f000 0x0 0x1000>,
+                  <0x81 0x01653000 0x0 0x1000>,
+                  <0x81 0x81604000 0x0 0x1000>,
+                  <0x81 0x81605000 0x0 0x1000>,
+                  <0x81 0x81606000 0x0 0x1000>,
+                  <0x81 0x81607000 0x0 0x1000>,
+                  <0x81 0x8160b000 0x0 0x1000>,
+                  <0x81 0x8160c000 0x0 0x1000>,
+                  <0x81 0x8160e000 0x0 0x1000>,
+                  <0x81 0x8160f000 0x0 0x1000>,
+                  <0x88 0x01601000 0x0 0x1000>,
+                  <0x88 0x01602000 0x0 0x1000>,
+                  <0xa8 0x01604000 0x0 0x1000>,
+                  <0xa8 0x01628000 0x0 0x1000>,
+                  <0xa8 0x01629000 0x0 0x1000>,
+                  <0x00 0x01610000 0x0 0x2000>,
+                  <0x00 0x01612000 0x0 0x1000>;
+            clocks = <&bpmp TEGRA264_CLK_LA>,
+                     <&bpmp TEGRA264_CLK_SPLL_OUT7>;
+            clock-names = "la, parent";
+            resets = <&bpmp TEGRA264_RESET_LA>,
+                     <&bpmp TEGRA264_RESET_HWPM>;
+            reset-names = "la, hwpm";
+            iommus = <&smmu1_mmu TEGRA_SID_PMA0>;
+            status = "disabled";
+        };
