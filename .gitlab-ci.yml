@@ -92,8 +92,24 @@ stages:
   - git submodule update --init --recursive
   - id 
   - export DATE_STR=$(TZ='Asia/Hong_Kong' date +%Y-%m-%d)
+  - |
+    cleanup_rootfs_mounts() {
+      for mp in ./rootfs/dev/pts ./rootfs/dev ./rootfs/proc ./rootfs/sys; do
+        if mountpoint -q "$mp"; then
+          umount "$mp"
+        fi
+      done
+    }
   # clean the rootfs for every image
   - mkdir -p rootfs
+  - cleanup_rootfs_mounts
+  - |
+    rootfs_path="$(realpath ./rootfs)"
+    if findmnt -rn -o TARGET | awk -v root="$rootfs_path" '$0 == root || index($0, root "/") == 1 { found = 1 } END { exit !found }'; then
+      echo "Error: rootfs still contains mounted filesystems; refusing to clean rootfs." >&2
+      findmnt -rn -o TARGET,SOURCE,FSTYPE | awk -v root="$rootfs_path" '$1 == root || index($1, root "/") == 1' >&2
+      exit 1
+    fi
   - rm -rf rootfs/*
   - wget  http://192.168.1.77/jetson/$ROOTFS_NAME -q
   - tar xpf $ROOTFS_NAME -C rootfs
@@ -171,6 +187,8 @@ stages:
   # install user custom package(optional)
   - sed -i "s/<SOC>/$SOC/g" rootfs/etc/apt/sources.list.d/nvidia-l4t-apt-source.list
   - sudo sed -i 's| --noplugin=[^ ]*||' rootfs/lib/systemd/system/bluetooth.service.d/nv-bluetooth-service.conf
+  - trap 'cleanup_rootfs_mounts || true' EXIT
+  - cleanup_rootfs_mounts
   - mount --bind /sys ./rootfs/sys
   - mount --bind /dev ./rootfs/dev
   - mount --bind /dev/pts ./rootfs/dev/pts
@@ -190,10 +208,8 @@ stages:
       echo "current kernel number $KER_NUM"
       sudo chroot rootfs depmod -a  $KER_NUM
     fi
-  - umount ./rootfs/sys
-  - umount ./rootfs/dev/pts
-  - umount ./rootfs/dev
-  - umount ./rootfs/proc
+  - cleanup_rootfs_mounts
+  - trap - EXIT
   - rm rootfs/rootfs_magic.sh
   - rm rootfs/usr/bin/qemu-aarch64-static
   - rm rootfs/bluetooth-auto-trust_1.1-1.deb
