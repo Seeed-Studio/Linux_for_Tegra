@@ -160,6 +160,7 @@ stages:
       cp ../kernel/dtb/tegra234-p3767-camera-p3768-imx477-dual-seeed.dtbo ../rootfs/boot/;
       cp ../kernel/dtb/tegra234-p3767-camera-p3768-imx219-imx477.dtbo ../rootfs/boot/;
       cp ../kernel/dtb/tegra234-p3767-camera-p3768-imx477-imx219.dtbo ../rootfs/boot/;
+      cp ../kernel/dtb/tegra234-stereolabs-zedx-overlay.dtbo ../rootfs/boot/;
     fi
   # deploy new kernel drviers
   - export INSTALL_MOD_PATH=`realpath ../rootfs/`
