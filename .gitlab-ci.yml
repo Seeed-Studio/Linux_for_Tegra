@@ -126,6 +126,9 @@ stages:
     else
       ./apply_binaries.sh
     fi
+  # Install the ZED X Argus ISP override into the generated rootfs.
+  - mkdir -p rootfs/var/nvidia/nvcam/settings
+  - cp extra_scripts/zedx/camera_overrides.isp rootfs/var/nvidia/nvcam/settings/camera_overrides.isp
   # record the system image name and commit info of seeed to target rootfs.
   - echo "# Seeed Image Name mfi_$CI_JOB_STAGE-$JETPACKVER-$JETSONVER-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
   - echo "# branch $CI_COMMIT_REF_NAME" >> ./rootfs/etc/nv_tegra_release
