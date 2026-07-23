@@ -80,6 +80,7 @@ SUPPORTED_EXTERNAL_DEVICES=(
 	'jetson-orin-nano-devkit:nvme0n1'
 	'recomputer-orin-j40mini:nvme0n1'
 	'recomputer-orin-j401:nvme0n1'
+	'recomputer-orin-super-j401:nvme0n1'
 	'recomputer-industrial-orin-j401:nvme0n1'
 	'reserver-industrial-orin-j401:nvme0n1'
 	'reserver-agx-orin-j501x:nvme0n1'
@@ -138,7 +139,7 @@ function usage()
 {
 	echo -ne "Usage: sudo $0 [options] <target board> <bsp version>\n"
 	echo -ne "\tWhere,\n"
-	echo -ne "\t\t<target board>: target board. Supported boards: jetson-agx-orin-devkit, jetson-agx-orin-devkit-industrial, jetson-orin-nano-devkit, jetson-orin-nano-devkit-super, jetson-orin-nano-devkit-super-maxn, recomputer-orin-j40mini, recomputer-orin-j401, recomputer-industrial-orin-j401, reserver-industrial-orin-j401, reserver-agx-orin-j501x, reserver-agx-orin-j501x-gmsl.\n"
+	echo -ne "\t\t<target board>: target board. Supported boards: jetson-agx-orin-devkit, jetson-agx-orin-devkit-industrial, jetson-orin-nano-devkit, jetson-orin-nano-devkit-super, jetson-orin-nano-devkit-super-maxn, recomputer-orin-j40mini, recomputer-orin-j401, recomputer-orin-super-j401, recomputer-industrial-orin-j401, reserver-industrial-orin-j401, reserver-agx-orin-j501x, reserver-agx-orin-j501x-gmsl.\n"
 	echo -ne "\t\t<bsp version>: the version of the base BSP. Supported versions: R35-5, R35-6, R36-3, R36-4, R36-5.\n"
 	echo -ne "\toptions:\n"
 	echo -ne "\t\t-u <PKC key file>: PKC key used for odm fused board\n"
@@ -233,6 +234,10 @@ function construct_board_spec_name()
 		'recomputer-orin-j401:0003'
 		'recomputer-orin-j401:0004'
 		'recomputer-orin-j401:0005'
+		'recomputer-orin-super-j401:0001'
+		'recomputer-orin-super-j401:0003'
+		'recomputer-orin-super-j401:0004'
+		'recomputer-orin-super-j401:0005'
 		'recomputer-industrial-orin-j401:0001'
 		'recomputer-industrial-orin-j401:0003'
 		'recomputer-industrial-orin-j401:0004'
@@ -420,6 +425,14 @@ function handle_esp_image()
 	fi
 	images_dir="${OTA_BASE_DIR_TMP}/${dev}/${TOT_IMAGES_DIR}"
 
+	# The NVMe partition layout may contain ESP partitions without a filename.
+	# In that case there is no ESP payload to replace.  Do not require an image
+	# name unless the caller explicitly requests an ESP update with -E.
+	if [ -z "${esp_image}" ]; then
+		echo "No custom ESP image is specified; preserve the existing ESP"
+		return 0
+	fi
+
 	local esp_image_name=
 	if ! get_esp_image_name "${images_dir}" "esp_image_name"; then
 		echo "Failed to run \"get_esp_image_name ${images_dir} esp_image_name\""
@@ -442,6 +455,39 @@ function handle_esp_image()
 			exit 1
 		fi
 	fi
+}
+
+# Verify that every generated board specification has its flash index before
+# packaging.  A payload without this file can pass host-side compression but
+# cannot select recovery/bootloader images on the OTA target.
+function validate_generated_images()
+{
+	local dev=
+	local images_dir=
+	local board_specs=
+	local spec=
+	local board_spec_name=
+
+	if [ -n "${external_device}" ]; then
+		dev="${EXT_DEV}"
+	else
+		dev="${INT_DEV}"
+	fi
+	images_dir="${OTA_BASE_DIR_TMP}/${dev}/${TOT_IMAGES_DIR}"
+	board_specs="${!BOARD_SPECS_ARRAY}[@]"
+
+	for spec in "${!board_specs}"; do
+		eval "${spec}"
+		if [ "${rootdev}" != "${INTERNAL_ROOTDEV}" ] && [ -z "${external_device}" ]; then
+			continue
+		fi
+		construct_board_spec_name "board_spec_name"
+		if [ ! -f "${images_dir}/${board_spec_name}/flash.idx" ]; then
+			echo "ERROR: missing OTA image index for board spec ${board_spec_name}"
+			return 1
+		fi
+	done
+	return 0
 }
 
 function check_external_device()
@@ -497,6 +543,7 @@ function generate_binaries()
 	local board_spec_name=
 	local build_system_img=
 	local ext_cfg_file=
+	local ext_cfg_file_with_sector_count=
 
 	board_specs="${!BOARD_SPECS_ARRAY}[@]"
 	for spec in "${!board_specs}"; do
@@ -572,6 +619,20 @@ function generate_binaries()
 				cmd_arg+="--external-device "
 				# Get the layout file for external device
 				get_layout_for_external_device ext_cfg_file
+				# The non-A/B, non-encrypted T234 NVMe layout used by some
+				# BSPs hard-codes num_sectors.  flash.sh can apply -T only when
+				# the layout contains the EXT_NUM_SECTORS token.  Keep the
+				# original layout unchanged for normal flashing, but make a
+				# per-OTA layout when the caller explicitly supplied -T.
+				if [ -n "${ext_num_sector}" ]; then
+					ext_cfg_file_with_sector_count="${OTA_BASE_DIR_TMP}/$(basename "${ext_cfg_file%.xml}")_ota.xml"
+					if ! sed -E 's/(<device type="external"[^>]*num_sectors=")[^"]*("[^>]*>)/\1EXT_NUM_SECTORS\2/' \
+						"${ext_cfg_file}" > "${ext_cfg_file_with_sector_count}"; then
+						echo "Failed to create the external-device OTA partition layout"
+						exit 1
+					fi
+					ext_cfg_file="${ext_cfg_file_with_sector_count}"
+				fi
 				cmd_arg+="-c \"${ext_cfg_file}\" "
 				if [ -n "${rootfs_size}" ]; then
 					cmd_arg+="-S \"${rootfs_size}\" "
@@ -660,6 +721,10 @@ function generate_binaries()
 
 	# Use user provided ESP image if specified
 	handle_esp_image
+	if ! validate_generated_images; then
+		echo "Failed to validate generated OTA images"
+		exit 1
+	fi
 	echo -e "${ret_msg}"
 	return 0
 }
