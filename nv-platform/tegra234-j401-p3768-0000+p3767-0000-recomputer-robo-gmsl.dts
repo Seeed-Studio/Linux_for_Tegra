@@ -15,7 +15,7 @@
 
 / {
         compatible = "nvidia,p3768-0000+p3767-0000-super", "nvidia,p3767-0000", "nvidia,tegra234";
-        model = "NVIDIA Jetson Orin Nano Seeed recomputer classic Robotics";
+        model = "NVIDIA Jetson Orin NX Seeed recomputer classic Robotics";
         leds {
                 compatible = "gpio-leds";
                 led1: led1 {
