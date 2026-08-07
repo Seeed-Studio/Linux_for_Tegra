@@ -94,7 +94,6 @@ cd source
 export INSTALL_MOD_PATH=`realpath ../rootfs/`
 ./nvbuild.sh -i
 cd ..
-sudo install -d -m 0755 rootfs/boot
 sudo cp kernel/dtb/tegra234-seeed-gmsl* rootfs/boot/
 sudo cp kernel/dtb/tegra234-seeed-orbbec-335lg-overlay.dtbo rootfs/boot/
 sudo cp kernel/dtb/tegra234-p3767-camera-p3768-imx219-dual-seeed.dtbo rootfs/boot/
