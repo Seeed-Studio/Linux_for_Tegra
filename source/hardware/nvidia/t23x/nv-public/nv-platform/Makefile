@@ -1,0 +1,85 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+DTC_FLAGS += -@
+
+old-dtb := $(dtb-y)
+old-dtbo := $(dtbo-y)
+dtb-y :=
+dtbo-y :=
+makefile-path := t23x/nv-public/nv-platform
+
+dtb-y += tegra234-p3737-0000+p3701-0000-nv.dtb
+dtb-y += tegra234-j501x-0000+p3701-0000-reserver.dtb
+dtb-y += tegra234-j501x-0000+p3701-0000-reserver-gmsl.dtb
+dtb-y += tegra234-p3737-0000+p3701-0004-nv.dtb
+dtb-y += tegra234-j501x-0000+p3701-0004-reserver.dtb
+dtb-y += tegra234-j501x-0000+p3701-0004-reserver-gmsl.dtb
+dtb-y += tegra234-p3737-0000+p3701-0005-nv.dtb
+dtb-y += tegra234-j501x-0000+p3701-0005-reserver.dtb
+dtb-y += tegra234-j501x-0000+p3701-0005-reserver-gmsl.dtb
+dtb-y += tegra234-p3737-0000+p3701-0008-nv.dtb
+dtb-y += tegra234-p3740-0002+p3701-0008-nv.dtb
+dtb-y += tegra234-p3740-0002+p3701-0008-nv-safety.dtb
+dtb-y += tegra234-p3768-0000+p3767-0000-nv.dtb
+dtb-y += tegra234-p3768-0000+p3767-0000-nv-px1.dtb
+dtb-y += tegra234-p3768-0000+p3767-0000-nv-super.dtb
+dtb-y += tegra234-p3768-0000+p3767-0000-nv-taylor-high.dtb
+dtb-y += tegra234-p3768-0000+p3767-0000-nv-taylor-low.dtb
+dtb-y += tegra234-p3768-0000+p3767-0001-nv.dtb
+dtb-y += tegra234-p3768-0000+p3767-0001-nv-super.dtb
+dtb-y += tegra234-p3768-0000+p3767-0003-nv.dtb
+dtb-y += tegra234-p3768-0000+p3767-0003-nv-super.dtb
+dtb-y += tegra234-p3768-0000+p3767-0004-nv.dtb
+dtb-y += tegra234-p3768-0000+p3767-0004-nv-super.dtb
+dtb-y += tegra234-p3768-0000+p3767-0005-nv.dtb
+dtb-y += tegra234-p3768-0000+p3767-0005-nv-super.dtb
+dtb-y += tegra234-j401-p3768-0000+p3767-0000-recomputer.dtb
+dtb-y += tegra234-j401-p3768-0000+p3767-0001-recomputer.dtb
+dtb-y += tegra234-j401-p3768-0000+p3767-0003-recomputer.dtb
+dtb-y += tegra234-j401-p3768-0000+p3767-0004-recomputer.dtb
+dtb-y += tegra234-j401-p3768-0000+p3767-0000-reserver-indu.dtb
+dtb-y += tegra234-j401-p3768-0000+p3767-0001-reserver-indu.dtb
+dtb-y += tegra234-j401-p3768-0000+p3767-0003-reserver-indu.dtb
+dtb-y += tegra234-j401-p3768-0000+p3767-0004-reserver-indu.dtb
+dtb-y += tegra234-j201-p3768-0000+p3767-0000-recomputer-indu.dtb
+dtb-y += tegra234-j201-p3768-0000+p3767-0001-recomputer-indu.dtb
+dtb-y += tegra234-j201-p3768-0000+p3767-0004-recomputer-indu.dtb
+dtb-y += tegra234-j201-p3768-0000+p3767-0003-recomputer-indu.dtb
+dtb-y += tegra234-j40mini-p3768-0000+p3767-0000-recomputer.dtb
+dtb-y += tegra234-j40mini-p3768-0000+p3767-0001-recomputer.dtb
+dtb-y += tegra234-j40mini-p3768-0000+p3767-0003-recomputer.dtb
+dtb-y += tegra234-j40mini-p3768-0000+p3767-0004-recomputer.dtb
+dtb-y += tegra234-j401-p3768-0000+p3767-0000-recomputer-super.dtb
+dtb-y += tegra234-j401-p3768-0000+p3767-0001-recomputer-super.dtb
+dtb-y += tegra234-j401-p3768-0000+p3767-0003-recomputer-super.dtb
+dtb-y += tegra234-j401-p3768-0000+p3767-0004-recomputer-super.dtb
+dtb-y += tegra234-j401-p3768-0000+p3767-0000-recomputer-robo.dtb
+dtb-y += tegra234-j401-p3768-0000+p3767-0001-recomputer-robo.dtb
+dtb-y += tegra234-j401-p3768-0000+p3767-0003-recomputer-robo.dtb
+dtb-y += tegra234-j401-p3768-0000+p3767-0004-recomputer-robo.dtb
+dtb-y += tegra234-j401-p3768-0000+p3767-0000-recomputer-robo-gmsl.dtb
+dtb-y += tegra234-j401-p3768-0000+p3767-0001-recomputer-robo-gmsl.dtb
+dtb-y += tegra234-j401-p3768-0000+p3767-0003-recomputer-robo-gmsl.dtb
+dtb-y += tegra234-j401-p3768-0000+p3767-0004-recomputer-robo-gmsl.dtb
+dtb-y += tegra234-j401-p3768-0000+p3767-0000-recomputer-rugged.dtb
+dtb-y += tegra234-j401-p3768-0000+p3767-0001-recomputer-rugged.dtb
+dtb-y += tegra234-j401-p3768-0000+p3767-0003-recomputer-rugged.dtb
+dtb-y += tegra234-j401-p3768-0000+p3767-0004-recomputer-rugged.dtb
+dtb-y += tegra234-j501x-0000+p3701-0000-recomputer-mini.dtb
+dtb-y += tegra234-j501x-0000+p3701-0004-recomputer-mini.dtb
+dtb-y += tegra234-j501x-0000+p3701-0005-recomputer-mini.dtb
+dtb-y += tegra234-j501x-0000+p3701-0000-recomputer-robo.dtb
+dtb-y += tegra234-j501x-0000+p3701-0004-recomputer-robo.dtb
+dtb-y += tegra234-j501x-0000+p3701-0005-recomputer-robo.dtb
+
+ifneq ($(dtb-y),)
+dtb-y := $(addprefix $(makefile-path)/,$(dtb-y))
+endif
+ifneq ($(dtbo-y),)
+dtbo-y := $(addprefix $(makefile-path)/,$(dtbo-y))
+endif
+
+dtb-y += $(old-dtb)
+dtbo-y += $(old-dtbo)
+
