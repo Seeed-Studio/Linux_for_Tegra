@@ -88,11 +88,22 @@ cd source
 ./nvbuild.sh
 ```
 
-8. install new kernel dtbs and drivers
+8. install new kernel dtbs, drivers, and Seeed camera overlays
 ```
 ./do_copy.sh
 export INSTALL_MOD_PATH=`realpath ../rootfs/`
 ./nvbuild.sh -i
+cd ..
+sudo cp kernel/dtb/tegra234-seeed-gmsl* rootfs/boot/
+sudo cp kernel/dtb/tegra234-seeed-orbbec-335lg-overlay.dtbo rootfs/boot/
+sudo cp kernel/dtb/tegra234-p3767-camera-p3768-imx219-dual-seeed.dtbo rootfs/boot/
+sudo cp kernel/dtb/tegra234-p3767-camera-p3768-imx219-quad-seeed.dtbo rootfs/boot/
+sudo cp kernel/dtb/tegra234-p3767-camera-p3768-imx477-dual-seeed.dtbo rootfs/boot/
+sudo cp kernel/dtb/tegra234-p3767-camera-p3768-imx477-quad-seeed.dtbo rootfs/boot/
+sudo cp kernel/dtb/tegra234-p3767-camera-p3768-imx219-imx477-quad-seeed.dtbo rootfs/boot/
+sudo cp kernel/dtb/tegra234-p3767-camera-p3768-imx219-imx477.dtbo rootfs/boot/
+sudo cp kernel/dtb/tegra234-p3767-camera-p3768-imx477-imx219.dtbo rootfs/boot/
+sudo ./tools/l4t_update_initrd.sh
 ```
 
 9. flash the device(take recomputer-orin-j401 for example)

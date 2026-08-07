@@ -117,6 +117,8 @@ stages:
   - cp kernel/dtb/tegra234-p3767-camera-p3768-imx219-imx477-quad-seeed.dtbo rootfs/boot/
   - cp kernel/dtb/tegra234-p3767-camera-p3768-imx219-imx477.dtbo rootfs/boot/
   - cp kernel/dtb/tegra234-p3767-camera-p3768-imx477-imx219.dtbo rootfs/boot/
+  # update initrd
+  - ./tools/l4t_update_initrd.sh
   - >
     if [ $BUILD_QSPI_IMG == "1" ]; then
       # package the image for qspi flash
