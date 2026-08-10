@@ -1,0 +1,116 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/ramoops_carveout/ramoops.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Ramoops
+
+maintainers:
+  - Pritesh Raithatha
+
+description: |
+     the compatability = ramoops is mentioned in the following drivers
+        - <TOP>/kernel/kernel-oot/drivers/of/platform.c
+        - <TOP>/kernel/kernel-oot/drivers/platform/chrome/chromeos_pstore.c
+
+     The following nodes use this compatibility
+        - /reserved-memory/ramoops_carveout
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - ramoops
+
+  required:
+    - compatible
+
+properties:
+
+    size:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x200000
+                  maximum: 0x200000
+
+    record-size:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x10000
+        maximum: 0x10000
+
+    console-size:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x80000
+        maximum: 0x80000
+
+    alignment:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x10000
+                  maximum: 0x10000
+
+    alloc-ranges:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x1
+                  maximum: 0x1
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+
+    no-map:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+required:
+    - compatible
+
+examples:
+    - |
+        ramoops_carveout {
+            compatible = "ramoops";
+            status = "disabled";
+            size = <0x0 0x200000>;
+            record-size = <0x00010000>;
+            console-size = <0x00080000>;
+            alignment = <0x0 0x10000>;
+            alloc-ranges = <0x0 0x0 0x1 0x0>;
+            no-map;
+        };

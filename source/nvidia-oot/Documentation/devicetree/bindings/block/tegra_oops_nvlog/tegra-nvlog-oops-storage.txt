@@ -1,0 +1,100 @@
+Tegra NvLog crash dump storage driver
+
+The NvLog OOPS storage driver captures kernel crash dumps (panic/oops) and writes
+them to hypervisor shared memory using NVIDIA's NvLog framework raw binary protocol.
+This driver operates exclusively in crash context when the kernel panics, ensuring
+critical crash data is preserved for post-mortem analysis.
+
+Key Features:
+- Executes only during kernel panic/oops (not during normal operation)
+- Captures KMSG (kernel messages) data from pstore framework
+- Uses ARM64-safe operations for reliability in crash context
+- Writes raw binary data to circular buffer in hypervisor memory
+- NvLog Server handles message wrapping and storage
+- Preserves crash dumps even if filesystem is corrupted
+- Compatible with existing NvLog infrastructure
+
+Architecture:
+When a kernel panic occurs, this driver is invoked through the pstore framework
+to capture KMSG crash data. It writes the raw compressed panic data directly to
+a pre-allocated hypervisor shared memory region (mempool) using a circular buffer
+protocol. The driver does NOT format messages - it writes raw binary data that
+the NvLog Server subsequently reads, wraps in NvLogMsg_t format, and stores.
+
+Important: During kernel panic, ONLY KMSG data is sent by the pstore framework.
+Console, FTRACE, and PMSG data are NOT available during panic due to the unstable
+state of the kernel. This driver is optimized for this single-purpose operation.
+
+Required Properties:
+- compatible: should be "nvidia,tegra-nvlog-oops-storage"
+- nvlog_kmsg_entity_id: Entity ID for kernel panic messages and stack traces
+- nvlog_mempool_id: Hypervisor mempool ID for crash data storage
+
+Optional Properties:
+- pstore_max_reason: Crash capture threshold (default and fixed: 2)
+    Value 2 = KMSG_DUMP_OOPS (captures PANIC and OOPS events)
+- pstore_kmsg_size: Buffer for kernel panic dumps (default: 64KB)
+    Size should be block-aligned, range: 4KB - 1MB
+
+Entity ID Values:
+Entity ID format: [15:14]=0xC (mark), [13:8]=Entity, [7:0]=Sub-Entity
+
+Common KMSG Entity ID Assignments:
+- 0xC001: GOS0 (Primary VM) kernel panic messages
+- 0xC201: GOS1 (Secondary VM) kernel panic messages
+- 0xC401: GOS2 kernel panic messages
+- 0xC601: GOS3 kernel panic messages
+
+Custom values: 0xC000-0xFFFF range
+
+Raw Binary Protocol:
+The driver implements a circular buffer protocol with metadata:
+- 8 x u64 metadata array at start of mempool
+- Metadata[0]: Signature (0xDEADBEEFDEADBEEF)
+- Metadata[1]: Data start offset
+- Metadata[2]: Read offset (updated by consumer)
+- Metadata[3]: Write offset (updated by driver)
+- Metadata[5]: Total bytes written
+- Metadata[7]: End tag (set to 1 when dump complete)
+
+Data Flow:
+1. Pstore framework provides compressed KMSG data (DBGC header)
+2. Driver writes raw data to circular buffer at write offset
+3. Driver updates write offset and sets end tag
+4. NvLog Server reads raw data from circular buffer
+5. NvLog Server wraps data in NvLogMsg_t and stores
+
+Common Crash Storage Configuration:
+- Mempool ID 153 (NVLOG_SERVER_M_153): Dedicated crash dump storage
+- Pre-allocated to ensure availability during panic
+- Raw binary writes to circular buffer
+- Survives kernel crashes for retrieval
+
+The crash mempool must be configured in hypervisor PCT configuration
+to ensure it's allocated before any kernel crash occurs.
+
+Standard Configuration Example:
+	tegra_nvlog_oops {
+		compatible = "nvidia,tegra-nvlog-oops-storage";
+		status = "okay";
+
+		/* Crash data storage mempool */
+		nvlog_mempool_id = <153>;              /* Pre-allocated crash storage */
+
+		/* Entity ID for kernel panic dumps (only KMSG sent during panic) */
+		nvlog_kmsg_entity_id = <0xC001>;       /* KMSG panic data */
+
+		/* pstore configuration */
+		pstore_kmsg_size = <0x10000>;          /* 64KB for KMSG */
+		pstore_max_reason = <2>;               /* Panic/oops threshold */
+	};
+
+Crash Context Notes:
+- Driver executes only during kernel panic/oops
+- Receives compressed data from pstore (DBGC format)
+- Uses ARM64-safe operations for crash reliability
+- Pre-allocated mempool survives kernel crashes
+- Raw binary writes to circular buffer
+- No message formatting in driver (NvLog Server handles)
+- Only KMSG data available during panic
+- Crash data retrieved after reboot via NvLog infrastructure

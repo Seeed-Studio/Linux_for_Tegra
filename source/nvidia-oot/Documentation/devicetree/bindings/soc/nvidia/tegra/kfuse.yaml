@@ -1,0 +1,59 @@
+# SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/soc/nvidia/tegra/kfuse.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Device tree binding for NVIDIA Tegra KFUSE
+
+maintainers:
+  - Laxman Dewangan <ldewangan@nvidia.com>
+
+description: |
+   The kfuse block stores downstream and upstream HDCP keys for use by the HDMI module.
+
+properties:
+  compatible:
+    enum:
+      - nvidia,tegra194-kfuse
+      - nvidia,tegra186-kfuse
+      - nvidia,tegra210-kfuse
+      - nvidia,tegra124-kfuse
+
+  reg:
+    maxItems: 1
+    description: |
+       Physical base address and length of registers for Kfuse HW.
+
+  clocks:
+    maxItems: 1
+    description: |
+       Specifies the kfuse hw ref clock.
+
+  clock-names:
+    description: |
+      Specifies the name kfuse hw ref clock. Valid name is "kfuse".
+
+required:
+  - compatible
+  - reg
+  - clocks
+  - clock-names
+
+unevaluatedProperties: false
+
+examples:
+  - |
+    #define TEGRA194_CLK_KFUSE                 70U
+    soc {
+        #address-cells = <2>;
+        #size-cells = <2>;
+
+        kfuse@3830000 {
+            compatible = "nvidia,tegra194-kfuse";
+            reg = <0x0 0x3830000 0x0 0x10000>;
+            clocks = <&bpmp_clks TEGRA194_CLK_KFUSE>;
+            clock-names = "kfuse";
+        };
+     };
+...

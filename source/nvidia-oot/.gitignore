@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0
+#
+# Use command 'git ls-files -i --exclude-standard' to ensure that no
+# tracked files are ignored.
+#
+*.o
+*.o.*
+*.a
+*.s
+*.ko
+*.so
+*.so.dbg
+*.mod.c
+*.i
+*.symtypes
+*.order
+*.patch
+modules.builtin
+Module.symvers
+*.dwo
+*.mod
+*.cmd
+*mods.dtb*
+

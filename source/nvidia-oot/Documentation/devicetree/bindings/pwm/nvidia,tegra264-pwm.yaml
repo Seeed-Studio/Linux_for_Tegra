@@ -1,0 +1,146 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/pwm@c6a0000/nvidia,tegra264-pwm.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Tegra Pulse Width Modulation Module
+
+maintainers:
+  - Suresh Mangipudi
+
+description: |
+     the compatability = nvidia,tegra264-pwm is mentioned in the following drivers
+        - <TOP>/kernel/kernel-oot/drivers/pwm/pwm-tegra.c
+
+     The following nodes use this compatibility
+        - /bus@0/pwm@c6a0000
+        - /bus@0/pwm@810c5e0000
+        - /bus@0/pwm@810c5f0000
+        - /bus@0/pwm@810c600000
+        - /bus@0/pwm@810c610000
+        - /bus@0/pwm@810c620000
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra264-pwm
+
+  required:
+    - compatible
+
+properties:
+
+    reg:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Registers are given by a tuple of two values:
+                - register address:
+                - register block size.
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x81
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0xc5e0000
+                  maximum: 0xc6a0000
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x10000
+                  maximum: 0x10000
+
+    nvidia,hw-instance-id:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x2
+        maximum: 0xa
+
+    clocks:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Clocks are given by a tuple of 2 values:
+                - Phandle to the device
+                - Clock ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x16
+                  maximum: 0xa0
+
+    '#pwm-cells':
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x2
+        maximum: 0x2
+
+    resets:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Resets are given by a tuple of 2 values:
+                - Phandle to the device
+                - Reset ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x17
+                  maximum: 0x1c
+
+    reset-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - pwm
+
+
+    clock-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - pwm
+                - pll_aon
+                - parent
+
+
+required:
+    - compatible
+    - reg
+    - clocks
+    - resets
+    - reset-names
+    - clock-names
+
+examples:
+    - |
+        pwm@c6a0000 {
+            compatible = "nvidia,tegra264-pwm";
+            status = "disabled";
+            reg = <0x0 0xc6a0000 0x0 0x10000>;
+            nvidia,hw-instance-id = <0x4>;
+            clocks = <&bpmp TEGRA264_CLK_PWM4>;
+            #pwm-cells = <2>;
+            resets = <&bpmp TEGRA264_RESET_PWM4>;
+            reset-names = "pwm";
+        };

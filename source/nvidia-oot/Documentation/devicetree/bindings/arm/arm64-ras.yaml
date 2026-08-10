@@ -1,0 +1,62 @@
+# SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/arm/arm64-ras.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Device tree binding for ARMv8.2 RAS
+
+maintainers:
+  - Laxman Dewangan <ldewangan@nvidia.com>
+
+description: |
+   RAS are three aspects of the dependability of a system:
+   Reliability: continuity of correct service
+   Availability: readiness for correct service
+   Serviceability: ability to undergo modifications and repairs
+
+   ARMv8.2 provides RAS extensions to achieve the above features in a system.
+
+   arm64_ras driver allows you to handle Correctable errors using per core
+   Fault Handling Interrupt (or FHI). Un-correactable errors are handled by
+   raising SError exception to kernel or Trusted Firmware(EL3) on CCLEX.
+
+   The driver provides an API for CPU specific RAS drivers to
+   register callbacks in case of FHI. When FHI occurs, the FHI
+   ISR goes through the list of registered callbacks and executes
+   them. Similarly, the driver allows registering SError callbacks
+   for Un-correctable errors within Core, Core-Cluster & CCPLEX.
+   When SError is reported, then those callbacks are scanned to
+   find and report error in a Core, Cluster or CCPLEX
+
+properties:
+  compatible:
+    enum:
+      - arm,armv8.2-ras
+
+  interrupts:
+    minItems: 1
+    maxItems: 8
+    description: |
+       Represents per core Fault Handling Interrupt.
+
+required:
+  - compatible
+  - interrupts
+
+unevaluatedProperties: false
+
+examples:
+  - |
+    arm64_ras: arm64_ras {
+       compatible = "arm,armv8.2-ras";
+       interrupts = <0 392 0x04>,
+                    <0 393 0x04>,
+                    <0 394 0x04>,
+                    <0 395 0x04>,
+                    <0 396 0x04>,
+                    <0 397 0x04>,
+                    <0 398 0x04>,
+                    <0 399 0x04>;
+    };
+...

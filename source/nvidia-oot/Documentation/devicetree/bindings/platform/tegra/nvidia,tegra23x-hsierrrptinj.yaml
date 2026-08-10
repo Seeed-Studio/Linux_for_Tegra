@@ -1,0 +1,74 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/hsierrrptinj/nvidia,tegra23x-hsierrrptinj.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Tegra HSI Error Report Injection driver
+
+maintainers:
+  - Harshraj Rao
+
+description: |
+     the compatability = nvidia,tegra23x-hsierrrptinj is mentioned in the following drivers
+        - <TOP>/kernel/kernel-oot/drivers/platform/tegra/tegra-hsierrrptinj.c
+
+     The following nodes use this compatibility
+        - /hsierrrptinj
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra23x-hsierrrptinj
+
+  required:
+    - compatible
+
+properties:
+
+    mboxes:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 3
+            maxItems: 3
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x101
+                  maximum: 0x101
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x80000001
+                  maximum: 0x80000001
+
+    mbox-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - hsierrrptinj-tx
+
+
+required:
+    - compatible
+
+examples:
+    - |
+        hsierrrptinj {
+            compatible = "nvidia,tegra23x-hsierrrptinj";
+            mboxes = <&top_hsp0 (TEGRA_HSP_MBOX_TYPE_SM|TEGRA_HSP_MBOX_TYPE_SM_128BIT) TEGRA_HSP_SM_TX(1)>;
+            mbox-names = "hsierrrptinj-tx";
+            status = "disabled";
+        };
