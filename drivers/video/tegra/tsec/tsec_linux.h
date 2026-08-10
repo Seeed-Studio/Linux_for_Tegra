@@ -1,0 +1,33 @@
+/* SPDX-License-Identifier: GPL-2.0-only */
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+ *
+ * Tegra TSEC Module Support
+ */
+
+#ifndef TSEC_LINUX_H
+#define TSEC_LINUX_H
+
+#include <linux/types.h>                   /* for types like u8, u32 etc */
+#include <linux/platform_device.h>         /* for platform_device */
+#include <linux/of_device.h>               /* for of_match_device etc */
+#include <linux/slab.h>                    /* for kzalloc */
+#include <linux/delay.h>                   /* for udelay */
+#include <linux/clk.h>                     /* for clk_prepare_enable */
+#include <linux/reset.h>                   /* for reset_control_reset */
+#include <linux/iommu.h>                   /* for dev_iommu_fwspec_get */
+#include <linux/iopoll.h>                  /* for readl_poll_timeout */
+#include <linux/dma-mapping.h>             /* for dma_map_page_attrs */
+#include <linux/pm.h>                      /* for dev_pm_ops */
+#include <linux/interrupt.h>               /* for enable_irq */
+#include <linux/firmware.h>                /* for request_firmware */
+#include <soc/tegra/mc.h>                  /* for tegra_mc_get_carveout_info */
+#include <linux/libnvdimm.h>               /* for arch_invalidate_pmem */
+#ifdef CONFIG_DEBUG_FS
+#include <linux/debugfs.h>                 /* for debugfs APIs */
+#endif
+#include <linux/sizes.h>                   /* for SZ_* size macros */
+#include <vdso/bits.h>                     /* for BIT(x) macro */
+#include <linux/suspend.h>                 /* for suspend APIs */
+
+#endif /* TSEC_LINUX_H */

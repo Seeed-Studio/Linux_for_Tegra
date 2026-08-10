@@ -1,0 +1,107 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/temp-sensor@4c/ti,tmp451.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: LM90/ADM1032 driver
+
+maintainers:
+  - Yi-Wei Wang
+
+description: |
+     the compatability = ti,tmp451 is mentioned in the following drivers
+        - <TOP>/kernel/kernel-oot/drivers/hwmon/lm90.c
+
+     The following nodes use this compatibility
+        - /bpmp/i2c/temp-sensor@4c
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - ti,tmp451
+
+  required:
+    - compatible
+
+properties:
+
+    reg:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Registers are given by a tuple of two values:
+                - register address:
+                - register block size.
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x4c
+                  maximum: 0x4c
+
+    sensor-name:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - tmp451-ext-soc
+
+
+    '#thermal-sensor-cells':
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x1
+        maximum: 0x1
+
+    interrupt-parent:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x4e
+        maximum: 0x4e
+
+    interrupts:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Interrupts are give by a tuple of 3 values:
+                - interrupt specifier (GIC_SPI = 0, GIC_PPI = 1)
+                  definitions in dt-bindings/interrupt-controller/arm-gic.h
+                - interrupt number
+                - trigger type (rising edge, falling edge, both, etc)
+                  definitions in dt-bindings/interrupt-controller/irq.h
+        items:
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x8
+                  maximum: 0x9
+
+    temp-alert-gpio:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0x4e
+
+    offset:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0xfffff060
+        maximum: 0xfffff060
+
+required:
+    - compatible
+    - reg
+    - interrupts
+
+examples:
+    - |
+        temp-sensor@4c {
+        };

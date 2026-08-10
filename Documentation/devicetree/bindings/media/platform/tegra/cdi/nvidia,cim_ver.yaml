@@ -1,0 +1,64 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/cim_ver/nvidia,cim_ver.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Tegra Automotive CDI Manager Driver
+
+maintainers:
+  - Frank Chen
+
+description: |
+     the compatability = nvidia,cim_ver is mentioned in the following drivers
+        - <TOP>/kernel/nvidia-oot/drivers/media/platform/tegra/cdi/cdi_mgr.c
+        - <TOP>/kernel/nvidia-oot/drivers/media/platform/tegra/cdi/cdi_dev.c
+
+     The following nodes use this compatibility
+        - /cim_ver
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,cim_ver
+
+  required:
+    - compatible
+
+properties:
+
+    cim_ver:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - cim_ver_a02
+
+
+    cim_frsync_src:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0x0
+
+required:
+    - compatible
+
+examples:
+    - |
+        cim_ver {
+            compatible = "nvidia,cim_ver";
+            status = "okay";
+        };

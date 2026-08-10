@@ -1,0 +1,239 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/regulator/regulator-max77851.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: MAX77851 Power management IC Regulator
+
+maintainers:
+  - Joan Na<Joan.na@maximintegrated.com>
+  - Shubhi Garg <shgarg@nvidia.com>
+
+description: |
+  Regulator DT binding for MAX77851 Power management IC from Maxim Semiconductor.
+
+properties:
+  maxim,out-voltage-range:
+    $ref: "/schemas/types.yaml#/definitions/uint32"
+    description:
+      Output Voltage Range
+        enabled/disabled when system is in active state.
+        Valid values are:
+            - MAX77620_FPS_SRC_0,
+                FPS source is FPS0.
+            - MAX77620_FPS_SRC_1,
+                FPS source is FPS1
+            - MAX77620_FPS_SRC_2 and
+                FPS source is FPS2
+            - MAX77620_FPS_SRC_NONE.
+                Regulator is not controlled
+                by FPS events and it gets
+                enabled/disabled by register
+                access.
+        Absence of this property will leave
+        the FPS configuration register for that
+        regulator to default configuration.
+
+  maxim,fps-user-setting-enable:
+    $ref: /schemas/types.yaml#/definitions/flag
+    using default setting (OTP/SHADOW)
+
+  maxim,regulator-dvs-mode-enable:
+    $ref: /schemas/types.yaml#/definitions/flag
+    DVS Mode Enable
+                    the regulator get disabled when master
+                    FPS input event set to LOW.
+                    Valid values are 0 to 7.
+                    This is applicable if FPS source is
+                    selected as FPS0, FPS1 or FPS2.
+
+  maxim,regulator-dvs-voltage:
+    $ref: "/schemas/types.yaml#/definitions/uint32"
+    VOUT0/VOUT1 Voltage array
+
+  maxim,pu-slot:
+    $ref: "/schemas/types.yaml#/definitions/uint32"
+    FPS Power-Up Slot
+        Valid values are 0 to F.
+
+  maxim,pd-slot:
+    $ref: "/schemas/types.yaml#/definitions/uint32"
+    FPS Power-Down Slot
+        Valid values are 0 to F.
+
+  maxim,slpx-slot:
+    $ref: "/schemas/types.yaml#/definitions/uint32"
+    FPS Sleep Exit Slot
+        Valid values are 0 to F.
+
+  maxim,slpy-slot:
+    $ref: "/schemas/types.yaml#/definitions/uint32"
+    FPS Sleep Enter Slot
+        Valid values are 0 to F.
+
+examples:
+  - |
+    #include <dt-bindings/mfd/max77851.h>
+    ...
+    max77851: max77851@3c {
+        regulators {
+
+            max77851_ldo0: ldo0 {
+                ...
+
+                #maxim,fps-default-enable;
+                maxim,fps-user-setting-enable;
+
+                maxim,out-voltage-range = <MAX77851_VOUT_RNG_LOW>;
+                maxim,pu-slpx-master-slot = <MAX77851_FPS_MASTER_SLOT_1>;
+                maxim,pd-slpy-master-slot = <MAX77851_FPS_MASTER_SLOT_1>;
+                maxim,pu-slot = <MAX77851_FPS_SLOT_5>;
+                maxim,pd-slot = <MAX77851_FPS_SLOT_7>;
+            };
+
+            max77851_ldo1: ldo1 {
+                ...
+
+                maxim,fps-user-setting-enable;
+
+                maxim,regulator-dvs-mode-enable;
+                /*
+                 * 0x38(56h) : 0.75V
+                 * 0x30(48h) : 0.70V
+                 */
+                maxim,regulator-dvs-voltage = <0x38>, <0x30>;
+
+                maxim,out-voltage-range = <MAX77851_VOUT_RNG_LOW>;
+                maxim,pu-slpx-master-slot = <MAX77851_FPS_MASTER_SLOT_2>;
+                maxim,pd-slpy-master-slot = <MAX77851_FPS_MASTER_SLOT_2>;
+                maxim,pu-slot = <MAX77851_FPS_SLOT_1>;
+                maxim,pd-slot = <MAX77851_FPS_SLOT_2>;
+            };
+
+            max77851_ldo2: ldo2 {
+                ...
+
+                maxim,fps-user-setting-enable;
+
+                maxim,out-voltage-range = <MAX77851_VOUT_RNG_LOW>;
+                maxim,pu-slpx-master-slot = <MAX77851_FPS_MASTER_SLOT_1>;
+                maxim,pd-slpy-master-slot = <MAX77851_FPS_MASTER_SLOT_1>;
+                maxim,pd-slot = <MAX77851_FPS_SLOT_8>;
+                maxim,slpx-slot = <MAX77851_FPS_SLOT_2>;
+                maxim,slpy-slot = <MAX77851_FPS_SLOT_5>;
+            };
+
+            max77851_ldo3: ldo3 {
+                ...
+
+                maxim,fps-user-setting-enable;
+
+                maxim,out-voltage-range = <MAX77851_VOUT_RNG_LOW>;
+                maxim,pu-slpx-master-slot = <MAX77851_FPS_MASTER_SLOT_1>;
+                maxim,pd-slpy-master-slot = <MAX77851_FPS_MASTER_SLOT_1>;
+                maxim,pd-slot = <MAX77851_FPS_SLOT_8>;
+                maxim,slpx-slot = <MAX77851_FPS_SLOT_2>;
+                maxim,slpy-slot = <MAX77851_FPS_SLOT_5>;
+            };
+
+            max77851_ldo4: ldo4 {
+                ...
+
+                maxim,out-voltage-range = <MAX77851_VOUT_RNG_LOW>;
+                maxim,pu-slpx-master-slot = <MAX77851_FPS_MASTER_SLOT_0>;
+                maxim,pd-slpy-master-slot = <MAX77851_FPS_MASTER_SLOT_0>;
+                maxim,pd-slot = <MAX77851_FPS_SLOT_8>;
+            };
+
+            max77851_ldo5: ldo5 {
+                ...
+
+                maxim,out-voltage-range = <MAX77851_VOUT_RNG_LOW>;
+                maxim,pu-slpx-master-slot = <MAX77851_FPS_MASTER_SLOT_0>;
+                maxim,pd-slpy-master-slot = <MAX77851_FPS_MASTER_SLOT_0>;
+                maxim,pd-slot = <MAX77851_FPS_SLOT_8>;
+            };
+
+            max77851_ldo6: ldo6 {
+                ...
+
+                maxim,out-voltage-range = <MAX77851_VOUT_RNG_LOW>;
+                maxim,pu-slpx-master-slot = <MAX77851_FPS_MASTER_SLOT_0>;
+                maxim,pd-slpy-master-slot = <MAX77851_FPS_MASTER_SLOT_0>;
+                maxim,pd-slot = <MAX77851_FPS_SLOT_8>;
+            };
+
+            max77851_buck0: buck0 {
+                ...
+
+                maxim,fps-user-setting-enable;
+
+                maxim,out-voltage-range = <MAX77851_VOUT_RNG_LOW>;
+                maxim,pu-slpx-master-slot = <MAX77851_FPS_MASTER_SLOT_3>;
+                maxim,pd-slpy-master-slot = <MAX77851_FPS_MASTER_SLOT_3>;
+                maxim,pu-slot = <MAX77851_FPS_SLOT_6>;
+                maxim,pd-slot = <MAX77851_FPS_SLOT_6>;
+            };
+
+            max77851_buck1: buck1 {
+                ...
+
+                maxim,fps-user-setting-enable;
+
+                maxim,out-voltage-range = <MAX77851_VOUT_RNG_LOW>;
+                maxim,pu-slpx-master-slot = <MAX77851_FPS_MASTER_SLOT_3>;
+                maxim,pd-slpy-master-slot = <MAX77851_FPS_MASTER_SLOT_3>;
+                maxim,pu-slot = <MAX77851_FPS_SLOT_6>;
+                maxim,pd-slot = <MAX77851_FPS_SLOT_6>;
+            };
+
+            max77851_buck2: buck2 {
+                ...
+
+                maxim,fps-user-setting-enable;
+
+                maxim,regulator-dvs-mode-enable;
+                /*
+                 * 0x50(80h) : 0.50V
+                 * 0x3C(60h) : 0.45V
+                 */
+                maxim,regulator-dvs-voltage = <0x50>, <0x3C>;
+
+                maxim,out-voltage-range = <MAX77851_VOUT_RNG_LOW>;
+                maxim,pu-slpx-master-slot = <MAX77851_FPS_MASTER_SLOT_1>;
+                maxim,pd-slpy-master-slot = <MAX77851_FPS_MASTER_SLOT_1>;
+                maxim,pu-slot = <MAX77851_FPS_SLOT_7>;
+                maxim,pd-slot = <MAX77851_FPS_SLOT_7>;
+
+                maxim,slpx-slot = <MAX77851_FPS_SLOT_3>;
+                maxim,slpy-slot = <MAX77851_FPS_SLOT_3>;
+            };
+
+            max77851_buck3: buck3 {
+                ...
+
+                maxim,fps-user-setting-enable;
+
+                maxim,out-voltage-range = <MAX77851_VOUT_RNG_MID>;
+                maxim,pu-slpx-master-slot = <MAX77851_FPS_MASTER_SLOT_3>;
+                maxim,pd-slpy-master-slot = <MAX77851_FPS_MASTER_SLOT_3>;
+                maxim,pu-slot = <MAX77851_FPS_SLOT_0>;
+                maxim,pd-slot = <MAX77851_FPS_SLOT_2>;
+            };
+            max77851_buck4: buck4 {
+                ...
+
+                maxim,fps-user-setting-enable;
+
+                maxim,out-voltage-range = <MAX77851_VOUT_RNG_MID>;
+                maxim,pu-slpx-master-slot = <MAX77851_FPS_MASTER_SLOT_3>;
+                maxim,pd-slpy-master-slot = <MAX77851_FPS_MASTER_SLOT_3>;
+                maxim,pu-slot = <MAX77851_FPS_SLOT_2>;
+                maxim,pd-slot = <MAX77851_FPS_SLOT_3>;
+            };
+        };
+    };
+
+    ...

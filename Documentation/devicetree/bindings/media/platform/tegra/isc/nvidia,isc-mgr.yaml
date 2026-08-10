@@ -1,0 +1,98 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/isc-mgr.0/nvidia,isc-mgr.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Tegra Autotive ISC Manager Driver
+
+maintainers:
+  - Frank Chen
+
+description: |
+     the compatability = nvidia,isc-mgr is mentioned in the following drivers
+        - <TOP>/kernel/nvidia-oot/drivers/media/platform/tegra/isc/isc_mgr.c
+
+     The following nodes use this compatibility
+        - /isc-mgr.0
+        - /isc-mgr.1
+        - /isc-mgr.2
+        - /isc-mgr.3
+        - /isc-mgr.4
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,isc-mgr
+
+  required:
+    - compatible
+
+properties:
+
+    i2c-bus:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0xc
+
+    csi-port:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0x6
+
+    cphy-map-trio0:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - A_B_C
+
+
+    cphy-map-trio1:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - C_A_B
+
+
+    cphy-map-trio2:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - A_B_C
+
+
+    cphy-map-trio3:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - C_A_B
+
+
+required:
+    - compatible
+
+examples:
+    - |
+        isc-mgr.0 {
+            compatible = "nvidia,isc-mgr";                                                                                                                          7095 »   »   i2c-bus = <0x7>;
+            csi-port = <0x0>;
+            cphy-map-trio0 = "A_B_C";
+            cphy-map-trio1 = "C_A_B";
+            cphy-map-trio2 = "A_B_C";
+            cphy-map-trio3 = "C_A_B";
+            status = "okay";
+        };

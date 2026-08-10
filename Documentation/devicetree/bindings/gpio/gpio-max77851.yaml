@@ -1,0 +1,44 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/gpio/gpio-max77851.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: DT bindings MAX77851 Power Management IC GPIO
+
+maintainers:
+  - Joan Na<Joan.na@maximintegrated.com>
+  - Shubhi Garg <shgarg@nvidia.com>
+
+description: |
+  DT bindings GPIO driver for MAX77851 Power management IC from Maxim Semiconductor.
+
+  Device has 8 GPIO pins and 4 FPSO pins which can be configured as GPIO as well as the
+  special IO functions.
+
+  For more details, please refer generic GPIO DT binding document
+  <devicetree/bindings/gpio/gpio.txt>.
+
+properties:
+
+  compatible:
+    const: "maxim,max77851-pmic"
+
+  gpio-controller: true
+
+  '#gpio-cells':
+    const: 2
+
+examples:
+  - |
+    #include <dt-bindings/gpio/gpio.h>
+    #include <dt-bindings/mfd/max77851.h>
+    ...
+    max77851: max77851@3c {
+	compatible = "maxim,max77851-pmic";
+
+	gpio-controller;
+	#gpio-cells = <2>;
+    };
+    ...

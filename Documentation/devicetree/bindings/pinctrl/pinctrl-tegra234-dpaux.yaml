@@ -1,0 +1,72 @@
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-2-Clause
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/pinctrl/pinctrl-tegra234-dpaux.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: NVIDIA Tegra234 DPAUX pin controller
+
+maintainers:
+  - Laxman Dewangan <ldewangan@nvidia.com>
+  - Prathamesh Shete <pshete@nvidia.com>
+
+description:
+  Bindings for NVIDIA Tegra234 DPAUX pin controller
+
+properties:
+  compatible:
+    const: nvidia,tegra234-misc-dpaux-padctl
+
+  reg:
+    maxItems: 1
+    description: |
+       Base address and size of the DP auxillary pin controller.
+
+required:
+  - compatible
+  - reg
+
+
+patternProperties:
+  'pinmux-[0-9]*$':
+    type: object
+    patternProperties:
+      '-pins*$':
+        type: object
+        description: |
+          A pinctrl node should contain at least one subnodes representing the
+          pinctrl groups available on the machine. Each subnode will list the
+          pins it needs, and how they should be configured either in display or i2c mode.
+        $ref: "/schemas/pinctrl/pincfg-node.yaml"
+
+        properties:
+          function:
+            enum: [ i2c, display ]
+            description:
+              Functionality of the pins.
+          pins:
+            enum: [ dpaux-0 ]
+            description:
+              Name of pins.
+
+additionalProperties: false
+
+examples:
+  - |
+    soc {
+        #address-cells = <2>;
+        #size-cells = <2>;
+
+        pinctrl@155F0000 {
+           compatible = "nvidia,tegra234-misc-dpaux-padctl";
+           reg = <0x0 0x155F0000 0x0 0x00040000>;
+
+           dpaux_default: pinmux-0 {
+              dpaux0-pins {
+                  pins = "dpaux-0";
+                  function = "i2c";
+              };
+           };
+        };
+     };
+...

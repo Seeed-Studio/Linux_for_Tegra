@@ -1,0 +1,85 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/memory-controller-hwpm@8108020000/nvidia,tegra-t264-mc-hwpm.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Tegra264 MC-HWPM driver
+
+maintainers:
+  - Pritesh Raithatha
+  - Ketan Patil
+
+description: |
+     the compatability = nvidia,tegra-t264-mc-hwpm is mentioned in the following drivers
+        - <TOP>/kernel/nvidia-oot/drivers/memory/tegra/tegra264-mc-hwpm.c
+
+     The following nodes use this compatibility
+        - /bus@0/memory-controller-hwpm@8108020000
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra-t264-mc-hwpm
+
+  required:
+    - compatible
+
+properties:
+
+    reg:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Registers are given by a tuple of two values:
+                - register address:
+                - register block size.
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x81
+                  maximum: 0x81
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x8020000
+                  maximum: 0x8220000
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x20000
+                  maximum: 0x20000
+
+required:
+    - compatible
+    - reg
+
+examples:
+    - |
+        memory-controller-hwpm@8108020000 {
+            compatible = "nvidia,tegra-t264-mc-hwpm";
+            reg = <0x81 0x8020000 0x0 0x20000>,
+                  <0x81 0x8040000 0x0 0x20000>,
+                  <0x81 0x8060000 0x0 0x20000>,
+                  <0x81 0x8080000 0x0 0x20000>,
+                  <0x81 0x80a0000 0x0 0x20000>,
+                  <0x81 0x80c0000 0x0 0x20000>,
+                  <0x81 0x80e0000 0x0 0x20000>,
+                  <0x81 0x8100000 0x0 0x20000>,
+                  <0x81 0x8120000 0x0 0x20000>,
+                  <0x81 0x8140000 0x0 0x20000>,
+                  <0x81 0x8160000 0x0 0x20000>,
+                  <0x81 0x8180000 0x0 0x20000>,
+                  <0x81 0x81a0000 0x0 0x20000>,
+                  <0x81 0x81c0000 0x0 0x20000>,
+                  <0x81 0x81e0000 0x0 0x20000>,
+                  <0x81 0x8200000 0x0 0x20000>,
+                  <0x81 0x8220000 0x0 0x20000>;
+            status = "disabled";
+        };

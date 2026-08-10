@@ -1,0 +1,135 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/padctl@a808680000/nvidia,tegra264-xusb-padctl.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Tegra XUSB Pad Controller driver
+
+maintainers:
+  - Sing HanChen
+
+description: |
+     the compatability = nvidia,tegra264-xusb-padctl is mentioned in the following drivers
+        - <TOP>/kernel/kernel-oot/drivers/phy/tegra/xusb.c
+
+     The following nodes use this compatibility
+        - /bus@0/padctl@a808680000
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra264-xusb-padctl
+
+  required:
+    - compatible
+
+properties:
+
+    reg:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Registers are given by a tuple of two values:
+                - register address:
+                - register block size.
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0xa8
+                  maximum: 0xa8
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x8680000
+                  maximum: 0x86a0000
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x10000
+                  maximum: 0x20000
+
+    reg-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - padctl
+                - ao
+
+
+    interrupts:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Interrupts are give by a tuple of 3 values:
+                - interrupt specifier (GIC_SPI = 0, GIC_PPI = 1)
+                  definitions in dt-bindings/interrupt-controller/arm-gic.h
+                - interrupt number
+                - trigger type (rising edge, falling edge, both, etc)
+                  definitions in dt-bindings/interrupt-controller/irq.h
+        items:
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x2
+                  maximum: 0x2
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x5
+                  maximum: 0x5
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x4
+                  maximum: 0x4
+
+    resets:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Resets are given by a tuple of 2 values:
+                - Phandle to the device
+                - Reset ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x4d
+                  maximum: 0x4d
+
+    reset-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - padctl
+
+
+required:
+    - compatible
+    - reg
+    - interrupts
+    - resets
+    - reset-names
+
+examples:
+    - |
+        padctl@a808680000 {
+            compatible = "nvidia,tegra264-xusb-padctl";
+            reg = <0xa8 0x8680000 0x00 0x20000>,
+                  <0xa8 0x86a0000 0x00 0x10000>;
+            reg-names = "padctl, ao";
+            interrupts = <2 5 IRQ_TYPE_LEVEL_HIGH>;
+            resets = <&bpmp TEGRA264_RESET_XUSB1_PADCTL>;
+            reset-names = "padctl";
+            status = "disabled";
+        };
