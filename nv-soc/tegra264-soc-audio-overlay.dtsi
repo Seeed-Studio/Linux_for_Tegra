@@ -1,0 +1,176 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+/ {
+	bus@0 {
+		aconnect@9000000 {
+			adsp0: adsp@9080000 {
+				compatible = "nvidia,tegra264-adsp";
+				interrupt-parent = <&agic_page0>;
+				resets = <&bpmp TEGRA264_RESET_ADSP_CORE0>;
+				reset-names = "adsp";
+				clocks = <&bpmp TEGRA264_CLK_ADSP>;
+				clock-names = "cpu_clock";
+				reg = <0x0 0x9d60000 0x0 0x10000>, /* AMC */
+				      <0x0 0x9a00000 0x0 0x1000>, /* AMISC */
+				      <0x0 0x9a20000 0x0 0x40000>; /* AHSP */
+				nvidia,dram_map =
+					<0x0 0x20000000 0x0 0x20000000>;
+				nvidia,adsp_mem =
+					<0x0 0x0>, /* ADSP OS */
+					<0x0 0x0>, /* ADSP APP */
+					<0x0 0x0>, /* ARAM ALIAS 0 */
+					<0x0 0x200000>; /* ACSR */
+				interrupts =
+					<GIC_SPI 0x29 IRQ_TYPE_EDGE_RISING>, /* MBOX SEND */
+					<GIC_SPI 0x20 IRQ_TYPE_EDGE_RISING>, /* MBOX RECV */
+					<GIC_SPI 0x52 IRQ_TYPE_EDGE_RISING>, /* ATKE Watchdog */
+					<GIC_SPI 0x40 IRQ_TYPE_EDGE_RISING>, /* WFI */
+					<GIC_SPI 0x39 IRQ_TYPE_EDGE_RISING>, /* AMC ERR IRQ */
+					<GIC_SPI 0x3b IRQ_TYPE_EDGE_RISING>; /* Reserved INTR: 25 */
+				iommus = <&smmu1_mmu (TEGRA_SID_APE + 0x6)>;
+				memory-region = <&adsp0_resv>;
+				nvidia,cluster_mem =
+					<0x0 0x9080000 0x0 0x80000  0x0 0x80000>, /* TCM */
+					<0x0 0x9e80000 0x0 0x200000 0x0 0x80000>, /* SRAM */
+					<0x0 0xa080000 0x0 0x100000 0x0 0x18000>; /* ARAM */
+				nvidia,adsp_os_secload;
+				status = "disabled";
+			};
+
+			adsp1: adsp1@9180000 {
+				compatible = "nvidia,tegra264-adsp1";
+				interrupt-parent = <&agic_page0>;
+				resets = <&bpmp TEGRA264_RESET_ADSP_CORE1>;
+				reset-names = "adsp";
+				clocks = <&bpmp TEGRA264_CLK_ADSP>;
+				clock-names = "cpu_clock";
+				reg = <0x0 0x9d60000 0x0 0x10000>,  /* AMC */
+						<0x0 0x9a01000 0x0 0x1000>,  /* AMISC */
+						<0x0 0x9b20000 0x0 0x40000>;  /* AHSP */
+				nvidia,dram_map =
+					<0x0 0x20000000 0x0 0x20000000>;
+				nvidia,adsp_mem =
+					<0x0 0x0>, /* ADSP OS */
+					<0x0 0x0>, /* ADSP APP */
+					<0x0 0x0>, /* ARAM ALIAS 0 */
+					<0x0 0x200000>; /* ACSR */
+				interrupts =
+					<GIC_SPI 0x69 IRQ_TYPE_EDGE_RISING>, /* MBOX SEND */
+					<GIC_SPI 0x60 IRQ_TYPE_EDGE_RISING>, /* MBOX RECV */
+					<GIC_SPI 0x53 IRQ_TYPE_EDGE_RISING>, /* ATKE Watchdog */
+					<GIC_SPI 0x8a IRQ_TYPE_EDGE_RISING>, /* WFI */
+					<GIC_SPI 0x3a IRQ_TYPE_EDGE_RISING>, /* Reserved INTR: 24 */
+					<GIC_SPI 0x3c IRQ_TYPE_EDGE_RISING>; /* Reserved INTR: 26 */
+				iommus = <&smmu1_mmu (TEGRA_SID_APE + 0x7)>;
+				memory-region = <&adsp1_resv>;
+				nvidia,cluster_mem =
+					<0x0 0x9180000 0x0 0x80000  0x0 0x80000>, /* TCM */
+					<0x0 0x9e80000 0x0 0x200000 0x0 0x80000>, /* SRAM */
+					<0x0 0xa080000 0x0 0x100000 0x0 0x18000>; /* ARAM */
+				nvidia,adsp_os_secload;
+				status = "disabled";
+			};
+
+			ahub@9630000 {
+
+				tegra_misc: misc@9640000 {
+					compatible = "nvidia,tegra264-ahub-misc";
+					reg = <0x0 0x9640000 0 0x10000>;
+					interrupt-parent = <&agic_page0>;
+					interrupts = <GIC_SPI 0x38 IRQ_TYPE_LEVEL_HIGH>;
+				};
+
+				tegra_arad: arad@9870000 {
+					compatible = "nvidia,tegra264-arad",
+						    "nvidia,tegra186-arad";
+					reg = <0x0 0x9870000 0x0 0x10000>;
+					ports {
+						#address-cells = <1>;
+						#size-cells = <0>;
+
+						port@0 {
+							reg = <0x0>;
+
+							arad_ep: endpoint {
+								remote-endpoint = <&xbar_arad>;
+							};
+						};
+					};
+				};
+
+				ports {
+					xbar_arad_port: port@91 {
+						reg = <0x91>;
+
+						xbar_arad: endpoint {
+							remote-endpoint = <&arad_ep>;
+						};
+					};
+				};
+			};
+		};
+
+		aocluster@c000000 {
+			compatible = "nvidia,tegra264-aocluster";
+			#address-cells = <2>;
+			#size-cells = <2>;
+			ranges = <0x0 0xc000000 0x0 0xc000000 0x0 0x1000000>;
+			status = "disabled";
+
+			aon: aon@c040000 {
+				compatible = "nvidia,tegra264-aon";
+				nvidia,adsp_os_secload;
+				resets = <&bpmp TEGRA264_RESET_AON_CPU_ALL>;
+				reset-names = "aon_cpu";
+				clocks = <&bpmp TEGRA264_CLK_AON_CPU>;
+				clock-names = "cpu_clock";
+				reg = <0x0 0xc040000 0x0 0xa0000>, /* Dummy entry for AMC */
+				      <0x0 0xc100000 0x0 0x20000>, /* AO_MISC */
+				      <0x0 0xc410000 0x0 0x40000>;  /* AON_HSP */
+				nvidia,dram_map = <0x0 0x20000000 0x0 0x20000000>;
+				nvidia,adsp_mem =
+					<0x0 0x0>, /* ADSP OS */
+					<0x0 0x0>, /* ADSP APP */
+					<0x0 0x0>, /* ARAM ALIAS 0 */
+					<0x0 0x200000>; /* ACSR */
+				interrupts =
+					<GIC_SPI 0x229 IRQ_TYPE_LEVEL_HIGH>, /* MBOX SEND */
+					<GIC_SPI 0x22a IRQ_TYPE_LEVEL_HIGH>, /* MBOX RECV */
+					<GIC_SPI 0x236 IRQ_TYPE_LEVEL_HIGH>, /* WDT */
+					<GIC_SPI 0x2d8 IRQ_TYPE_LEVEL_HIGH>; /* WFI */
+				iommus = <&smmu1_mmu TEGRA_SID_AON>;
+				memory-region = <&aon_resv>;
+				nvidia,cluster_mem =
+					<0x0 0xc040000 0x0 0x40000  0x0 0xa0000>, /* TCM */
+					<0x0 0xce00000 0x0 0x200000 0x0 0x80000>; /* SRAM */
+				status = "disabled";
+			};
+		};
+	};
+
+	reserved-memory {
+		aon_resv: reservation-aon {
+			iommu-addresses = <&aon 0x0 0x00000000 0x0 0x20000000>,
+			                  <&aon 0x0 0x40000000 0xffffffff 0xbfffffff>;
+		};
+
+		adsp0_resv: reservation-adsp0 {
+			iommu-addresses = <&adsp0 0x0 0x00000000 0x0 0x20000000>,
+			                  <&adsp0 0x0 0x40000000 0xffffffff 0xbfffffff>;
+		};
+
+		adsp1_resv: reservation-adsp1 {
+			iommu-addresses = <&adsp1 0x0 0x00000000 0x0 0x20000000>,
+			                  <&adsp1 0x0 0x40000000 0xffffffff 0xbfffffff>;
+		};
+	};
+
+	tegra_sound: sound {
+		/* mixer-controls node provide controls to override PCM params */
+		mixer-controls {
+			compatible = "nvidia,tegra264-mixer-control",
+				     "nvidia,tegra234-mixer-control";
+		};
+	};
+};
