@@ -1,0 +1,2040 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// Stereolabs ZED X / ZED X One GS GMSL overlay.
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/gpio/tegra234-gpio.h>
+#include <dt-bindings/clock/tegra234-clock.h>
+#include <dt-bindings/tegra234-p3737-0000+p3701-0000.h>
+#include "tegra234-stereolabs-zedx-config.dtsi"
+
+#define NUM_LANES	2
+#define NUM_LANES_A	4
+#define NUM_LANES_B	4
+
+#define STR(x) #x
+#define XSTR(x) STR(x)
+
+#define ZED_ORIN_CLKS \
+	clocks = <&bpmp TEGRA234_CLK_EXTPERIPH1>, \
+		<&bpmp TEGRA234_CLK_EXTPERIPH1>; \
+	clock-names = "extperiph1", "pllp_grtba"; \
+	mclk = "extperiph1";
+
+#define AR0234_MODES_LANES_CLK(VC_ID, OPT_CSI_SERIAL, LANE_POLARITY, LANES, SERDES_PIX_CLK) \
+	physical_w = "15.0"; \
+	physical_h = "12.5"; \
+	post_crop_frame_drop = "0"; \
+	use_sensor_mode_id = "true"; \
+	mode0 { \
+		mclk_khz = "24000"; \
+		num_lanes = XSTR(LANES); \
+		tegra_sinterface = OPT_CSI_SERIAL; \
+		lane_polarity = LANE_POLARITY; \
+		vc_id = VC_ID; \
+		discontinuous_clk = "no"; \
+		dpcm_enable = "false"; \
+		cil_settletime = "0"; \
+		dynamic_pixel_bit_depth = "10"; \
+		csi_pixel_bit_depth = "10"; \
+		mode_type = "bayer"; \
+		pixel_phase = "grbg"; \
+		active_w = "1920"; \
+		active_h = "1200"; \
+		readout_orientation = "0"; \
+		line_length = "12496"; \
+		inherent_gain = "1"; \
+		mclk_multiplier = "3.01"; \
+		pix_clk_hz = "229500000"; \
+		serdes_pix_clk_hz = SERDES_PIX_CLK; \
+		gain_factor = "100"; \
+		min_gain_val = "100"; \
+		max_gain_val = "1600"; \
+		step_gain_val = "1"; \
+		default_gain = "100"; \
+		min_hdr_ratio = "1"; \
+		max_hdr_ratio = "1"; \
+		framerate_factor = "1000000"; \
+		min_framerate = "15000000"; \
+		max_framerate = "60000000"; \
+		step_framerate = "15000000"; \
+		default_framerate = "30000000"; \
+		exposure_factor = "1000000"; \
+		min_exp_time = "28"; \
+		max_exp_time = "66000"; \
+		step_exp_time = "1"; \
+		default_exp_time = "13000"; \
+		embedded_metadata_height = "0"; \
+	}; \
+	mode1 { \
+		mclk_khz = "24000"; \
+		num_lanes = XSTR(LANES); \
+		tegra_sinterface = OPT_CSI_SERIAL; \
+		lane_polarity = LANE_POLARITY; \
+		vc_id = VC_ID; \
+		discontinuous_clk = "no"; \
+		dpcm_enable = "false"; \
+		cil_settletime = "0"; \
+		dynamic_pixel_bit_depth = "10"; \
+		csi_pixel_bit_depth = "10"; \
+		mode_type = "bayer"; \
+		pixel_phase = "grbg"; \
+		active_w = "960"; \
+		active_h = "600"; \
+		readout_orientation = "0"; \
+		line_length = "6248"; \
+		inherent_gain = "1"; \
+		mclk_multiplier = "3.01"; \
+		pix_clk_hz = "229500000"; \
+		serdes_pix_clk_hz = SERDES_PIX_CLK; \
+		gain_factor = "100"; \
+		min_gain_val = "100"; \
+		max_gain_val = "1600"; \
+		step_gain_val = "1"; \
+		default_gain = "100"; \
+		min_hdr_ratio = "1"; \
+		max_hdr_ratio = "1"; \
+		framerate_factor = "1000000"; \
+		min_framerate = "15000000"; \
+		max_framerate = "120000000"; \
+		step_framerate = "15000000"; \
+		default_framerate = "120000000"; \
+		exposure_factor = "1000000"; \
+		min_exp_time = "28"; \
+		max_exp_time = "66000"; \
+		step_exp_time = "1"; \
+		default_exp_time = "8000"; \
+		embedded_metadata_height = "0"; \
+	}; \
+	mode2 { \
+		mclk_khz = "24000"; \
+		num_lanes = XSTR(LANES); \
+		tegra_sinterface = OPT_CSI_SERIAL; \
+		lane_polarity = LANE_POLARITY; \
+		vc_id = VC_ID; \
+		discontinuous_clk = "no"; \
+		dpcm_enable = "false"; \
+		cil_settletime = "0"; \
+		dynamic_pixel_bit_depth = "10"; \
+		csi_pixel_bit_depth = "10"; \
+		mode_type = "bayer"; \
+		pixel_phase = "grbg"; \
+		active_w = "1920"; \
+		active_h = "1080"; \
+		readout_orientation = "0"; \
+		line_length = "12496"; \
+		inherent_gain = "1"; \
+		mclk_multiplier = "3.01"; \
+		pix_clk_hz = "229500000"; \
+		serdes_pix_clk_hz = SERDES_PIX_CLK; \
+		gain_factor = "100"; \
+		min_gain_val = "100"; \
+		max_gain_val = "1600"; \
+		step_gain_val = "1"; \
+		default_gain = "100"; \
+		min_hdr_ratio = "1"; \
+		max_hdr_ratio = "1"; \
+		framerate_factor = "1000000"; \
+		min_framerate = "15000000"; \
+		max_framerate = "60000000"; \
+		step_framerate = "15000000"; \
+		default_framerate = "30000000"; \
+		exposure_factor = "1000000"; \
+		min_exp_time = "28"; \
+		max_exp_time = "66000"; \
+		step_exp_time = "1"; \
+		default_exp_time = "13000"; \
+		embedded_metadata_height = "0"; \
+	}; \
+	mode3 { \
+		mclk_khz = "24000"; \
+		num_lanes = XSTR(LANES); \
+		tegra_sinterface = OPT_CSI_SERIAL; \
+		lane_polarity = LANE_POLARITY; \
+		vc_id = VC_ID; \
+		discontinuous_clk = "no"; \
+		dpcm_enable = "false"; \
+		cil_settletime = "0"; \
+		dynamic_pixel_bit_depth = "10"; \
+		csi_pixel_bit_depth = "10"; \
+		mode_type = "bayer"; \
+		pixel_phase = "grbg"; \
+		active_w = "1920"; \
+		active_h = "1200"; \
+		readout_orientation = "0"; \
+		line_length = "12496"; \
+		inherent_gain = "1"; \
+		mclk_multiplier = "3.01"; \
+		pix_clk_hz = "229500000"; \
+		serdes_pix_clk_hz = SERDES_PIX_CLK; \
+		gain_factor = "100"; \
+		min_gain_val = "100"; \
+		max_gain_val = "1600"; \
+		step_gain_val = "1"; \
+		default_gain = "100"; \
+		min_hdr_ratio = "1"; \
+		max_hdr_ratio = "1"; \
+		framerate_factor = "1000000"; \
+		min_framerate = "15000000"; \
+		max_framerate = "30000000"; \
+		step_framerate = "15000000"; \
+		default_framerate = "30000000"; \
+		exposure_factor = "1000000"; \
+		min_exp_time = "28"; \
+		max_exp_time = "66000"; \
+		step_exp_time = "1"; \
+		default_exp_time = "13000"; \
+		embedded_metadata_height = "0"; \
+	};
+
+#define AR0234_MODES(VC_ID, OPT_CSI_SERIAL, LANE_POLARITY) \
+	AR0234_MODES_LANES_CLK(VC_ID, OPT_CSI_SERIAL, LANE_POLARITY, NUM_LANES, "299000000")
+
+#define AR0234_MODES_A(VC_ID, OPT_CSI_SERIAL, LANE_POLARITY) \
+	AR0234_MODES_LANES_CLK(VC_ID, OPT_CSI_SERIAL, LANE_POLARITY, NUM_LANES_A, "598000000")
+
+#define AR0234_MODES_B(VC_ID, OPT_CSI_SERIAL, LANE_POLARITY) \
+	AR0234_MODES_LANES_CLK(VC_ID, OPT_CSI_SERIAL, LANE_POLARITY, NUM_LANES_B, "598000000")
+
+#define ZEDX_CAMERA_MODULE(ID, BADGE, POSITION, DEVNAME, PROC_DEV_TREE) \
+	module##ID { \
+		badge = BADGE; \
+		position = POSITION; \
+		orientation = "1"; \
+		drivernode0 { \
+			pcl_id = "v4l2_sensor"; \
+			devname = DEVNAME; \
+			proc-device-tree = PROC_DEV_TREE; \
+		}; \
+	};
+
+#define ZEDX_ONE_GS_VI_PORT(ID, REG_ID, VC_ID, VI_PORT_INDEX) \
+	port@REG_ID { \
+		reg = <REG_ID>; \
+		zedxone_gs_vi_in##ID: endpoint { \
+			vc-id = <VC_ID>; \
+			port-index = <VI_PORT_INDEX>; \
+			bus-width = <NUM_LANES>; \
+			remote-endpoint = <&zedxone_gs_csi_out##ID>; \
+		}; \
+	};
+
+#define ZEDX_ONE_GS_VI_PORT_A(ID, REG_ID, VC_ID, VI_PORT_INDEX) \
+	port@REG_ID { \
+		reg = <REG_ID>; \
+		zedxone_gs_vi_in##ID: endpoint { \
+			vc-id = <VC_ID>; \
+			port-index = <VI_PORT_INDEX>; \
+			bus-width = <NUM_LANES_A>; \
+			remote-endpoint = <&zedxone_gs_csi_out##ID>; \
+		}; \
+	};
+
+#define ZEDX_ONE_GS_VI_PORT_B(ID, REG_ID, VC_ID, VI_PORT_INDEX) \
+	port@REG_ID { \
+		reg = <REG_ID>; \
+		zedxone_gs_vi_in##ID: endpoint { \
+			vc-id = <VC_ID>; \
+			port-index = <VI_PORT_INDEX>; \
+			bus-width = <NUM_LANES_B>; \
+			remote-endpoint = <&zedxone_gs_csi_out##ID>; \
+		}; \
+	};
+
+#define ZEDX_ONE_GS_CSI_CHANNEL(ID, REG_ID, CSI_PORT_INDEX) \
+	channel@REG_ID { \
+		reg = <REG_ID>; \
+		ports { \
+			#address-cells = <1>; \
+			#size-cells = <0>; \
+			port@0 { \
+				reg = <0>; \
+				zedxone_gs_csi_in##ID: endpoint@0 { \
+					port-index = <CSI_PORT_INDEX>; \
+					bus-width = <NUM_LANES>; \
+					remote-endpoint = <&zedxone_gs_out##ID>; \
+				}; \
+			}; \
+			port@1 { \
+				reg = <1>; \
+				zedxone_gs_csi_out##ID: endpoint@1 { \
+					remote-endpoint = <&zedxone_gs_vi_in##ID>; \
+				}; \
+			}; \
+		}; \
+	};
+
+#define ZEDX_ONE_GS_CSI_CHANNEL_A(ID, REG_ID, CSI_PORT_INDEX) \
+	channel@REG_ID { \
+		reg = <REG_ID>; \
+		ports { \
+			#address-cells = <1>; \
+			#size-cells = <0>; \
+			port@0 { \
+				reg = <0>; \
+				zedxone_gs_csi_in##ID: endpoint@0 { \
+					port-index = <CSI_PORT_INDEX>; \
+					bus-width = <NUM_LANES_A>; \
+					remote-endpoint = <&zedxone_gs_out##ID>; \
+				}; \
+			}; \
+			port@1 { \
+				reg = <1>; \
+				zedxone_gs_csi_out##ID: endpoint@1 { \
+					remote-endpoint = <&zedxone_gs_vi_in##ID>; \
+				}; \
+			}; \
+		}; \
+	};
+
+#define ZEDX_ONE_GS_CSI_CHANNEL_B(ID, REG_ID, CSI_PORT_INDEX) \
+	channel@REG_ID { \
+		reg = <REG_ID>; \
+		ports { \
+			#address-cells = <1>; \
+			#size-cells = <0>; \
+			port@0 { \
+				reg = <0>; \
+				zedxone_gs_csi_in##ID: endpoint@0 { \
+					port-index = <CSI_PORT_INDEX>; \
+					bus-width = <NUM_LANES_B>; \
+					remote-endpoint = <&zedxone_gs_out##ID>; \
+				}; \
+			}; \
+			port@1 { \
+				reg = <1>; \
+				zedxone_gs_csi_out##ID: endpoint@1 { \
+					remote-endpoint = <&zedxone_gs_vi_in##ID>; \
+				}; \
+			}; \
+		}; \
+	};
+
+/ {
+
+	overlay-name = ZEDX_OVERLAY_NAME;
+	jetson-header-name = "Jetson AGX CSI Connector";
+	compatible = JETSON_COMPATIBLE;
+
+	fragment@0 {
+		target-path = "/";
+		__overlay__ {
+
+			tegra-capture-vi {
+				num-channels = <24>;
+				ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					port@0 {
+						reg = <0>;
+						zedx_vi_in0: endpoint {
+							vc-id = <0>;
+							port-index = <0>;
+							bus-width = <NUM_LANES_A>;
+							remote-endpoint = <&zedx_csi_out0>;
+						};
+					};
+
+					port@1 {
+						reg = <1>;
+						zedx_vi_in1: endpoint {
+							vc-id = <1>;
+							port-index = <0>;
+							bus-width = <NUM_LANES_A>;
+							remote-endpoint = <&zedx_csi_out1>;
+						};
+					};
+
+					port@2 {
+						reg = <2>;
+						zedx_vi_in2: endpoint {
+							vc-id = <2>;
+							port-index = <0>;
+							bus-width = <NUM_LANES_A>;
+							remote-endpoint = <&zedx_csi_out2>;
+						};
+					};
+
+					port@3 {
+						reg = <3>;
+						zedx_vi_in3: endpoint {
+							vc-id = <3>;
+							port-index = <0>;
+							bus-width = <NUM_LANES_A>;
+							remote-endpoint = <&zedx_csi_out3>;
+						};
+					};
+
+					port@4 {
+						reg = <4>;
+						zedx_vi_in4: endpoint {
+							vc-id = <0>;
+							port-index = <2>;
+							bus-width = <NUM_LANES_A>;
+							remote-endpoint = <&zedx_csi_out4>;
+						};
+					};
+
+					port@5 {
+						reg = <5>;
+						zedx_vi_in5: endpoint {
+							vc-id = <1>;
+							port-index = <2>;
+							bus-width = <NUM_LANES_A>;
+							remote-endpoint = <&zedx_csi_out5>;
+						};
+					};
+
+					port@6 {
+						reg = <6>;
+						zedx_vi_in6: endpoint {
+							vc-id = <2>;
+							port-index = <2>;
+							bus-width = <NUM_LANES_A>;
+							remote-endpoint = <&zedx_csi_out6>;
+						};
+					};
+
+					port@7 {
+						reg = <7>;
+						zedx_vi_in7: endpoint {
+							vc-id = <3>;
+							port-index = <2>;
+							bus-width = <NUM_LANES_A>;
+							remote-endpoint = <&zedx_csi_out7>;
+						};
+					};
+
+					port@8 {
+						reg = <8>;
+						zedx_vi_in8: endpoint {
+							vc-id = <0>;
+							port-index = <4>;
+							bus-width = <NUM_LANES_B>;
+							remote-endpoint = <&zedx_csi_out8>;
+						};
+					};
+
+					port@9 {
+						reg = <9>;
+						zedx_vi_in9: endpoint {
+							vc-id = <1>;
+							port-index = <4>;
+							bus-width = <NUM_LANES_B>;
+							remote-endpoint = <&zedx_csi_out9>;
+						};
+					};
+
+					port@10 {
+						reg = <10>;
+						zedx_vi_in10: endpoint {
+							vc-id = <2>;
+							port-index = <4>;
+							bus-width = <NUM_LANES_B>;
+							remote-endpoint = <&zedx_csi_out10>;
+						};
+					};
+
+					port@11 {
+						reg = <11>;
+						zedx_vi_in11: endpoint {
+							vc-id = <3>;
+							port-index = <4>;
+							bus-width = <NUM_LANES_B>;
+							remote-endpoint = <&zedx_csi_out11>;
+						};
+					};
+
+					port@12 {
+						reg = <12>;
+						zedx_vi_in12: endpoint {
+							vc-id = <0>;
+							port-index = <5>;
+							bus-width = <NUM_LANES_B>;
+							remote-endpoint = <&zedx_csi_out12>;
+						};
+					};
+
+					port@13 {
+						reg = <13>;
+						zedx_vi_in13: endpoint {
+							vc-id = <1>;
+							port-index = <5>;
+							bus-width = <NUM_LANES_B>;
+							remote-endpoint = <&zedx_csi_out13>;
+						};
+					};
+
+					port@14 {
+						reg = <14>;
+						zedx_vi_in14: endpoint {
+							vc-id = <2>;
+							port-index = <5>;
+							bus-width = <NUM_LANES_B>;
+							remote-endpoint = <&zedx_csi_out14>;
+						};
+					};
+
+					port@15 {
+						reg = <15>;
+						zedx_vi_in15: endpoint {
+							vc-id = <3>;
+							port-index = <5>;
+							bus-width = <NUM_LANES_B>;
+							remote-endpoint = <&zedx_csi_out15>;
+						};
+					};
+
+					ZEDX_ONE_GS_VI_PORT_A(0, 16, 0, 0)
+					ZEDX_ONE_GS_VI_PORT_A(1, 17, 2, 0)
+					ZEDX_ONE_GS_VI_PORT_A(2, 18, 0, 2)
+					ZEDX_ONE_GS_VI_PORT_A(3, 19, 2, 2)
+					ZEDX_ONE_GS_VI_PORT_B(4, 20, 0, 4)
+					ZEDX_ONE_GS_VI_PORT_B(5, 21, 2, 4)
+					ZEDX_ONE_GS_VI_PORT_B(6, 22, 0, 5)
+					ZEDX_ONE_GS_VI_PORT_B(7, 23, 2, 5)
+
+				};
+			};
+
+			BOARD_GPIOS_SET
+
+			tegra-camera-platform {
+				compatible = "nvidia, tegra-camera-platform";
+				num_csi_lanes = <16>;
+				max_lane_speed = <2000000>;
+				min_bits_per_pixel = <10>;
+				vi_peak_byte_per_pixel = <2>;
+				vi_bw_margin_pct = <25>;
+				isp_peak_byte_per_pixel = <5>;
+				isp_bw_margin_pct = <25>;
+				modules {
+					ZEDX_CAMERA_MODULE(0, "zedx_left0_ar0234", "frontleft", ZEDX_DEVNAME_LEFT0, ZEDX_PROC_LEFT0)
+					ZEDX_CAMERA_MODULE(1, "zedx_right0_ar0234", "frontright", ZEDX_DEVNAME_RIGHT0, ZEDX_PROC_RIGHT0)
+					ZEDX_CAMERA_MODULE(2, "zedxone_gs0_ar0234", "front", ZEDX_DEVNAME_ONE_GS0, ZEDX_PROC_ONE_GS0)
+					ZEDX_CAMERA_MODULE(3, "zedx_left1_ar0234", "frontleft", ZEDX_DEVNAME_LEFT1, ZEDX_PROC_LEFT1)
+					ZEDX_CAMERA_MODULE(4, "zedx_right1_ar0234", "frontright", ZEDX_DEVNAME_RIGHT1, ZEDX_PROC_RIGHT1)
+					ZEDX_CAMERA_MODULE(5, "zedxone_gs1_ar0234", "front", ZEDX_DEVNAME_ONE_GS1, ZEDX_PROC_ONE_GS1)
+					ZEDX_CAMERA_MODULE(6, "zedx_left2_ar0234", "rearleft", ZEDX_DEVNAME_LEFT2, ZEDX_PROC_LEFT2)
+					ZEDX_CAMERA_MODULE(7, "zedx_right2_ar0234", "rearright", ZEDX_DEVNAME_RIGHT2, ZEDX_PROC_RIGHT2)
+					ZEDX_CAMERA_MODULE(8, "zedxone_gs2_ar0234", "rear", ZEDX_DEVNAME_ONE_GS2, ZEDX_PROC_ONE_GS2)
+					ZEDX_CAMERA_MODULE(9, "zedx_left3_ar0234", "rearleft", ZEDX_DEVNAME_LEFT3, ZEDX_PROC_LEFT3)
+					ZEDX_CAMERA_MODULE(10, "zedx_right3_ar0234", "rearright", ZEDX_DEVNAME_RIGHT3, ZEDX_PROC_RIGHT3)
+					ZEDX_CAMERA_MODULE(11, "zedxone_gs3_ar0234", "rear", ZEDX_DEVNAME_ONE_GS3, ZEDX_PROC_ONE_GS3)
+					ZEDX_CAMERA_MODULE(12, "zedx_left4_ar0234", "frontleft", ZEDX_DEVNAME_LEFT4, ZEDX_PROC_LEFT4)
+					ZEDX_CAMERA_MODULE(13, "zedx_right4_ar0234", "frontright", ZEDX_DEVNAME_RIGHT4, ZEDX_PROC_RIGHT4)
+					ZEDX_CAMERA_MODULE(14, "zedxone_gs4_ar0234", "front", ZEDX_DEVNAME_ONE_GS4, ZEDX_PROC_ONE_GS4)
+					ZEDX_CAMERA_MODULE(15, "zedx_left5_ar0234", "frontleft", ZEDX_DEVNAME_LEFT5, ZEDX_PROC_LEFT5)
+					ZEDX_CAMERA_MODULE(16, "zedx_right5_ar0234", "frontright", ZEDX_DEVNAME_RIGHT5, ZEDX_PROC_RIGHT5)
+					ZEDX_CAMERA_MODULE(17, "zedxone_gs5_ar0234", "front", ZEDX_DEVNAME_ONE_GS5, ZEDX_PROC_ONE_GS5)
+					ZEDX_CAMERA_MODULE(18, "zedx_left6_ar0234", "rearleft", ZEDX_DEVNAME_LEFT6, ZEDX_PROC_LEFT6)
+					ZEDX_CAMERA_MODULE(19, "zedx_right6_ar0234", "rearright", ZEDX_DEVNAME_RIGHT6, ZEDX_PROC_RIGHT6)
+					ZEDX_CAMERA_MODULE(20, "zedxone_gs6_ar0234", "rear", ZEDX_DEVNAME_ONE_GS6, ZEDX_PROC_ONE_GS6)
+					ZEDX_CAMERA_MODULE(21, "zedx_left7_ar0234", "rearleft", ZEDX_DEVNAME_LEFT7, ZEDX_PROC_LEFT7)
+					ZEDX_CAMERA_MODULE(22, "zedx_right7_ar0234", "rearright", ZEDX_DEVNAME_RIGHT7, ZEDX_PROC_RIGHT7)
+					ZEDX_CAMERA_MODULE(23, "zedxone_gs7_ar0234", "rear", ZEDX_DEVNAME_ONE_GS7, ZEDX_PROC_ONE_GS7)
+
+				};
+			};
+
+			bus@0 {
+				BOARD_GPIO_SETUP
+
+				TEGRA_ZEDX_GMSL_I2C {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					max96712_a@29 {
+						compatible = "stereolabs,sl_max96712";
+						reg = <0x29>;
+						channel = "a";
+						pwr-gpio = ZEDX_DSER_PWR_GPIO;
+						status = "okay";
+
+						camera-serializers = <
+							/* GMSL 0: ZED X (id=0) OR ZED X One GS (id=4) */
+							&zedx_ser0
+							&zedxone_gs_ser0
+							/* GMSL 1: ZED X (id=1) OR ZED X One GS (id=5) */
+							&zedx_ser1
+							&zedxone_gs_ser1
+							/* GMSL 2: ZED X (id=2) OR ZED X One GS (id=6) */
+							&zedx_ser2
+							&zedxone_gs_ser2
+							/* GMSL 3: ZED X (id=3) OR ZED X One GS (id=7) */
+							&zedx_ser3
+							&zedxone_gs_ser3
+						>;
+					};
+
+					bmi088_a: bmi088_a@3b {
+						compatible = "bmi,bmi088";
+						reg = <0x3b>;
+						accel_i2c_addr = <0x3c>;
+						accel_matrix = [01 00 00 00 01 00 00 00 01];
+						gyro_matrix = [01 00 00 00 01 00 00 00 01];
+					};
+
+					bmi088_b: bmi088_b@4b {
+						compatible = "bmi,bmi088";
+						reg = <0x4b>;
+						accel_i2c_addr = <0x4c>;
+						accel_matrix = [01 00 00 00 01 00 00 00 01];
+						gyro_matrix = [01 00 00 00 01 00 00 00 01];
+					};
+
+					/* ---- sensor nodes (all channel = "a") ---- */
+
+					/* GMSL 0, 4-lane output B, Orin Port0, VI Stream0, VC0/VC1 */
+					zedx_left0: zedx_left_0@28 {
+						compatible = "stereolabs,zedx";
+						reg = <0x28>;
+
+						ZED_ORIN_CLKS
+
+						devnode = "video0";
+						sync_sensor = "ZED_CAM0";
+						sync_sensor_index = <1>;
+
+						zedx-id = "0";
+						channel = "a";
+
+						has-eeprom;
+						eeprom-addr = <0x54>;
+
+						AR0234_MODES_A("0", "serial_a", "0")
+
+						ports {
+							#address-cells = <1>;
+							#size-cells = <0>;
+							port@0 {
+								reg = <0>;
+								zedx_ar0234_out0: endpoint {
+									vc-id = <0>;
+									port-index = <0>;
+									opt-csi-port = "b";
+									bus-width = <NUM_LANES_A>;
+									i2c-cc = <0>;
+									remote-endpoint = <&zedx_csi_in0>;
+								};
+							};
+						};
+					};
+
+					zedx_right0: zedx_right_0@20 {
+						compatible = "stereolabs,zedx";
+						reg = <0x20>;
+
+						ZED_ORIN_CLKS
+
+						devnode = "video1";
+						sync_sensor = "ZED_CAM0";
+						sync_sensor_index = <2>;
+
+						zedx-id = "0";
+						channel = "a";
+
+						has-eeprom;
+						eeprom-addr = <0x54>;
+
+						AR0234_MODES_A("1", "serial_a", "0")
+
+						ports {
+							#address-cells = <1>;
+							#size-cells = <0>;
+							port@0 {
+								reg = <0>;
+								zedx_ar0234_out1: endpoint {
+									vc-id = <1>;
+									port-index = <0>;
+									opt-csi-port = "b";
+									bus-width = <NUM_LANES_A>;
+									i2c-cc = <0>;
+									remote-endpoint = <&zedx_csi_in1>;
+								};
+							};
+						};
+					};
+
+					zedxone_gs0: zedxone_gs_0@10 {
+						compatible = "stereolabs,zedx";
+						reg = <0x10>;
+
+						ZED_ORIN_CLKS
+
+						devnode = "video16";
+						sync_sensor = "ZEDXONE_CAM0";
+						sync_sensor_index = <1>;
+
+						zedx-id = "4";
+						channel = "a";
+
+						has-eeprom;
+						eeprom-addr = <0x56>;
+
+						AR0234_MODES_A("0", "serial_a", "0")
+
+						ports {
+							#address-cells = <1>;
+							#size-cells = <0>;
+							port@0 {
+								reg = <0>;
+								zedxone_gs_out0: endpoint {
+									vc-id = <0>;
+									port-index = <0>;
+									opt-csi-port = "b";
+									bus-width = <NUM_LANES_A>;
+									i2c-cc = <0>;
+									remote-endpoint = <&zedxone_gs_csi_in0>;
+								};
+							};
+						};
+					};
+
+					/* GMSL 1, 4-lane output B, Orin Port0, VI Stream0, VC2/VC3 */
+					zedx_left1: zedx_left_1@38 {
+						compatible = "stereolabs,zedx";
+						reg = <0x38>;
+
+						ZED_ORIN_CLKS
+
+						devnode = "video2";
+						sync_sensor = "ZED_CAM1";
+						sync_sensor_index = <1>;
+
+						zedx-id = "1";
+						channel = "a";
+
+						has-eeprom;
+						eeprom-addr = <0x54>;
+
+						AR0234_MODES_A("2", "serial_a", "0")
+
+						ports {
+							#address-cells = <1>;
+							#size-cells = <0>;
+							port@0 {
+								reg = <0>;
+								zedx_ar0234_out2: endpoint {
+									vc-id = <2>;
+									port-index = <0>;
+									opt-csi-port = "b";
+									bus-width = <NUM_LANES_A>;
+									i2c-cc = <0>;
+									remote-endpoint = <&zedx_csi_in2>;
+								};
+							};
+						};
+					};
+
+					zedx_right1: zedx_right_1@30 {
+						compatible = "stereolabs,zedx";
+						reg = <0x30>;
+
+						ZED_ORIN_CLKS
+
+						devnode = "video3";
+						sync_sensor = "ZED_CAM1";
+						sync_sensor_index = <2>;
+
+						zedx-id = "1";
+						channel = "a";
+
+						has-eeprom;
+						eeprom-addr = <0x54>;
+
+						AR0234_MODES_A("3", "serial_a", "0")
+
+						ports {
+							#address-cells = <1>;
+							#size-cells = <0>;
+							port@0 {
+								reg = <0>;
+								zedx_ar0234_out3: endpoint {
+									vc-id = <3>;
+									port-index = <0>;
+									opt-csi-port = "b";
+									bus-width = <NUM_LANES_A>;
+									i2c-cc = <0>;
+									remote-endpoint = <&zedx_csi_in3>;
+								};
+							};
+						};
+					};
+
+					zedxone_gs1: zedxone_gs_1@11 {
+						compatible = "stereolabs,zedx";
+						reg = <0x11>;
+
+						ZED_ORIN_CLKS
+
+						devnode = "video17";
+						sync_sensor = "ZEDXONE_CAM1";
+						sync_sensor_index = <1>;
+
+						zedx-id = "5";
+						channel = "a";
+
+						has-eeprom;
+						eeprom-addr = <0x56>;
+
+						AR0234_MODES_A("2", "serial_a", "0")
+
+						ports {
+							#address-cells = <1>;
+							#size-cells = <0>;
+							port@0 {
+								reg = <0>;
+								zedxone_gs_out1: endpoint {
+									vc-id = <2>;
+									port-index = <0>;
+									opt-csi-port = "b";
+									bus-width = <NUM_LANES_A>;
+									i2c-cc = <0>;
+									remote-endpoint = <&zedxone_gs_csi_in1>;
+								};
+							};
+						};
+					};
+
+					/* GMSL 2, 4-lane output A, Orin Port2, VI Stream2, VC0/VC1 */
+					zedx_left2: zedx_left_2@48 {
+						compatible = "stereolabs,zedx";
+						reg = <0x48>;
+
+						ZED_ORIN_CLKS
+
+						devnode = "video4";
+						sync_sensor = "ZED_CAM2";
+						sync_sensor_index = <1>;
+
+						zedx-id = "2";
+						channel = "a";
+
+						has-eeprom;
+						eeprom-addr = <0x54>;
+
+						AR0234_MODES_A("0", "serial_c", "0")
+
+						ports {
+							#address-cells = <1>;
+							#size-cells = <0>;
+							port@0 {
+								reg = <0>;
+								zedx_ar0234_out4: endpoint {
+									vc-id = <0>;
+									port-index = <2>;
+									opt-csi-port = "a";
+									bus-width = <NUM_LANES_A>;
+									i2c-cc = <0>;
+									remote-endpoint = <&zedx_csi_in4>;
+								};
+							};
+						};
+					};
+
+					zedx_right2: zedx_right_2@40 {
+						compatible = "stereolabs,zedx";
+						reg = <0x40>;
+
+						ZED_ORIN_CLKS
+
+						devnode = "video5";
+						sync_sensor = "ZED_CAM2";
+						sync_sensor_index = <2>;
+
+						zedx-id = "2";
+						channel = "a";
+
+						has-eeprom;
+						eeprom-addr = <0x54>;
+
+						AR0234_MODES_A("1", "serial_c", "0")
+
+						ports {
+							#address-cells = <1>;
+							#size-cells = <0>;
+							port@0 {
+								reg = <0>;
+								zedx_ar0234_out5: endpoint {
+									vc-id = <1>;
+									port-index = <2>;
+									opt-csi-port = "a";
+									bus-width = <NUM_LANES_A>;
+									i2c-cc = <0>;
+									remote-endpoint = <&zedx_csi_in5>;
+								};
+							};
+						};
+					};
+
+					zedxone_gs2: zedxone_gs_2@12 {
+						compatible = "stereolabs,zedx";
+						reg = <0x12>;
+
+						ZED_ORIN_CLKS
+
+						devnode = "video18";
+						sync_sensor = "ZEDXONE_CAM2";
+						sync_sensor_index = <1>;
+
+						zedx-id = "6";
+						channel = "a";
+
+						has-eeprom;
+						eeprom-addr = <0x56>;
+
+						AR0234_MODES_A("0", "serial_c", "0")
+
+						ports {
+							#address-cells = <1>;
+							#size-cells = <0>;
+							port@0 {
+								reg = <0>;
+								zedxone_gs_out2: endpoint {
+									vc-id = <0>;
+									port-index = <2>;
+									opt-csi-port = "a";
+									bus-width = <NUM_LANES_A>;
+									i2c-cc = <0>;
+									remote-endpoint = <&zedxone_gs_csi_in2>;
+								};
+							};
+						};
+					};
+
+					/* GMSL 3, 4-lane output A, Orin Port2, VI Stream2, VC2/VC3 */
+					zedx_left3: zedx_left_3@14 {
+						compatible = "stereolabs,zedx";
+						reg = <0x14>;
+
+						ZED_ORIN_CLKS
+
+						devnode = "video6";
+						sync_sensor = "ZED_CAM3";
+						sync_sensor_index = <1>;
+
+						zedx-id = "3";
+						channel = "a";
+
+						has-eeprom;
+						eeprom-addr = <0x54>;
+
+						AR0234_MODES_A("2", "serial_c", "0")
+
+						ports {
+							#address-cells = <1>;
+							#size-cells = <0>;
+							port@0 {
+								reg = <0>;
+								zedx_ar0234_out6: endpoint {
+									vc-id = <2>;
+									port-index = <2>;
+									opt-csi-port = "a";
+									bus-width = <NUM_LANES_A>;
+									i2c-cc = <0>;
+									remote-endpoint = <&zedx_csi_in6>;
+								};
+							};
+						};
+					};
+
+					zedx_right3: zedx_right_3@41 {
+						compatible = "stereolabs,zedx";
+						reg = <0x41>;
+
+						ZED_ORIN_CLKS
+
+						devnode = "video7";
+						sync_sensor = "ZED_CAM3";
+						sync_sensor_index = <2>;
+
+						zedx-id = "3";
+						channel = "a";
+
+						has-eeprom;
+						eeprom-addr = <0x54>;
+
+						AR0234_MODES_A("3", "serial_c", "0")
+
+						ports {
+							#address-cells = <1>;
+							#size-cells = <0>;
+							port@0 {
+								reg = <0>;
+								zedx_ar0234_out7: endpoint {
+									vc-id = <3>;
+									port-index = <2>;
+									opt-csi-port = "a";
+									bus-width = <NUM_LANES_A>;
+									i2c-cc = <0>;
+									remote-endpoint = <&zedx_csi_in7>;
+								};
+							};
+						};
+					};
+
+					zedxone_gs3: zedxone_gs_3@13 {
+						compatible = "stereolabs,zedx";
+						reg = <0x13>;
+
+						ZED_ORIN_CLKS
+
+						devnode = "video19";
+						sync_sensor = "ZEDXONE_CAM3";
+						sync_sensor_index = <1>;
+
+						zedx-id = "7";
+						channel = "a";
+
+						has-eeprom;
+						eeprom-addr = <0x56>;
+
+						AR0234_MODES_A("2", "serial_c", "0")
+
+						ports {
+							#address-cells = <1>;
+							#size-cells = <0>;
+							port@0 {
+								reg = <0>;
+								zedxone_gs_out3: endpoint {
+									vc-id = <2>;
+									port-index = <2>;
+									opt-csi-port = "a";
+									bus-width = <NUM_LANES_A>;
+									i2c-cc = <0>;
+									remote-endpoint = <&zedxone_gs_csi_in3>;
+								};
+							};
+						};
+					};
+
+					/* ---- serializer nodes (all channel = "a") ---- */
+
+					zedx_ser0: zedx_ser_0@62 {
+						compatible = "stereolabs,sl_max9295";
+						reg = <0x62>;
+						zedx-id = "0";
+						channel = "a";
+						mode = "master";
+						camera_model = "zedx";
+						camera-sensors = <&zedx_left0 &zedx_right0>;
+						imu = <&bmi088_a &bmi088_b>;
+					};
+
+					zedxone_gs_ser0: zedxone_gs_ser_0@66 {
+						compatible = "stereolabs,sl_max9295";
+						reg = <0x66>;
+						zedx-id = "4";
+						channel = "a";
+						mode = "master";
+						camera_model = "zedonegs";
+						camera-sensors = <&zedxone_gs0>;
+						imu = <&bmi088_a &bmi088_b>;
+					};
+
+					zedx_ser1: zedx_ser_1@63 {
+						compatible = "stereolabs,sl_max9295";
+						reg = <0x63>;
+						zedx-id = "1";
+						channel = "a";
+						mode = "master";
+						camera_model = "zedx";
+						camera-sensors = <&zedx_left1 &zedx_right1>;
+						imu = <&bmi088_a &bmi088_b>;
+					};
+
+					zedxone_gs_ser1: zedxone_gs_ser_1@67 {
+						compatible = "stereolabs,sl_max9295";
+						reg = <0x67>;
+						zedx-id = "5";
+						channel = "a";
+						mode = "master";
+						camera_model = "zedonegs";
+						camera-sensors = <&zedxone_gs1>;
+						imu = <&bmi088_a &bmi088_b>;
+					};
+
+					zedx_ser2: zedx_ser_2@64 {
+						compatible = "stereolabs,sl_max9295";
+						reg = <0x64>;
+						zedx-id = "2";
+						channel = "a";
+						mode = "master";
+						camera_model = "zedx";
+						camera-sensors = <&zedx_left2 &zedx_right2>;
+						imu = <&bmi088_a &bmi088_b>;
+					};
+
+					zedxone_gs_ser2: zedxone_gs_ser_2@68 {
+						compatible = "stereolabs,sl_max9295";
+						reg = <0x68>;
+						zedx-id = "6";
+						channel = "a";
+						mode = "master";
+						camera_model = "zedonegs";
+						camera-sensors = <&zedxone_gs2>;
+						imu = <&bmi088_a &bmi088_b>;
+					};
+
+					zedx_ser3: zedx_ser_3@65 {
+						compatible = "stereolabs,sl_max9295";
+						reg = <0x65>;
+						zedx-id = "3";
+						channel = "a";
+						mode = "master";
+						camera_model = "zedx";
+						camera-sensors = <&zedx_left3 &zedx_right3>;
+						imu = <&bmi088_a &bmi088_b>;
+					};
+
+					zedxone_gs_ser3: zedxone_gs_ser_3@69 {
+						compatible = "stereolabs,sl_max9295";
+						reg = <0x69>;
+						zedx-id = "7";
+						channel = "a";
+						mode = "master";
+						camera_model = "zedonegs";
+						camera-sensors = <&zedxone_gs3>;
+						imu = <&bmi088_a &bmi088_b>;
+					};
+
+				};
+
+				TEGRA_ZEDX_GMSL_I2C_1 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					max96712_b@29 {
+						compatible = "stereolabs,sl_max96712";
+						reg = <0x29>;
+						channel = "b";
+						pwr-gpio = ZEDX_DSER_B_PWR_GPIO;
+						status = "okay";
+
+						camera-serializers = <
+							/* GMSL 0: ZED X (id=8) OR ZED X One GS (id=12) */
+							&zedx_ser4
+							&zedxone_gs_ser4
+							/* GMSL 1: ZED X (id=9) OR ZED X One GS (id=13) */
+							&zedx_ser5
+							&zedxone_gs_ser5
+							/* GMSL 2: ZED X (id=10) OR ZED X One GS (id=14) */
+							&zedx_ser6
+							&zedxone_gs_ser6
+							/* GMSL 3: ZED X (id=11) OR ZED X One GS (id=15) */
+							&zedx_ser7
+							&zedxone_gs_ser7
+						>;
+					};
+
+					bmi088_c: bmi088_c@3b {
+						compatible = "bmi,bmi088";
+						reg = <0x3b>;
+						accel_i2c_addr = <0x3c>;
+						accel_matrix = [01 00 00 00 01 00 00 00 01];
+						gyro_matrix = [01 00 00 00 01 00 00 00 01];
+					};
+
+					bmi088_d: bmi088_d@4b {
+						compatible = "bmi,bmi088";
+						reg = <0x4b>;
+						accel_i2c_addr = <0x4c>;
+						accel_matrix = [01 00 00 00 01 00 00 00 01];
+						gyro_matrix = [01 00 00 00 01 00 00 00 01];
+					};
+
+					/* ---- sensor nodes (all channel = "b") ---- */
+
+					/* GMSL 0, 4-lane output B, Orin Port4, VI Stream4, VC0/VC1 */
+					zedx_left4: zedx_left_4@28 {
+						compatible = "stereolabs,zedx";
+						reg = <0x28>;
+
+						ZED_ORIN_CLKS
+
+						devnode = "video8";
+						sync_sensor = "ZED_CAM4";
+						sync_sensor_index = <1>;
+
+						zedx-id = "8";
+						channel = "b";
+
+						has-eeprom;
+						eeprom-addr = <0x54>;
+
+						AR0234_MODES_B("0", "serial_e", "0")
+
+						ports {
+							#address-cells = <1>;
+							#size-cells = <0>;
+							port@0 {
+								reg = <0>;
+								zedx_ar0234_out8: endpoint {
+									vc-id = <0>;
+									port-index = <4>;
+									opt-csi-port = "b";
+									bus-width = <NUM_LANES_B>;
+									i2c-cc = <0>;
+									remote-endpoint = <&zedx_csi_in8>;
+								};
+							};
+						};
+					};
+
+					zedx_right4: zedx_right_4@20 {
+						compatible = "stereolabs,zedx";
+						reg = <0x20>;
+
+						ZED_ORIN_CLKS
+
+						devnode = "video9";
+						sync_sensor = "ZED_CAM4";
+						sync_sensor_index = <2>;
+
+						zedx-id = "8";
+						channel = "b";
+
+						has-eeprom;
+						eeprom-addr = <0x54>;
+
+						AR0234_MODES_B("1", "serial_e", "0")
+
+						ports {
+							#address-cells = <1>;
+							#size-cells = <0>;
+							port@0 {
+								reg = <0>;
+								zedx_ar0234_out9: endpoint {
+									vc-id = <1>;
+									port-index = <4>;
+									opt-csi-port = "b";
+									bus-width = <NUM_LANES_B>;
+									i2c-cc = <0>;
+									remote-endpoint = <&zedx_csi_in9>;
+								};
+							};
+						};
+					};
+
+					zedxone_gs4: zedxone_gs_4@10 {
+						compatible = "stereolabs,zedx";
+						reg = <0x10>;
+
+						ZED_ORIN_CLKS
+
+						devnode = "video20";
+						sync_sensor = "ZEDXONE_CAM4";
+						sync_sensor_index = <1>;
+
+						zedx-id = "12";
+						channel = "b";
+
+						has-eeprom;
+						eeprom-addr = <0x56>;
+
+						AR0234_MODES_B("0", "serial_e", "0")
+
+						ports {
+							#address-cells = <1>;
+							#size-cells = <0>;
+							port@0 {
+								reg = <0>;
+								zedxone_gs_out4: endpoint {
+									vc-id = <0>;
+									port-index = <4>;
+									opt-csi-port = "b";
+									bus-width = <NUM_LANES_B>;
+									i2c-cc = <0>;
+									remote-endpoint = <&zedxone_gs_csi_in4>;
+								};
+							};
+						};
+					};
+
+					/* GMSL 1, 4-lane output B, Orin Port4, VI Stream4, VC2/VC3 */
+					zedx_left5: zedx_left_5@38 {
+						compatible = "stereolabs,zedx";
+						reg = <0x38>;
+
+						ZED_ORIN_CLKS
+
+						devnode = "video10";
+						sync_sensor = "ZED_CAM5";
+						sync_sensor_index = <1>;
+
+						zedx-id = "9";
+						channel = "b";
+
+						has-eeprom;
+						eeprom-addr = <0x54>;
+
+						AR0234_MODES_B("2", "serial_e", "0")
+
+						ports {
+							#address-cells = <1>;
+							#size-cells = <0>;
+							port@0 {
+								reg = <0>;
+								zedx_ar0234_out10: endpoint {
+									vc-id = <2>;
+									port-index = <4>;
+									opt-csi-port = "b";
+									bus-width = <NUM_LANES_B>;
+									i2c-cc = <0>;
+									remote-endpoint = <&zedx_csi_in10>;
+								};
+							};
+						};
+					};
+
+					zedx_right5: zedx_right_5@30 {
+						compatible = "stereolabs,zedx";
+						reg = <0x30>;
+
+						ZED_ORIN_CLKS
+
+						devnode = "video11";
+						sync_sensor = "ZED_CAM5";
+						sync_sensor_index = <2>;
+
+						zedx-id = "9";
+						channel = "b";
+
+						has-eeprom;
+						eeprom-addr = <0x54>;
+
+						AR0234_MODES_B("3", "serial_e", "0")
+
+						ports {
+							#address-cells = <1>;
+							#size-cells = <0>;
+							port@0 {
+								reg = <0>;
+								zedx_ar0234_out11: endpoint {
+									vc-id = <3>;
+									port-index = <4>;
+									opt-csi-port = "b";
+									bus-width = <NUM_LANES_B>;
+									i2c-cc = <0>;
+									remote-endpoint = <&zedx_csi_in11>;
+								};
+							};
+						};
+					};
+
+					zedxone_gs5: zedxone_gs_5@11 {
+						compatible = "stereolabs,zedx";
+						reg = <0x11>;
+
+						ZED_ORIN_CLKS
+
+						devnode = "video21";
+						sync_sensor = "ZEDXONE_CAM5";
+						sync_sensor_index = <1>;
+
+						zedx-id = "13";
+						channel = "b";
+
+						has-eeprom;
+						eeprom-addr = <0x56>;
+
+						AR0234_MODES_B("2", "serial_e", "0")
+
+						ports {
+							#address-cells = <1>;
+							#size-cells = <0>;
+							port@0 {
+								reg = <0>;
+								zedxone_gs_out5: endpoint {
+									vc-id = <2>;
+									port-index = <4>;
+									opt-csi-port = "b";
+									bus-width = <NUM_LANES_B>;
+									i2c-cc = <0>;
+									remote-endpoint = <&zedxone_gs_csi_in5>;
+								};
+							};
+						};
+					};
+
+					/* GMSL 2, 4-lane output A, Orin Port6, VI Stream5, VC0/VC1 */
+					zedx_left6: zedx_left_6@48 {
+						compatible = "stereolabs,zedx";
+						reg = <0x48>;
+
+						ZED_ORIN_CLKS
+
+						devnode = "video12";
+						sync_sensor = "ZED_CAM6";
+						sync_sensor_index = <1>;
+
+						zedx-id = "10";
+						channel = "b";
+
+						has-eeprom;
+						eeprom-addr = <0x54>;
+
+						AR0234_MODES_B("0", "serial_g", "0")
+
+						ports {
+							#address-cells = <1>;
+							#size-cells = <0>;
+							port@0 {
+								reg = <0>;
+								zedx_ar0234_out12: endpoint {
+									vc-id = <0>;
+									port-index = <6>;
+									opt-csi-port = "a";
+									bus-width = <NUM_LANES_B>;
+									i2c-cc = <0>;
+									remote-endpoint = <&zedx_csi_in12>;
+								};
+							};
+						};
+					};
+
+					zedx_right6: zedx_right_6@40 {
+						compatible = "stereolabs,zedx";
+						reg = <0x40>;
+
+						ZED_ORIN_CLKS
+
+						devnode = "video13";
+						sync_sensor = "ZED_CAM6";
+						sync_sensor_index = <2>;
+
+						zedx-id = "10";
+						channel = "b";
+
+						has-eeprom;
+						eeprom-addr = <0x54>;
+
+						AR0234_MODES_B("1", "serial_g", "0")
+
+						ports {
+							#address-cells = <1>;
+							#size-cells = <0>;
+							port@0 {
+								reg = <0>;
+								zedx_ar0234_out13: endpoint {
+									vc-id = <1>;
+									port-index = <6>;
+									opt-csi-port = "a";
+									bus-width = <NUM_LANES_B>;
+									i2c-cc = <0>;
+									remote-endpoint = <&zedx_csi_in13>;
+								};
+							};
+						};
+					};
+
+					zedxone_gs6: zedxone_gs_6@12 {
+						compatible = "stereolabs,zedx";
+						reg = <0x12>;
+
+						ZED_ORIN_CLKS
+
+						devnode = "video22";
+						sync_sensor = "ZEDXONE_CAM6";
+						sync_sensor_index = <1>;
+
+						zedx-id = "14";
+						channel = "b";
+
+						has-eeprom;
+						eeprom-addr = <0x56>;
+
+						AR0234_MODES_B("0", "serial_g", "0")
+
+						ports {
+							#address-cells = <1>;
+							#size-cells = <0>;
+							port@0 {
+								reg = <0>;
+								zedxone_gs_out6: endpoint {
+									vc-id = <0>;
+									port-index = <6>;
+									opt-csi-port = "a";
+									bus-width = <NUM_LANES_B>;
+									i2c-cc = <0>;
+									remote-endpoint = <&zedxone_gs_csi_in6>;
+								};
+							};
+						};
+					};
+
+					/* GMSL 3, 4-lane output A, Orin Port6, VI Stream5, VC2/VC3 */
+					zedx_left7: zedx_left_7@14 {
+						compatible = "stereolabs,zedx";
+						reg = <0x14>;
+
+						ZED_ORIN_CLKS
+
+						devnode = "video14";
+						sync_sensor = "ZED_CAM7";
+						sync_sensor_index = <1>;
+
+						zedx-id = "11";
+						channel = "b";
+
+						has-eeprom;
+						eeprom-addr = <0x54>;
+
+						AR0234_MODES_B("2", "serial_g", "0")
+
+						ports {
+							#address-cells = <1>;
+							#size-cells = <0>;
+							port@0 {
+								reg = <0>;
+								zedx_ar0234_out14: endpoint {
+									vc-id = <2>;
+									port-index = <6>;
+									opt-csi-port = "a";
+									bus-width = <NUM_LANES_B>;
+									i2c-cc = <0>;
+									remote-endpoint = <&zedx_csi_in14>;
+								};
+							};
+						};
+					};
+
+					zedx_right7: zedx_right_7@41 {
+						compatible = "stereolabs,zedx";
+						reg = <0x41>;
+
+						ZED_ORIN_CLKS
+
+						devnode = "video15";
+						sync_sensor = "ZED_CAM7";
+						sync_sensor_index = <2>;
+
+						zedx-id = "11";
+						channel = "b";
+
+						has-eeprom;
+						eeprom-addr = <0x54>;
+
+						AR0234_MODES_B("3", "serial_g", "0")
+
+						ports {
+							#address-cells = <1>;
+							#size-cells = <0>;
+							port@0 {
+								reg = <0>;
+								zedx_ar0234_out15: endpoint {
+									vc-id = <3>;
+									port-index = <6>;
+									opt-csi-port = "a";
+									bus-width = <NUM_LANES_B>;
+									i2c-cc = <0>;
+									remote-endpoint = <&zedx_csi_in15>;
+								};
+							};
+						};
+					};
+
+					zedxone_gs7: zedxone_gs_7@13 {
+						compatible = "stereolabs,zedx";
+						reg = <0x13>;
+
+						ZED_ORIN_CLKS
+
+						devnode = "video23";
+						sync_sensor = "ZEDXONE_CAM7";
+						sync_sensor_index = <1>;
+
+						zedx-id = "15";
+						channel = "b";
+
+						has-eeprom;
+						eeprom-addr = <0x56>;
+
+						AR0234_MODES_B("2", "serial_g", "0")
+
+						ports {
+							#address-cells = <1>;
+							#size-cells = <0>;
+							port@0 {
+								reg = <0>;
+								zedxone_gs_out7: endpoint {
+									vc-id = <2>;
+									port-index = <6>;
+									opt-csi-port = "a";
+									bus-width = <NUM_LANES_B>;
+									i2c-cc = <0>;
+									remote-endpoint = <&zedxone_gs_csi_in7>;
+								};
+							};
+						};
+					};
+
+					/* ---- serializer nodes (all channel = "b") ---- */
+
+					zedx_ser4: zedx_ser_4@62 {
+						compatible = "stereolabs,sl_max9295";
+						reg = <0x62>;
+						zedx-id = "8";
+						channel = "b";
+						mode = "master";
+						camera_model = "zedx";
+						camera-sensors = <&zedx_left4 &zedx_right4>;
+						imu = <&bmi088_c &bmi088_d>;
+					};
+
+					zedxone_gs_ser4: zedxone_gs_ser_4@66 {
+						compatible = "stereolabs,sl_max9295";
+						reg = <0x66>;
+						zedx-id = "12";
+						channel = "b";
+						mode = "master";
+						camera_model = "zedonegs";
+						camera-sensors = <&zedxone_gs4>;
+						imu = <&bmi088_c &bmi088_d>;
+					};
+
+					zedx_ser5: zedx_ser_5@63 {
+						compatible = "stereolabs,sl_max9295";
+						reg = <0x63>;
+						zedx-id = "9";
+						channel = "b";
+						mode = "master";
+						camera_model = "zedx";
+						camera-sensors = <&zedx_left5 &zedx_right5>;
+						imu = <&bmi088_c &bmi088_d>;
+					};
+
+					zedxone_gs_ser5: zedxone_gs_ser_5@67 {
+						compatible = "stereolabs,sl_max9295";
+						reg = <0x67>;
+						zedx-id = "13";
+						channel = "b";
+						mode = "master";
+						camera_model = "zedonegs";
+						camera-sensors = <&zedxone_gs5>;
+						imu = <&bmi088_c &bmi088_d>;
+					};
+
+					zedx_ser6: zedx_ser_6@64 {
+						compatible = "stereolabs,sl_max9295";
+						reg = <0x64>;
+						zedx-id = "10";
+						channel = "b";
+						mode = "master";
+						camera_model = "zedx";
+						camera-sensors = <&zedx_left6 &zedx_right6>;
+						imu = <&bmi088_c &bmi088_d>;
+					};
+
+					zedxone_gs_ser6: zedxone_gs_ser_6@68 {
+						compatible = "stereolabs,sl_max9295";
+						reg = <0x68>;
+						zedx-id = "14";
+						channel = "b";
+						mode = "master";
+						camera_model = "zedonegs";
+						camera-sensors = <&zedxone_gs6>;
+						imu = <&bmi088_c &bmi088_d>;
+					};
+
+					zedx_ser7: zedx_ser_7@65 {
+						compatible = "stereolabs,sl_max9295";
+						reg = <0x65>;
+						zedx-id = "11";
+						channel = "b";
+						mode = "master";
+						camera_model = "zedx";
+						camera-sensors = <&zedx_left7 &zedx_right7>;
+						imu = <&bmi088_c &bmi088_d>;
+					};
+
+					zedxone_gs_ser7: zedxone_gs_ser_7@69 {
+						compatible = "stereolabs,sl_max9295";
+						reg = <0x69>;
+						zedx-id = "15";
+						channel = "b";
+						mode = "master";
+						camera_model = "zedonegs";
+						camera-sensors = <&zedxone_gs7>;
+						imu = <&bmi088_c &bmi088_d>;
+					};
+
+				};
+
+				host1x@13e00000 {
+					nvcsi@15a00000 {
+						num-channels = <24>;
+						#address-cells = <1>;
+						#size-cells = <0>;
+
+						channel@0 {
+							reg = <0>;
+							ports {
+								#address-cells = <1>;
+								#size-cells = <0>;
+								port@0 {
+									reg = <0>;
+									zedx_csi_in0: endpoint@0 {
+										port-index = <0>;
+										bus-width = <NUM_LANES_A>;
+										remote-endpoint = <&zedx_ar0234_out0>;
+									};
+								};
+								port@1 {
+									reg = <1>;
+									zedx_csi_out0: endpoint@16 {
+										remote-endpoint = <&zedx_vi_in0>;
+									};
+								};
+							};
+						};
+
+						channel@1 {
+							reg = <1>;
+							ports {
+								#address-cells = <1>;
+								#size-cells = <0>;
+								port@0 {
+									reg = <0>;
+									zedx_csi_in1: endpoint@1 {
+										port-index = <0>;
+										bus-width = <NUM_LANES_A>;
+										remote-endpoint = <&zedx_ar0234_out1>;
+									};
+								};
+								port@1 {
+									reg = <1>;
+									zedx_csi_out1: endpoint@17 {
+										remote-endpoint = <&zedx_vi_in1>;
+									};
+								};
+							};
+						};
+
+						channel@2 {
+							reg = <2>;
+							ports {
+								#address-cells = <1>;
+								#size-cells = <0>;
+								port@0 {
+									reg = <0>;
+									zedx_csi_in2: endpoint@2 {
+										port-index = <0>;
+										bus-width = <NUM_LANES_A>;
+										remote-endpoint = <&zedx_ar0234_out2>;
+									};
+								};
+								port@1 {
+									reg = <1>;
+									zedx_csi_out2: endpoint@18 {
+										remote-endpoint = <&zedx_vi_in2>;
+									};
+								};
+							};
+						};
+
+						channel@3 {
+							reg = <3>;
+							ports {
+								#address-cells = <1>;
+								#size-cells = <0>;
+								port@0 {
+									reg = <0>;
+									zedx_csi_in3: endpoint@3 {
+										port-index = <0>;
+										bus-width = <NUM_LANES_A>;
+										remote-endpoint = <&zedx_ar0234_out3>;
+									};
+								};
+								port@1 {
+									reg = <1>;
+									zedx_csi_out3: endpoint@19 {
+										remote-endpoint = <&zedx_vi_in3>;
+									};
+								};
+							};
+						};
+
+						channel@4 {
+							reg = <4>;
+							ports {
+								#address-cells = <1>;
+								#size-cells = <0>;
+								port@0 {
+									reg = <0>;
+									zedx_csi_in4: endpoint@4 {
+										port-index = <2>;
+										bus-width = <NUM_LANES_A>;
+										remote-endpoint = <&zedx_ar0234_out4>;
+									};
+								};
+								port@1 {
+									reg = <1>;
+									zedx_csi_out4: endpoint@20 {
+										remote-endpoint = <&zedx_vi_in4>;
+									};
+								};
+							};
+						};
+
+						channel@5 {
+							reg = <5>;
+							ports {
+								#address-cells = <1>;
+								#size-cells = <0>;
+								port@0 {
+									reg = <0>;
+									zedx_csi_in5: endpoint@5 {
+										port-index = <2>;
+										bus-width = <NUM_LANES_A>;
+										remote-endpoint = <&zedx_ar0234_out5>;
+									};
+								};
+								port@1 {
+									reg = <1>;
+									zedx_csi_out5: endpoint@21 {
+										remote-endpoint = <&zedx_vi_in5>;
+									};
+								};
+							};
+						};
+
+						channel@6 {
+							reg = <6>;
+							ports {
+								#address-cells = <1>;
+								#size-cells = <0>;
+								port@0 {
+									reg = <0>;
+									zedx_csi_in6: endpoint@6 {
+										port-index = <2>;
+										bus-width = <NUM_LANES_A>;
+										remote-endpoint = <&zedx_ar0234_out6>;
+									};
+								};
+								port@1 {
+									reg = <1>;
+									zedx_csi_out6: endpoint@22 {
+										remote-endpoint = <&zedx_vi_in6>;
+									};
+								};
+							};
+						};
+
+						channel@7 {
+							reg = <7>;
+							ports {
+								#address-cells = <1>;
+								#size-cells = <0>;
+								port@0 {
+									reg = <0>;
+									zedx_csi_in7: endpoint@7 {
+										port-index = <2>;
+										bus-width = <NUM_LANES_A>;
+										remote-endpoint = <&zedx_ar0234_out7>;
+									};
+								};
+								port@1 {
+									reg = <1>;
+									zedx_csi_out7: endpoint@23 {
+										remote-endpoint = <&zedx_vi_in7>;
+									};
+								};
+							};
+						};
+
+						channel@8 {
+							reg = <8>;
+							ports {
+								#address-cells = <1>;
+								#size-cells = <0>;
+								port@0 {
+									reg = <0>;
+									zedx_csi_in8: endpoint@8 {
+										port-index = <4>;
+										bus-width = <NUM_LANES_B>;
+										remote-endpoint = <&zedx_ar0234_out8>;
+									};
+								};
+								port@1 {
+									reg = <1>;
+									zedx_csi_out8: endpoint@24 {
+										remote-endpoint = <&zedx_vi_in8>;
+									};
+								};
+							};
+						};
+
+						channel@9 {
+							reg = <9>;
+							ports {
+								#address-cells = <1>;
+								#size-cells = <0>;
+								port@0 {
+									reg = <0>;
+									zedx_csi_in9: endpoint@9 {
+										port-index = <4>;
+										bus-width = <NUM_LANES_B>;
+										remote-endpoint = <&zedx_ar0234_out9>;
+									};
+								};
+								port@1 {
+									reg = <1>;
+									zedx_csi_out9: endpoint@25 {
+										remote-endpoint = <&zedx_vi_in9>;
+									};
+								};
+							};
+						};
+
+						channel@10 {
+							reg = <10>;
+							ports {
+								#address-cells = <1>;
+								#size-cells = <0>;
+								port@0 {
+									reg = <0>;
+									zedx_csi_in10: endpoint@10 {
+										port-index = <4>;
+										bus-width = <NUM_LANES_B>;
+										remote-endpoint = <&zedx_ar0234_out10>;
+									};
+								};
+								port@1 {
+									reg = <1>;
+									zedx_csi_out10: endpoint@26 {
+										remote-endpoint = <&zedx_vi_in10>;
+									};
+								};
+							};
+						};
+
+						channel@11 {
+							reg = <11>;
+							ports {
+								#address-cells = <1>;
+								#size-cells = <0>;
+								port@0 {
+									reg = <0>;
+									zedx_csi_in11: endpoint@11 {
+										port-index = <4>;
+										bus-width = <NUM_LANES_B>;
+										remote-endpoint = <&zedx_ar0234_out11>;
+									};
+								};
+								port@1 {
+									reg = <1>;
+									zedx_csi_out11: endpoint@27 {
+										remote-endpoint = <&zedx_vi_in11>;
+									};
+								};
+							};
+						};
+
+						channel@12 {
+							reg = <12>;
+							ports {
+								#address-cells = <1>;
+								#size-cells = <0>;
+								port@0 {
+									reg = <0>;
+									zedx_csi_in12: endpoint@12 {
+										port-index = <6>;
+										bus-width = <NUM_LANES_B>;
+										remote-endpoint = <&zedx_ar0234_out12>;
+									};
+								};
+								port@1 {
+									reg = <1>;
+									zedx_csi_out12: endpoint@28 {
+										remote-endpoint = <&zedx_vi_in12>;
+									};
+								};
+							};
+						};
+
+						channel@13 {
+							reg = <13>;
+							ports {
+								#address-cells = <1>;
+								#size-cells = <0>;
+								port@0 {
+									reg = <0>;
+									zedx_csi_in13: endpoint@13 {
+										port-index = <6>;
+										bus-width = <NUM_LANES_B>;
+										remote-endpoint = <&zedx_ar0234_out13>;
+									};
+								};
+								port@1 {
+									reg = <1>;
+									zedx_csi_out13: endpoint@29 {
+										remote-endpoint = <&zedx_vi_in13>;
+									};
+								};
+							};
+						};
+
+						channel@14 {
+							reg = <14>;
+							ports {
+								#address-cells = <1>;
+								#size-cells = <0>;
+								port@0 {
+									reg = <0>;
+									zedx_csi_in14: endpoint@14 {
+										port-index = <6>;
+										bus-width = <NUM_LANES_B>;
+										remote-endpoint = <&zedx_ar0234_out14>;
+									};
+								};
+								port@1 {
+									reg = <1>;
+									zedx_csi_out14: endpoint@30 {
+										remote-endpoint = <&zedx_vi_in14>;
+									};
+								};
+							};
+						};
+
+						channel@15 {
+							reg = <15>;
+							ports {
+								#address-cells = <1>;
+								#size-cells = <0>;
+								port@0 {
+									reg = <0>;
+									zedx_csi_in15: endpoint@15 {
+										port-index = <6>;
+										bus-width = <NUM_LANES_B>;
+										remote-endpoint = <&zedx_ar0234_out15>;
+									};
+								};
+								port@1 {
+									reg = <1>;
+									zedx_csi_out15: endpoint@31 {
+										remote-endpoint = <&zedx_vi_in15>;
+									};
+								};
+							};
+						};
+
+						ZEDX_ONE_GS_CSI_CHANNEL_A(0, 16, 0)
+						ZEDX_ONE_GS_CSI_CHANNEL_A(1, 17, 0)
+						ZEDX_ONE_GS_CSI_CHANNEL_A(2, 18, 2)
+						ZEDX_ONE_GS_CSI_CHANNEL_A(3, 19, 2)
+						ZEDX_ONE_GS_CSI_CHANNEL_B(4, 20, 4)
+						ZEDX_ONE_GS_CSI_CHANNEL_B(5, 21, 4)
+						ZEDX_ONE_GS_CSI_CHANNEL_B(6, 22, 6)
+						ZEDX_ONE_GS_CSI_CHANNEL_B(7, 23, 6)
+
+					};
+				};
+
+			};
+		};
+	};
+};

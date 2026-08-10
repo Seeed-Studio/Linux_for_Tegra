@@ -1,0 +1,16 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+/*
+ * Device-tree overlay for 40-pin expansion Header.
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/tegra234-p3767-0000-common.h>
+#include "tegra234-p3767-0000-common-hdr40.dtsi"
+
+/ {
+	compatible = JETSON_COMPATIBLE;
+};
+

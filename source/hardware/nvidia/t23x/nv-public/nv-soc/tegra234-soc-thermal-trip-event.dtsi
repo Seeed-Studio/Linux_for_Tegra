@@ -1,0 +1,239 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+#define TEGRA234_THERMAL_HOT_SURFACE_TEMP 70000
+#define TEGRA234_THERMAL_HOT_SURFACE_HYST 8000
+
+/ {
+	cpu_throttle_alert: cpu-throttle-alert {
+		compatible = "thermal-trip-event";
+		cdev-type = "cpu-throttle-alert";
+		#cooling-cells = <2>;
+	};
+
+	gpu_throttle_alert: gpu-throttle-alert {
+		compatible = "thermal-trip-event";
+		cdev-type = "gpu-throttle-alert";
+		#cooling-cells = <2>;
+	};
+
+	cv0_throttle_alert: cv0-throttle-alert {
+		compatible = "thermal-trip-event";
+		cdev-type = "cv0-throttle-alert";
+		#cooling-cells = <2>;
+	};
+
+	cv1_throttle_alert: cv1-throttle-alert {
+		compatible = "thermal-trip-event";
+		cdev-type = "cv1-throttle-alert";
+		#cooling-cells = <2>;
+	};
+
+	cv2_throttle_alert: cv2-throttle-alert {
+		compatible = "thermal-trip-event";
+		cdev-type = "cv2-throttle-alert";
+		#cooling-cells = <2>;
+	};
+
+	soc0_throttle_alert: soc0-throttle-alert {
+		compatible = "thermal-trip-event";
+		cdev-type = "soc0-throttle-alert";
+		#cooling-cells = <2>;
+	};
+
+	soc1_throttle_alert: soc1-throttle-alert {
+		compatible = "thermal-trip-event";
+		cdev-type = "soc1-throttle-alert";
+		#cooling-cells = <2>;
+	};
+
+	soc2_throttle_alert: soc2-throttle-alert {
+		compatible = "thermal-trip-event";
+		cdev-type = "soc2-throttle-alert";
+		#cooling-cells = <2>;
+	};
+
+	hot_surface_alert: hot-surface-alert {
+		compatible = "thermal-trip-event";
+		cdev-type = "hot-surface-alert";
+		#cooling-cells = <2>;
+	};
+
+	thermal-zones {
+		cpu-thermal {
+			trips {
+				cpu_trip_hot_surface: hot-surface {
+					temperature = <TEGRA234_THERMAL_HOT_SURFACE_TEMP>;
+					hysteresis = <TEGRA234_THERMAL_HOT_SURFACE_HYST>;
+					type = "passive";
+				};
+			};
+
+			cooling-maps {
+				map-throttle-alert {
+					trip = <&cpu_sw_slowdown>;
+					cooling-device = <&cpu_throttle_alert 1 1>;
+				};
+
+				map-hot-surface-alert {
+					trip = <&cpu_trip_hot_surface>;
+					cooling-device = <&hot_surface_alert 1 1>;
+				};
+			};
+		};
+
+		gpu-thermal {
+			trips {
+				gpu_trip_hot_surface: hot-surface {
+					temperature = <TEGRA234_THERMAL_HOT_SURFACE_TEMP>;
+					hysteresis = <TEGRA234_THERMAL_HOT_SURFACE_HYST>;
+					type = "passive";
+				};
+			};
+
+			cooling-maps {
+				map-throttle-alert {
+					trip = <&gpu_sw_slowdown>;
+					cooling-device = <&gpu_throttle_alert 1 1>;
+				};
+
+				map-hot-surface-alert {
+					trip = <&gpu_trip_hot_surface>;
+					cooling-device = <&hot_surface_alert 1 1>;
+				};
+			};
+		};
+
+		cv0-thermal {
+			trips {
+				cv0_trip_hot_surface: hot-surface {
+					temperature = <TEGRA234_THERMAL_HOT_SURFACE_TEMP>;
+					hysteresis = <TEGRA234_THERMAL_HOT_SURFACE_HYST>;
+					type = "passive";
+				};
+			};
+
+			cooling-maps {
+				map-throttle-alert {
+					trip = <&cv0_sw_slowdown>;
+					cooling-device = <&cv0_throttle_alert 1 1>;
+				};
+
+				map-hot-surface-alert {
+					trip = <&cv0_trip_hot_surface>;
+					cooling-device = <&hot_surface_alert 1 1>;
+				};
+			};
+		};
+
+		cv1-thermal {
+			trips {
+				cv1_trip_hot_surface: hot-surface {
+					temperature = <TEGRA234_THERMAL_HOT_SURFACE_TEMP>;
+					hysteresis = <TEGRA234_THERMAL_HOT_SURFACE_HYST>;
+					type = "passive";
+				};
+			};
+
+			cooling-maps {
+				map-throttle-alert {
+					trip = <&cv1_sw_slowdown>;
+					cooling-device = <&cv1_throttle_alert 1 1>;
+				};
+
+				map-hot-surface-alert {
+					trip = <&cv1_trip_hot_surface>;
+					cooling-device = <&hot_surface_alert 1 1>;
+				};
+			};
+		};
+
+		cv2-thermal {
+			trips {
+				cv2_trip_hot_surface: hot-surface {
+					temperature = <TEGRA234_THERMAL_HOT_SURFACE_TEMP>;
+					hysteresis = <TEGRA234_THERMAL_HOT_SURFACE_HYST>;
+					type = "passive";
+				};
+			};
+
+			cooling-maps {
+				map-throttle-alert {
+					trip = <&cv2_sw_slowdown>;
+					cooling-device = <&cv2_throttle_alert 1 1>;
+				};
+
+				map-hot-surface-alert {
+					trip = <&cv2_trip_hot_surface>;
+					cooling-device = <&hot_surface_alert 1 1>;
+				};
+			};
+		};
+
+		soc0-thermal {
+			trips {
+				soc0_trip_hot_surface: hot-surface {
+					temperature = <TEGRA234_THERMAL_HOT_SURFACE_TEMP>;
+					hysteresis = <TEGRA234_THERMAL_HOT_SURFACE_HYST>;
+					type = "passive";
+				};
+			};
+
+			cooling-maps {
+				map-throttle-alert {
+					trip = <&soc0_sw_slowdown>;
+					cooling-device = <&soc0_throttle_alert 1 1>;
+				};
+
+				map-hot-surface-alert {
+					trip = <&soc0_trip_hot_surface>;
+					cooling-device = <&hot_surface_alert 1 1>;
+				};
+			};
+		};
+
+		soc1-thermal {
+			trips {
+				soc1_trip_hot_surface: hot-surface {
+					temperature = <TEGRA234_THERMAL_HOT_SURFACE_TEMP>;
+					hysteresis = <TEGRA234_THERMAL_HOT_SURFACE_HYST>;
+					type = "passive";
+				};
+			};
+
+			cooling-maps {
+				map-throttle-alert {
+					trip = <&soc1_sw_slowdown>;
+					cooling-device = <&soc1_throttle_alert 1 1>;
+				};
+
+				map-hot-surface-alert {
+					trip = <&soc1_trip_hot_surface>;
+					cooling-device = <&hot_surface_alert 1 1>;
+				};
+			};
+		};
+
+		soc2-thermal {
+			trips {
+				soc2_trip_hot_surface: hot-surface {
+					temperature = <TEGRA234_THERMAL_HOT_SURFACE_TEMP>;
+					hysteresis = <TEGRA234_THERMAL_HOT_SURFACE_HYST>;
+					type = "passive";
+				};
+			};
+
+			cooling-maps {
+				map-throttle-alert {
+					trip = <&soc2_sw_slowdown>;
+					cooling-device = <&soc2_throttle_alert 1 1>;
+				};
+
+				map-hot-surface-alert {
+					trip = <&soc2_trip_hot_surface>;
+					cooling-device = <&hot_surface_alert 1 1>;
+				};
+			};
+		};
+	};
+};

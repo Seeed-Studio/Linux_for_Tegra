@@ -1,0 +1,172 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+/dts-v1/;
+/plugin/;
+
+/ {
+	/* SFC overrrides */
+	fragment-audio-overrides@0 {
+		target-path = "/bus@0/aconnect@2900000/ahub@2900800/sfc@2902000/ports";
+		__overlay__ {
+			port@0 {
+				endpoint {
+					convert-rate = <96000>;
+				};
+			};
+
+			port@1 {
+				endpoint {
+					convert-rate = <48000>;
+				};
+			};
+		};
+	};
+
+	fragment-audio-overrides@1 {
+		target-path = "/bus@0/aconnect@2900000/ahub@2900800/sfc@2902200/ports";
+		__overlay__ {
+			port@0 {
+				endpoint {
+					convert-rate = <22050>;
+				};
+			};
+
+			port@1 {
+				endpoint {
+					convert-rate = <48000>;
+				};
+			};
+		};
+	};
+
+	fragment-audio-overrides@2 {
+		target-path = "/bus@0/aconnect@2900000/ahub@2900800/sfc@2902400/ports";
+		__overlay__ {
+			port@0 {
+				endpoint {
+					convert-rate = <8000>;
+				};
+			};
+
+			port@1 {
+				endpoint {
+					convert-rate = <48000>;
+				};
+			};
+		};
+	};
+
+	fragment-audio-overrides@3 {
+		target-path = "/bus@0/aconnect@2900000/ahub@2900800/sfc@2902600/ports";
+		__overlay__ {
+			port@0 {
+				endpoint {
+					convert-rate = <192000>;
+				};
+			};
+
+			port@1 {
+				endpoint {
+					convert-rate = <48000>;
+				};
+			};
+		};
+	};
+
+	/* I2S4 override for SFC */
+	fragment-audio-overrides@4 {
+		target-path = "/bus@0/aconnect@2900000/ahub@2900800/i2s@2901300/ports";
+		__overlay__ {
+			port@1 {
+				endpoint {
+					convert-rate = <48000>;
+				};
+			};
+		};
+	};
+
+	/* AMX/ADX overrides */
+	fragment-audio-overrides@5 {
+		target-path = "/bus@0/aconnect@2900000/ahub@2900800/amx@2903000/ports";
+		__overlay__ {
+			port@0 {
+				endpoint {
+					convert-channels = <2>;
+				};
+			};
+
+			port@1 {
+				endpoint {
+					convert-channels = <2>;
+				};
+			};
+
+			port@2 {
+				endpoint {
+					convert-channels = <2>;
+				};
+			};
+
+			port@3 {
+				endpoint {
+					convert-channels = <2>;
+				};
+			};
+
+			port@4 {
+				endpoint {
+					convert-channels = <8>;
+				};
+			};
+		};
+	};
+
+	fragment-audio-overrides@6 {
+		target-path = "/bus@0/aconnect@2900000/ahub@2900800/adx@2903800/ports";
+		__overlay__ {
+			port@0 {
+				endpoint {
+					convert-channels = <8>;
+				};
+			};
+
+			port@1 {
+				endpoint {
+					convert-channels = <2>;
+				};
+			};
+
+			port@2 {
+				endpoint {
+					convert-channels = <2>;
+				};
+			};
+
+			port@3 {
+				endpoint {
+					convert-channels = <2>;
+				};
+			};
+
+			port@4 {
+				endpoint {
+					convert-channels = <2>;
+				};
+			};
+		};
+	};
+
+	/* I2S6 override for AMX and ADX */
+	fragment-audio-overrides@7 {
+		target-path = "/bus@0/aconnect@2900000/ahub@2900800/i2s@2901500/ports";
+		__overlay__ {
+			port@1 {
+				endpoint {
+					dai-format = "dsp_a";
+					convert-channels = <8>;
+				};
+			};
+		};
+	};
+};
