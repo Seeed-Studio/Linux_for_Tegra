@@ -1,0 +1,10 @@
+// SPDX-License-Identifier: GPL-2.0
+// SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+#include "tegra234-p3971-0000+p3701-0008-nv.dts"
+#include "tegra234-p3740-0002+p3701-0008-safety.dtsi"
+
+/ {
+	compatible = "nvidia,p3971-0000+p3701-0008", "safety", "nvidia,p3701-0008", "nvidia,tegra234";
+
+};
