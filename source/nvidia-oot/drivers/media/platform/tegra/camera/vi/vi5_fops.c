@@ -779,35 +779,44 @@ static int vi5_channel_error_recover(struct tegra_channel *chan,
 	spin_lock_irqsave(&chan->capture_state_lock, flags);
 	chan->capture_state = CAPTURE_IDLE;
 	spin_unlock_irqrestore(&chan->capture_state_lock, flags);
+	wake_up_interruptible(&chan->start_wait);
 
 done:
 	return err;
+}
+
+static bool tegra_channel_capture_enqueue_ready(struct tegra_channel *chan)
+{
+	unsigned long flags;
+	bool ready;
+
+	spin_lock_irqsave(&chan->capture_state_lock, flags);
+	ready = chan->capture_state != CAPTURE_ERROR &&
+		chan->capture_reqs_enqueued <
+			(chan->capture_queue_depth * chan->valid_ports);
+	spin_unlock_irqrestore(&chan->capture_state_lock, flags);
+
+	return ready;
 }
 
 static int tegra_channel_kthread_capture_enqueue(void *data)
 {
 	struct tegra_channel *chan = data;
 	struct tegra_channel_buffer *buf;
-	unsigned long flags;
+
 	set_freezable();
 
 	while (1) {
 		try_to_freeze();
 
 		wait_event_interruptible(chan->start_wait,
-			(kthread_should_stop() || !list_empty(&chan->capture)));
+			kthread_should_stop() ||
+			(!list_empty(&chan->capture) &&
+			 tegra_channel_capture_enqueue_ready(chan)));
 
 		while (!(kthread_should_stop() || list_empty(&chan->capture))) {
-			spin_lock_irqsave(&chan->capture_state_lock, flags);
-			if ((chan->capture_state == CAPTURE_ERROR)
-					|| !(chan->capture_reqs_enqueued
-					< (chan->capture_queue_depth * chan->valid_ports))) {
-				spin_unlock_irqrestore(
-					&chan->capture_state_lock, flags);
+			if (!tegra_channel_capture_enqueue_ready(chan))
 				break;
-			}
-			spin_unlock_irqrestore(&chan->capture_state_lock,
-				flags);
 
 			buf = dequeue_buffer(chan, false);
 			if (!buf)
