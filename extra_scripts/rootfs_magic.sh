@@ -18,3 +18,5 @@ APT::Periodic::Unattended-Upgrade "0";
 EOF
 sudo apt-get remove --purge -y update-manager update-notifier
 sudo apt-mark hold nvidia-l4t-display-kernel nvidia-l4t-kernel nvidia-l4t-kernel-dtbs nvidia-l4t-kernel-headers nvidia-l4t-kernel-oot-headers nvidia-l4t-kernel-oot-modules nvidia-l4t-initrd
+/usr/sbin/setcap cap_net_raw+ep /usr/bin/ping
+/usr/sbin/getcap -v /usr/bin/ping | grep -Fx '/usr/bin/ping cap_net_raw=ep'
