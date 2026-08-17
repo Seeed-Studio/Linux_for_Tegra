@@ -1,0 +1,91 @@
+# Seeed version-freeze policy for JetPack/L4T apt packages (BSP r39.2.0).
+#
+# Freezes the whole NVIDIA stack to the version validated with this BSP:
+# L4T 39.2.0 + JetPack 7.2-b187. Pin-Priority 1001 forces these versions to
+# be the apt candidate, so `apt install nvidia-jetpack` and any later
+# `apt upgrade` (also for end users, since this file ships in the image)
+# stay on the frozen set instead of pulling the newest r39.2.x packages.
+#
+# Why not just apt-mark hold: hold only protects *installed* packages; new
+# packages (e.g. nvidia-l4t-gstreamer) would still resolve to the newest
+# repo version and drag the whole nvidia-l4t-* set with it via strict
+# version dependencies. Upgrading nvidia-l4t-bootloader on recomputer-*
+# boards fails: its postinst only accepts official NVIDIA board names.
+#
+# Regenerate this file when the BSP moves to a new L4T/JP release.
+
+# ---- L4T base (som suite): freeze at 39.2.0 ----
+Package: nvidia-l4t-*
+Pin: version 39.2.0-*
+Pin-Priority: 1001
+
+Package: nvidia-l4t-kernel* nvidia-l4t-display-kernel nvidia-l4t-initrd
+Pin: version 6.8.12-tegra-39.2.0-*
+Pin-Priority: 1001
+
+# ---- JetPack metas: freeze at 7.2-b187 ----
+Package: nvidia-jetpack nvidia-jetpack-runtime nvidia-jetpack-dev nvidia-cuda nvidia-cuda-dev nvidia-cudnn nvidia-cudnn-dev nvidia-tensorrt nvidia-tensorrt-dev nvidia-opencv nvidia-opencv-dev nvidia-vpi nvidia-vpi-dev nvidia-cupva nvidia-cupva-dev nvidia-container nvidia-container-dev nvidia-nsight-systems nvidia-nsight-systems-dev
+Pin: version 7.2-b187
+Pin-Priority: 1001
+
+# ---- OpenCV: b187 era ----
+Package: libopencv libopencv-dev libopencv-python libopencv-samples opencv-licenses opencv-samples-data
+Pin: version 4.8.0-3-g6ef37b4
+Pin-Priority: 1001
+
+# ---- VPI / PVA: b187 era ----
+Package: libnvvpi4 python3.12-vpi4 vpi4-dev vpi4-samples vpi4-python-src
+Pin: version 4.1.3
+Pin-Priority: 1001
+
+Package: pva-sdk-2.9-l4t
+Pin: version 2.9.1
+Pin-Priority: 1001
+
+# ---- CUDA toolkit metas: 13.2.1-1 era ----
+Package: cuda cuda-13-2 cuda-command-line-tools-13-2 cuda-compiler-13-2 cuda-libraries-13-2 cuda-libraries-dev-13-2 cuda-minimal-build-13-2 cuda-nsight-compute-13-2 cuda-nsight-systems-13-2 cuda-runtime-13-2 cuda-tools-13-2 cuda-visual-tools-13-2 cuda-toolkit cuda-toolkit-13 cuda-toolkit-13-2 nvidia-gds nvidia-gds-13-2
+Pin: version 13.2.1-1
+Pin-Priority: 1001
+
+# ---- CUDA libs 13.2.75 era ----
+Package: cuda-cccl-13-2 cuda-cudart-13-2 cuda-cudart-dev-13-2 cuda-culibos-13-2 cuda-culibos-dev-13-2 cuda-cupti-13-2 cuda-cupti-dev-13-2 cuda-documentation-13-2 cuda-driver-dev-13-2 cuda-gdb-13-2 cuda-gdb-src-13-2 libcudla-13-2 libcudla-dev-13-2 cuda-nvtx-13-2 cuda-profiler-api-13-2 cuda-toolkit-13-2-config-common cuda-toolkit-13-config-common cuda-toolkit-config-common
+Pin: version 13.2.75-1
+Pin-Priority: 1001
+
+# ---- CUDA tools 13.2.78 era ----
+Package: cuda-crt-13-2 cuda-ctadvisor-13-2 cuda-cuobjdump-13-2 cuda-cuxxfilt-13-2 cuda-nvcc-13-2 cuda-nvdisasm-13-2 cuda-nvprune-13-2 cuda-nvrtc-13-2 cuda-nvrtc-dev-13-2 cuda-tileiras-13-2 libnvfatbin-13-2 libnvfatbin-dev-13-2 libnvjitlink-13-2 libnvjitlink-dev-13-2 libnvptxcompiler-13-2 libnvvm-13-2
+Pin: version 13.2.78-1
+Pin-Priority: 1001
+
+Package: cuda-nvml-dev-13-2 cuda-sandbox-dev-13-2
+Pin: version 13.2.82-1
+Pin-Priority: 1001
+
+Package: cuda-sanitizer-13-2
+Pin: version 13.2.76-1
+Pin-Priority: 1001
+
+# ---- CUDA math libraries: b187-era builds ----
+Package: libcublas-13-2 libcublas-dev-13-2
+Pin: version 13.4.0.1-1
+Pin-Priority: 1001
+
+Package: libcufft-13-2 libcufft-dev-13-2
+Pin: version 12.2.0.46-1
+Pin-Priority: 1001
+
+Package: libcurand-13-2 libcurand-dev-13-2
+Pin: version 10.4.2.55-1
+Pin-Priority: 1001
+
+Package: libcusolver-13-2 libcusolver-dev-13-2
+Pin: version 12.2.0.1-1
+Pin-Priority: 1001
+
+Package: libcusparse-13-2 libcusparse-dev-13-2
+Pin: version 12.7.10.1-1
+Pin-Priority: 1001
+
+Package: libnpp-13-2 libnpp-dev-13-2 libnvjpeg-13-2 libnvjpeg-dev-13-2
+Pin: version 13.1.0.48-1
+Pin-Priority: 1001

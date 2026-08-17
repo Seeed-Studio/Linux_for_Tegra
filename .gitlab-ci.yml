@@ -182,6 +182,9 @@ stages:
   - mount --bind /proc ./rootfs/proc
   - cp /usr/bin/qemu-aarch64-static rootfs/usr/bin/
   - cp extra_scripts/rootfs_magic.sh rootfs
+  # freeze NVIDIA apt packages to the BSP version (L4T 39.2.0 + JP 7.2-b187)
+  - mkdir -p rootfs/etc/apt/preferences.d
+  - cp extra_scripts/99-seeed-freeze-jp.pref rootfs/etc/apt/preferences.d/
   - cp extra_scripts/bluetooth-auto-trust_1.1-1.deb rootfs
   - chroot rootfs dpkg -i bluetooth-auto-trust_1.1-1.deb || true
   - >
