@@ -1,0 +1,44 @@
+// SPDX-License-Identifier: GPL-2.0-only
+
+/*
+ * Board-level configuration for the Robotics J401 ZED X overlay.
+ *
+ * The overlay is built for every BSP target, so keep Robotics J401 as the
+ * standalone-build default. The normal image build injects
+ * CONFIG_RECOMPUTER_ORIN_ROBOTICS_J401 through overlay/Makefile.
+ */
+#if !defined(CONFIG_RECOMPUTER_ORIN_ROBOTICS_J401)
+#define CONFIG_RECOMPUTER_ORIN_ROBOTICS_J401
+#endif
+
+#if defined(CONFIG_RECOMPUTER_ORIN_ROBOTICS_J401)
+
+/*
+ * Seeed reComputer Robotics J401 (Orin NX/Nano, p3767) with the 4-port
+ * Robotics GMSL board: one MAX96712, one ZED X stereo and two ZED X One GS.
+ *
+ * Deserializer control I2C = CAM_I2C -> i2c@3180000.
+ * MAX96712 RESETB = SPI0_CS1 -> TEGRA234_MAIN_GPIO(Z, 7).
+ * MAX96712 PWDNB  = CAM0_PWDN -> TEGRA234_MAIN_GPIO(H, 6).
+ */
+#define ZEDX_OVERLAY_NAME	"Stereolabs ZED X for reComputer Robotics J401"
+
+#define CAM0_RST		TEGRA234_MAIN_GPIO(Z, 7)
+#define CAM0_PWDN		TEGRA234_MAIN_GPIO(H, 6)
+
+#define TEGRA_ZEDX_GMSL_I2C	i2c@3180000
+#define ZEDX_DSER_RESET_GPIO	<&gpio CAM0_RST GPIO_ACTIVE_HIGH>
+#define ZEDX_DSER_PWDN_GPIO	<&gpio CAM0_PWDN GPIO_ACTIVE_HIGH>
+
+/* Bus number in devname is cosmetic; i2c@3180000 is bus 2 on the DUT. */
+#define ZEDX_DEVNAME_LEFT0	"zedx 2-0028"
+#define ZEDX_DEVNAME_RIGHT0	"zedx 2-0020"
+#define ZEDX_DEVNAME_ONE_GS0	"zedx 2-0010"
+#define ZEDX_DEVNAME_ONE_GS1	"zedx 2-0011"
+
+#define ZEDX_PROC_LEFT0		"/proc/device-tree/bus@0/i2c@3180000/zedx_left_0@28"
+#define ZEDX_PROC_RIGHT0		"/proc/device-tree/bus@0/i2c@3180000/zedx_right_0@20"
+#define ZEDX_PROC_ONE_GS0	"/proc/device-tree/bus@0/i2c@3180000/zedxone_gs_0@10"
+#define ZEDX_PROC_ONE_GS1	"/proc/device-tree/bus@0/i2c@3180000/zedxone_gs_1@11"
+
+#endif

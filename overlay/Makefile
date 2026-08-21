@@ -86,13 +86,15 @@ dtbo-y += tegra234-seeed-gmsl2x1x4-6g-overlay.dtbo
 dtbo-y += tegra234-seeed-gmsl-recomputer-robo-3g-overlay.dtbo
 dtbo-y += tegra234-seeed-gmsl-recomputer-robo-6g-overlay.dtbo
 dtbo-y += tegra234-stereolabs-zedx-overlay.dtbo
+dtbo-y += tegra234-j401-stereolabs-zedx-overlay.dtbo
 
 # Board-specific overlay: inject #define based on CONFIG variable
 # Get absolute path of the overlay directory
 DTS_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 BOARD_CONFIG_DTS_FILES := \
 	$(DTS_DIR)/tegra234-seeed-gmsl2x4-orbbec-335lg-overlay.dts \
-	$(DTS_DIR)/tegra234-stereolabs-zedx-overlay.dts
+	$(DTS_DIR)/tegra234-stereolabs-zedx-overlay.dts \
+	$(DTS_DIR)/tegra234-j401-stereolabs-zedx-overlay.dts
 
 ifneq ($(CONFIG),)
 $(info CONFIG raw value: '$(CONFIG)')
