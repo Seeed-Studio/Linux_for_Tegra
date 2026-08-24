@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 /*
- * Board-level configuration for tegra234-stereolabs-zedx-overlay.dts.
+ * Board-level configuration for tegra234-stereolabs-zedx-j501-overlay.dts.
  *
  * Add future boards here with a new CONFIG_* block and keep camera topology in
  * the shared overlay unless the GMSL camera layout itself changes.
