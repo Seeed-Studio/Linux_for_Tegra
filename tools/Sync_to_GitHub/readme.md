@@ -108,7 +108,8 @@ sudo cp kernel/dtb/tegra234-p3767-camera-p3768-imx477-dual-seeed.dtbo rootfs/boo
 sudo cp kernel/dtb/tegra234-p3767-camera-p3768-imx477-quad-seeed.dtbo rootfs/boot/
 sudo cp kernel/dtb/tegra234-p3767-camera-p3768-imx219-imx477.dtbo rootfs/boot/
 sudo cp kernel/dtb/tegra234-p3767-camera-p3768-imx477-imx219.dtbo rootfs/boot/
-sudo cp kernel/dtb/tegra234-stereolabs-zedx-overlay.dtbo rootfs/boot/
+sudo cp kernel/dtb/tegra234-stereolabs-zedx-j501-overlay.dtbo rootfs/boot/
+sudo cp kernel/dtb/tegra234-stereolabs-zedx-j401-overlay.dtbo rootfs/boot/
 ```
 
 For Thor carrier boards:
@@ -202,7 +203,7 @@ jetson-agx-thor-devkit:
          - ln -sf ../../../../../../nvethernetrm nvidia-oot/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm
          - ./nvbuild.sh
          - ./do_copy.sh
-         - if [ "$SOC" == "t264" ]; then cp ../kernel/dtb/tegra264-p4071-camera-* ../rootfs/boot/; else cp ../kernel/dtb/tegra234-seeed-gmsl* ../rootfs/boot/; cp ../kernel/dtb/tegra234-seeed-orbbec-335lg-overlay.dtbo ../rootfs/boot/; cp ../kernel/dtb/tegra234-p3767-camera-p3768-imx219-dual-seeed.dtbo ../rootfs/boot/; cp ../kernel/dtb/tegra234-p3767-camera-p3768-imx219-quad-seeed.dtbo ../rootfs/boot/; cp ../kernel/dtb/tegra234-p3767-camera-p3768-imx219-imx477-quad-seeed.dtbo ../rootfs/boot/; cp ../kernel/dtb/tegra234-p3767-camera-p3768-imx477-dual-seeed.dtbo ../rootfs/boot/; cp ../kernel/dtb/tegra234-p3767-camera-p3768-imx219-imx477.dtbo ../rootfs/boot/; cp ../kernel/dtb/tegra234-p3767-camera-p3768-imx477-imx219.dtbo ../rootfs/boot/; cp ../kernel/dtb/tegra234-stereolabs-zedx-overlay.dtbo ../rootfs/boot/; fi
+         - if [ "$SOC" == "t264" ]; then cp ../kernel/dtb/tegra264-p4071-camera-* ../rootfs/boot/; else cp ../kernel/dtb/tegra234-seeed-gmsl* ../rootfs/boot/; cp ../kernel/dtb/tegra234-seeed-orbbec-335lg-overlay.dtbo ../rootfs/boot/; cp ../kernel/dtb/tegra234-p3767-camera-p3768-imx219-dual-seeed.dtbo ../rootfs/boot/; cp ../kernel/dtb/tegra234-p3767-camera-p3768-imx219-quad-seeed.dtbo ../rootfs/boot/; cp ../kernel/dtb/tegra234-p3767-camera-p3768-imx219-imx477-quad-seeed.dtbo ../rootfs/boot/; cp ../kernel/dtb/tegra234-p3767-camera-p3768-imx477-dual-seeed.dtbo ../rootfs/boot/; cp ../kernel/dtb/tegra234-p3767-camera-p3768-imx219-imx477.dtbo ../rootfs/boot/; cp ../kernel/dtb/tegra234-p3767-camera-p3768-imx477-imx219.dtbo ../rootfs/boot/; cp ../kernel/dtb/tegra234-stereolabs-zedx-j501-overlay.dtbo ../rootfs/boot/; cp ../kernel/dtb/tegra234-stereolabs-zedx-j401-overlay.dtbo ../rootfs/boot/; fi
          - export INSTALL_MOD_PATH=`realpath ../rootfs/`
          - ./nvbuild.sh -i
          - cd ..

@@ -110,9 +110,11 @@ stages:
     else
       ./apply_binaries.sh
     fi
-  # Install the ZED X Argus ISP override into the generated rootfs.
+  # Install the ZED X Argus NITO into the generated rootfs.
   - mkdir -p rootfs/var/nvidia/nvcam/settings
-  - cp extra_scripts/zedx/camera_overrides.isp rootfs/var/nvidia/nvcam/settings/camera_overrides.isp
+  - cp extra_scripts/zedx/zedx_ar0234.nito rootfs/var/nvidia/nvcam/settings/zedx_ar0234.nito
+  - mkdir -p rootfs/etc/systemd/system/nvargus-daemon.service.d
+  - cp extra_scripts/zedx/zedx-nito.conf rootfs/etc/systemd/system/nvargus-daemon.service.d/zedx-nito.conf
   # record the system image name and commit info of seeed to target rootfs.
   - echo "# Seeed Image Name mfi_$CI_JOB_STAGE-$JETPACKVER-$JETSONVER-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
   - echo "# branch $CI_COMMIT_REF_NAME" >> ./rootfs/etc/nv_tegra_release
@@ -148,7 +150,8 @@ stages:
       cp ../kernel/dtb/tegra234-p3767-camera-p3768-imx477-dual-seeed.dtbo ../rootfs/boot/;
       cp ../kernel/dtb/tegra234-p3767-camera-p3768-imx219-imx477.dtbo ../rootfs/boot/;
       cp ../kernel/dtb/tegra234-p3767-camera-p3768-imx477-imx219.dtbo ../rootfs/boot/;
-      cp ../kernel/dtb/tegra234-stereolabs-zedx-overlay.dtbo ../rootfs/boot/;
+      cp ../kernel/dtb/tegra234-stereolabs-zedx-j501-overlay.dtbo ../rootfs/boot/;
+      cp ../kernel/dtb/tegra234-stereolabs-zedx-j401-overlay.dtbo ../rootfs/boot/;
     fi
   # deploy new kernel drviers
   - export INSTALL_MOD_PATH=`realpath ../rootfs/`

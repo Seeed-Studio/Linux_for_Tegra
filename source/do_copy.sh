@@ -72,7 +72,8 @@ cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j501x-0000+
 cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j501x-0000+p3701-0004-recomputer-robo.dtb ../kernel/dtb/
 cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-j501x-0000+p3701-0005-recomputer-robo.dtb ../kernel/dtb/
 cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-dcb-p3701-0000-hdmi.dtbo ../kernel/dtb/
-cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-stereolabs-zedx-overlay.dtbo ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-stereolabs-zedx-j501-overlay.dtbo ../kernel/dtb/
+cp ./kernel_out/build/nvidia-public/devicetree/generic-dtbs/tegra234-stereolabs-zedx-j401-overlay.dtbo ../kernel/dtb/
 
 # kernel Image (JP7 uses kernel-noble; was kernel-jammy-src on r36)
 cp  ./kernel_out/kernel/kernel-noble/arch/arm64/boot/Image ../kernel/Image
