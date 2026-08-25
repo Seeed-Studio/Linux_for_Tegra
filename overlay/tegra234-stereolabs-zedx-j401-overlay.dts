@@ -210,8 +210,126 @@
 		}; \
 	};
 
-#define ZEDX_ONE_GS_VI_PORT(ID, REG_ID, VC_ID, VI_PORT_INDEX) \
+#define ZEDX_VI_PORT(ID, REG_ID, VC_ID, VI_PORT_INDEX) \
 	port@REG_ID { \
+		reg = <REG_ID>; \
+		zedx_vi_in##ID: endpoint { \
+			vc-id = <VC_ID>; \
+			port-index = <VI_PORT_INDEX>; \
+			bus-width = <NUM_LANES>; \
+			remote-endpoint = <&zedx_csi_out##ID>; \
+		}; \
+	};
+
+#define ZEDX_CSI_CHANNEL(ID, REG_ID, CSI_PORT_INDEX) \
+	channel@REG_ID { \
+		reg = <REG_ID>; \
+		ports { \
+			#address-cells = <1>; \
+			#size-cells = <0>; \
+			port@0 { \
+				reg = <0>; \
+				zedx_csi_in##ID: endpoint@0 { \
+					port-index = <CSI_PORT_INDEX>; \
+					bus-width = <NUM_LANES>; \
+					remote-endpoint = <&zedx_ar0234_out##ID>; \
+				}; \
+			}; \
+			port@1 { \
+				reg = <1>; \
+				zedx_csi_out##ID: endpoint@1 { \
+					remote-endpoint = <&zedx_vi_in##ID>; \
+				}; \
+			}; \
+		}; \
+	};
+
+#define ZEDX_STEREO_SENSOR(SLOT, SIDE, UNIT_ADDR, REG_ADDR, DEVNODE, SYNC_NAME, SYNC_INDEX, ZEDX_ID, VC_ID, CSI_SERIAL, LANE_POLARITY, CSI_PORT_INDEX, OPT_CSI_PORT, OUT_ID) \
+	zedx_##SIDE##SLOT: zedx_##SIDE##_##SLOT@UNIT_ADDR { \
+		compatible = "stereolabs,zedx"; \
+		reg = <REG_ADDR>; \
+		ZED_ORIN_CLKS \
+		devnode = DEVNODE; \
+		sync_sensor = SYNC_NAME; \
+		sync_sensor_index = <SYNC_INDEX>; \
+		zedx-id = XSTR(ZEDX_ID); \
+		channel = "a"; \
+		has-eeprom; \
+		eeprom-addr = <0x54>; \
+		AR0234_MODES(XSTR(VC_ID), CSI_SERIAL, LANE_POLARITY) \
+		ports { \
+			#address-cells = <1>; \
+			#size-cells = <0>; \
+			port@0 { \
+				reg = <0>; \
+				zedx_ar0234_out##OUT_ID: endpoint { \
+					vc-id = <VC_ID>; \
+					port-index = <CSI_PORT_INDEX>; \
+					opt-csi-port = OPT_CSI_PORT; \
+					bus-width = <NUM_LANES>; \
+					i2c-cc = <0>; \
+					remote-endpoint = <&zedx_csi_in##OUT_ID>; \
+				}; \
+			}; \
+		}; \
+	};
+
+#define ZEDX_ONE_GS_SENSOR(SLOT, UNIT_ADDR, REG_ADDR, DEVNODE, SYNC_NAME, ZEDX_ID, VC_ID, CSI_SERIAL, LANE_POLARITY, CSI_PORT_INDEX, OPT_CSI_PORT) \
+	zedxone_gs##SLOT: zedxone_gs_##SLOT@UNIT_ADDR { \
+		compatible = "stereolabs,zedx"; \
+		reg = <REG_ADDR>; \
+		ZED_ORIN_CLKS \
+		devnode = DEVNODE; \
+		sync_sensor = SYNC_NAME; \
+		sync_sensor_index = <1>; \
+		zedx-id = XSTR(ZEDX_ID); \
+		channel = "a"; \
+		has-eeprom; \
+		eeprom-addr = <0x56>; \
+		AR0234_MODES(XSTR(VC_ID), CSI_SERIAL, LANE_POLARITY) \
+		ports { \
+			#address-cells = <1>; \
+			#size-cells = <0>; \
+			port@0 { \
+				reg = <0>; \
+				zedxone_gs_out##SLOT: endpoint { \
+					vc-id = <VC_ID>; \
+					port-index = <CSI_PORT_INDEX>; \
+					opt-csi-port = OPT_CSI_PORT; \
+					bus-width = <NUM_LANES>; \
+					i2c-cc = <0>; \
+					remote-endpoint = <&zedxone_gs_csi_in##SLOT>; \
+				}; \
+			}; \
+		}; \
+	};
+
+#define ZEDX_SERIALIZER(SLOT, UNIT_ADDR, REG_ADDR, ZEDX_ID) \
+	zedx_ser##SLOT: zedx_ser_##SLOT@UNIT_ADDR { \
+		compatible = "stereolabs,sl_max9295"; \
+		reg = <REG_ADDR>; \
+		zedx-id = XSTR(ZEDX_ID); \
+		channel = "a"; \
+		mode = "master"; \
+		camera_model = "zedx"; \
+		camera-sensors = <&zedx_left##SLOT &zedx_right##SLOT>; \
+		imu = <&bmi088_a &bmi088_b>; \
+	};
+
+#define ZEDX_ONE_GS_SERIALIZER(SLOT, UNIT_ADDR, REG_ADDR, ZEDX_ID) \
+	zedxone_gs_ser##SLOT: zedxone_gs_ser_##SLOT@UNIT_ADDR { \
+		compatible = "stereolabs,sl_max9295"; \
+		reg = <REG_ADDR>; \
+		zedx-id = XSTR(ZEDX_ID); \
+		channel = "a"; \
+		mode = "master"; \
+		camera_model = "zedonegs"; \
+		camera-sensors = <&zedxone_gs##SLOT>; \
+		imu = <&bmi088_a &bmi088_b>; \
+	};
+
+#define ZEDX_ONE_GS_VI_PORT(ID, UNIT_ADDR, REG_ID, VC_ID, VI_PORT_INDEX) \
+	port@UNIT_ADDR { \
 		reg = <REG_ID>; \
 		zedxone_gs_vi_in##ID: endpoint { \
 			vc-id = <VC_ID>; \
@@ -322,37 +440,28 @@
 		__overlay__ {
 
 			tegra-capture-vi {
-				num-channels = <4>;
+				num-channels = <12>;
 				ports {
 					#address-cells = <1>;
 					#size-cells = <0>;
 
-					/* ZED X stereo left (VC0) on Orin CSI2 */
-					port@0 {
-						reg = <0>;
-						zedx_vi_in0: endpoint {
-							vc-id = <0>;
-							port-index = <2>;
-							bus-width = <NUM_LANES>;
-							remote-endpoint = <&zedx_csi_out0>;
-						};
-					};
+					/* GMSL0 -> MAX96712 PHY1 -> Orin CSI3. */
+					ZEDX_VI_PORT(0, 0, 0, 3)
+					ZEDX_VI_PORT(1, 1, 1, 3)
+					/* GMSL1 -> MAX96712 PHY0 -> Orin CSI2. */
+					ZEDX_VI_PORT(2, 2, 0, 2)
+					ZEDX_VI_PORT(3, 3, 1, 2)
+					/* GMSL2 -> MAX96712 PHY2 -> Orin CSI0. */
+					ZEDX_VI_PORT(4, 4, 0, 0)
+					ZEDX_VI_PORT(5, 5, 1, 0)
+					/* GMSL3 -> MAX96712 PHY3 -> Orin CSI1. */
+					ZEDX_VI_PORT(6, 6, 0, 1)
+					ZEDX_VI_PORT(7, 7, 1, 1)
 
-					/* ZED X stereo right (VC1) on Orin CSI2 */
-					port@1 {
-						reg = <1>;
-						zedx_vi_in1: endpoint {
-							vc-id = <1>;
-							port-index = <2>;
-							bus-width = <NUM_LANES>;
-							remote-endpoint = <&zedx_csi_out1>;
-						};
-					};
-
-					/* ZED X One GS #0 (VC0) on Orin CSI3 (link0, known-good) */
-					ZEDX_ONE_GS_VI_PORT(0, 2, 0, 3)
-					/* ZED X One GS #1 (VC0) on Orin CSI0 (MOVED to link2 -> phy1/PortC/CSI0) */
-					ZEDX_ONE_GS_VI_PORT(1, 3, 0, 0)
+					ZEDX_ONE_GS_VI_PORT(0, 8, 8, 0, 3)
+					ZEDX_ONE_GS_VI_PORT(1, 9, 9, 0, 2)
+					ZEDX_ONE_GS_VI_PORT(2, a, 10, 0, 0)
+					ZEDX_ONE_GS_VI_PORT(3, b, 11, 0, 1)
 				};
 			};
 
@@ -366,10 +475,18 @@
 				isp_peak_byte_per_pixel = <5>;
 				isp_bw_margin_pct = <25>;
 				modules {
-					ZEDX_CAMERA_MODULE(0, "zedx_ar0234", "bottomleft", ZEDX_DEVNAME_LEFT0, ZEDX_PROC_LEFT0)
-					ZEDX_CAMERA_MODULE(1, "zedx_ar0234", "bottomright", ZEDX_DEVNAME_RIGHT0, ZEDX_PROC_RIGHT0)
-					ZEDX_CAMERA_MODULE(2, "zedx_ar0234", "topleft", ZEDX_DEVNAME_ONE_GS0, ZEDX_PROC_ONE_GS0)
-					ZEDX_CAMERA_MODULE(3, "zedx_ar0234", "topright", ZEDX_DEVNAME_ONE_GS1, ZEDX_PROC_ONE_GS1)
+					ZEDX_CAMERA_MODULE(0, "zedx_left0_ar0234", "frontleft", ZEDX_DEVNAME_LEFT0, ZEDX_PROC_LEFT0)
+					ZEDX_CAMERA_MODULE(1, "zedx_right0_ar0234", "frontright", ZEDX_DEVNAME_RIGHT0, ZEDX_PROC_RIGHT0)
+					ZEDX_CAMERA_MODULE(2, "zedxone_gs0_ar0234", "front", ZEDX_DEVNAME_ONE_GS0, ZEDX_PROC_ONE_GS0)
+					ZEDX_CAMERA_MODULE(3, "zedx_left1_ar0234", "frontleft", ZEDX_DEVNAME_LEFT1, ZEDX_PROC_LEFT1)
+					ZEDX_CAMERA_MODULE(4, "zedx_right1_ar0234", "frontright", ZEDX_DEVNAME_RIGHT1, ZEDX_PROC_RIGHT1)
+					ZEDX_CAMERA_MODULE(5, "zedxone_gs1_ar0234", "front", ZEDX_DEVNAME_ONE_GS1, ZEDX_PROC_ONE_GS1)
+					ZEDX_CAMERA_MODULE(6, "zedx_left2_ar0234", "rearleft", ZEDX_DEVNAME_LEFT2, ZEDX_PROC_LEFT2)
+					ZEDX_CAMERA_MODULE(7, "zedx_right2_ar0234", "rearright", ZEDX_DEVNAME_RIGHT2, ZEDX_PROC_RIGHT2)
+					ZEDX_CAMERA_MODULE(8, "zedxone_gs2_ar0234", "rear", ZEDX_DEVNAME_ONE_GS2, ZEDX_PROC_ONE_GS2)
+					ZEDX_CAMERA_MODULE(9, "zedx_left3_ar0234", "rearleft", ZEDX_DEVNAME_LEFT3, ZEDX_PROC_LEFT3)
+					ZEDX_CAMERA_MODULE(10, "zedx_right3_ar0234", "rearright", ZEDX_DEVNAME_RIGHT3, ZEDX_PROC_RIGHT3)
+					ZEDX_CAMERA_MODULE(11, "zedxone_gs3_ar0234", "rear", ZEDX_DEVNAME_ONE_GS3, ZEDX_PROC_ONE_GS3)
 				};
 			};
 
@@ -377,60 +494,23 @@
 				host1x@13e00000 {
 					nvcsi@15a00000 {
 						status = "okay";
-						num-channels = <4>;
+						num-channels = <12>;
 						#address-cells = <1>;
 						#size-cells = <0>;
 
-						/* ZED X stereo left: Orin CSI2, VC0 */
-						channel@0 {
-							reg = <0>;
-							ports {
-								#address-cells = <1>;
-								#size-cells = <0>;
-								port@0 {
-									reg = <0>;
-									zedx_csi_in0: endpoint@0 {
-										port-index = <2>;
-										bus-width = <NUM_LANES>;
-										remote-endpoint = <&zedx_ar0234_out0>;
-									};
-								};
-								port@1 {
-									reg = <1>;
-									zedx_csi_out0: endpoint@16 {
-										remote-endpoint = <&zedx_vi_in0>;
-									};
-								};
-							};
-						};
+						ZEDX_CSI_CHANNEL(0, 0, 3)
+						ZEDX_CSI_CHANNEL(1, 1, 3)
+						ZEDX_CSI_CHANNEL(2, 2, 2)
+						ZEDX_CSI_CHANNEL(3, 3, 2)
+						ZEDX_CSI_CHANNEL(4, 4, 0)
+						ZEDX_CSI_CHANNEL(5, 5, 0)
+						ZEDX_CSI_CHANNEL(6, 6, 1)
+						ZEDX_CSI_CHANNEL(7, 7, 1)
 
-						/* ZED X stereo right: Orin CSI2, VC1 */
-						channel@1 {
-							reg = <1>;
-							ports {
-								#address-cells = <1>;
-								#size-cells = <0>;
-								port@0 {
-									reg = <0>;
-									zedx_csi_in1: endpoint@1 {
-										port-index = <2>;
-										bus-width = <NUM_LANES>;
-										remote-endpoint = <&zedx_ar0234_out1>;
-									};
-								};
-								port@1 {
-									reg = <1>;
-									zedx_csi_out1: endpoint@17 {
-										remote-endpoint = <&zedx_vi_in1>;
-									};
-								};
-							};
-						};
-
-						/* ZED X One GS #0: Orin CSI3, VC0 (link0, known-good) */
-						ZEDX_ONE_GS_CSI_CHANNEL(0, 2, 3)
-						/* ZED X One GS #1: Orin CSI0, VC0 (MOVED to link2 -> phy1/PortC/CSI0) */
-						ZEDX_ONE_GS_CSI_CHANNEL(1, 3, 0)
+						ZEDX_ONE_GS_CSI_CHANNEL(0, 8, 3)
+						ZEDX_ONE_GS_CSI_CHANNEL(1, 9, 2)
+						ZEDX_ONE_GS_CSI_CHANNEL(2, 10, 0)
+						ZEDX_ONE_GS_CSI_CHANNEL(3, 11, 1)
 					};
 				};
 
@@ -447,25 +527,18 @@
 						pwdn-gpio = ZEDX_DSER_PWDN_GPIO;
 						status = "okay";
 
-						/* Per-GMSL-port candidate matrix.
-						 *
-						 * With >2 cameras the sl_max96712 driver matches the Nth
-						 * serializer *of a given model* in this list to physical
-						 * GMSL link #N ("1st ZED X entry -> GMSL #0, 3rd -> GMSL #2").
-						 * So every link lists one slot per supported model, in link
-						 * order, and slots with no camera of that model plugged are
-						 * filled with zedx-id="-1" dummies (the driver's documented
-						 * "set a dummy instead" mechanism). Links are padded to all
-						 * four so n_serializers stays a multiple of 4.
-						 *
-						 * Physical wiring (link2 fix): GMSL0=GS, GMSL1=ZED X, GMSL2=GS,
-						 * GMSL3 EMPTY. The 2nd GS was moved off the faulty GMSL link3 input
-						 * onto the spare link2. Keep the cameras plugged exactly this way. */
+						/* Two candidates per physical link. The MAX96712 driver detects
+						 * the camera model and activates only the matching slot, so ZED X
+						 * and ZED X One GS do not have fixed connector assignments. */
 						camera-serializers = <
-							/* GMSL 0 */ &dummy_zedx_ser0	&zedxone_gs_ser0
-							/* GMSL 1 */ &zedx_ser0		&dummy_gs_ser1
-							/* GMSL 2 */ &dummy_zedx_ser2	&zedxone_gs_ser1
-							/* GMSL 3 */ &dummy_zedx_ser3	&dummy_gs_ser3
+							/* GMSL 0: ZED X (id=0) OR ZED X One GS (id=4) */
+							&zedx_ser0 &zedxone_gs_ser0
+							/* GMSL 1: ZED X (id=1) OR ZED X One GS (id=5) */
+							&zedx_ser1 &zedxone_gs_ser1
+							/* GMSL 2: ZED X (id=2) OR ZED X One GS (id=6) */
+							&zedx_ser2 &zedxone_gs_ser2
+							/* GMSL 3: ZED X (id=3) OR ZED X One GS (id=7) */
+							&zedx_ser3 &zedxone_gs_ser3
 						>;
 					};
 
@@ -485,240 +558,46 @@
 						gyro_matrix = [01 00 00 00 01 00 00 00 01];
 					};
 
-					/* ---- serializers ---- */
+					/* ---- per-link candidate sensors ----
+					 *
+					 * Output routing extends the existing J401 4x2-lane wiring:
+					 *   GMSL0 -> PHY1/CSI3, GMSL1 -> PHY0/CSI2,
+					 *   GMSL2 -> PHY2/CSI0, GMSL3 -> PHY3/CSI1.
+					 * Only the sensor nodes selected by runtime model detection are
+					 * activated, so ZED X and ZED X One GS can use any GMSL input.
+					 * GMSL3 previously showed bit errors on one test unit, so that
+					 * physical link still requires board-level validation.
+					 */
 
-					/* ZED X stereo on GMSL link #1 -> zedx-id 1 (base 0 + link 1) */
-					zedx_ser0: zedx_ser_0@62 {
-						compatible = "stereolabs,sl_max9295";
-						reg = <0x62>;
-						zedx-id = "1";
-						channel = "a";
-						mode = "master";
-						camera_model = "zedx";
-						camera-sensors = <&zedx_left0 &zedx_right0>;
-						imu = <&bmi088_a &bmi088_b>;
-					};
+					/* GMSL0: serial_d / Orin CSI3 / MAX96712 opt-csi-port d */
+					ZEDX_STEREO_SENSOR(0, left, 28, 0x28, "video0", "ZED_CAM0", 1, 0, 0, "serial_d", "0", 3, "d", 0)
+					ZEDX_STEREO_SENSOR(0, right, 20, 0x20, "video1", "ZED_CAM0", 2, 0, 1, "serial_d", "0", 3, "d", 1)
+					ZEDX_ONE_GS_SENSOR(0, 10, 0x10, "video8", "ZEDXONE_CAM0", 4, 0, "serial_d", "0", 3, "d")
 
-					/* ZED X One GS, zedx-id 4 */
-					zedxone_gs_ser0: zedxone_gs_ser_0@66 {
-						compatible = "stereolabs,sl_max9295";
-						reg = <0x66>;
-						zedx-id = "4";
-						channel = "a";
-						mode = "master";
-						camera_model = "zedonegs";
-						camera-sensors = <&zedxone_gs0>;
-						imu = <&bmi088_a &bmi088_b>;
-					};
+					/* GMSL1: serial_c / Orin CSI2 / MAX96712 opt-csi-port c */
+					ZEDX_STEREO_SENSOR(1, left, 38, 0x38, "video2", "ZED_CAM1", 1, 1, 0, "serial_c", "0", 2, "c", 2)
+					ZEDX_STEREO_SENSOR(1, right, 30, 0x30, "video3", "ZED_CAM1", 2, 1, 1, "serial_c", "0", 2, "c", 3)
+					ZEDX_ONE_GS_SENSOR(1, 11, 0x11, "video9", "ZEDXONE_CAM1", 5, 0, "serial_c", "0", 2, "c")
 
-					/* ZED X One GS on GMSL link #2 -> zedx-id 6 (base 4 + link 2).
-					 * MOVED off faulty link3 (was id7); must match zedxone_gs1's zedx-id. */
-					zedxone_gs_ser1: zedxone_gs_ser_1@67 {
-						compatible = "stereolabs,sl_max9295";
-						reg = <0x67>;
-						zedx-id = "6";
-						channel = "a";
-						mode = "master";
-						camera_model = "zedonegs";
-						camera-sensors = <&zedxone_gs1>;
-						imu = <&bmi088_a &bmi088_b>;
-					};
+					/* GMSL2: serial_a / Orin CSI0 / MAX96712 opt-csi-port e */
+					ZEDX_STEREO_SENSOR(2, left, 48, 0x48, "video4", "ZED_CAM2", 1, 2, 0, "serial_a", "6", 0, "e", 4)
+					ZEDX_STEREO_SENSOR(2, right, 40, 0x40, "video5", "ZED_CAM2", 2, 2, 1, "serial_a", "6", 0, "e", 5)
+					ZEDX_ONE_GS_SENSOR(2, 12, 0x12, "video10", "ZEDXONE_CAM2", 6, 0, "serial_a", "6", 0, "e")
 
-					/* ---- dummy serializers (placement placeholders) ----
-					 * Fill per-model GMSL slots that have no camera of that model
-					 * plugged, so the driver's >2-camera link#->model-index matching
-					 * lines up. zedx-id "-1" => parsed into sensor_list but never
-					 * probed or activated. No compatible/reg => not an i2c device.
-					 * A stereo (zedx) dummy needs TWO camera-sensors entries so the
-					 * placement loop's stereo skip consumes the right list slots; the
-					 * referenced dummy_cam node is never dereferenced for id -1. */
-					dummy_cam: dummy_cam {};
+					/* GMSL3: serial_b / Orin CSI1 / MAX96712 opt-csi-port f */
+					ZEDX_STEREO_SENSOR(3, left, 14, 0x14, "video6", "ZED_CAM3", 1, 3, 0, "serial_b", "6", 1, "f", 6)
+					ZEDX_STEREO_SENSOR(3, right, 41, 0x41, "video7", "ZED_CAM3", 2, 3, 1, "serial_b", "6", 1, "f", 7)
+					ZEDX_ONE_GS_SENSOR(3, 13, 0x13, "video11", "ZEDXONE_CAM3", 7, 0, "serial_b", "6", 1, "f")
 
-					dummy_zedx_ser0: dummy_zedx_ser_0 {
-						camera_model = "zedx";
-						zedx-id = "-1";
-						camera-sensors = <&dummy_cam &dummy_cam>;
-					};
-
-					dummy_zedx_ser2: dummy_zedx_ser_2 {
-						camera_model = "zedx";
-						zedx-id = "-1";
-						camera-sensors = <&dummy_cam &dummy_cam>;
-					};
-
-					dummy_zedx_ser3: dummy_zedx_ser_3 {
-						camera_model = "zedx";
-						zedx-id = "-1";
-						camera-sensors = <&dummy_cam &dummy_cam>;
-					};
-
-					dummy_gs_ser1: dummy_gs_ser_1 {
-						camera_model = "zedonegs";
-						zedx-id = "-1";
-						camera-sensors = <&dummy_cam>;
-					};
-
-					dummy_gs_ser2: dummy_gs_ser_2 {
-						camera_model = "zedonegs";
-						zedx-id = "-1";
-						camera-sensors = <&dummy_cam>;
-					};
-
-					dummy_gs_ser3: dummy_gs_ser_3 {
-						camera_model = "zedonegs";
-						zedx-id = "-1";
-						camera-sensors = <&dummy_cam>;
-					};
-
-					/* ---- sensor nodes (all channel = "a") ---- */
-
-					/* ZED X stereo left: GMSL #1 -> dphy out0 -> Orin CSI2, VC0 */
-					zedx_left0: zedx_left_0@28 {
-						compatible = "stereolabs,zedx";
-						reg = <0x28>;
-
-						ZED_ORIN_CLKS
-
-						devnode = "video0";
-						sync_sensor = "ZED_CAM0";
-						sync_sensor_index = <1>;
-
-						zedx-id = "1";
-						channel = "a";
-
-						has-eeprom;
-						eeprom-addr = <0x54>;
-
-						AR0234_MODES("0", "serial_c", "0")
-
-						ports {
-							#address-cells = <1>;
-							#size-cells = <0>;
-							port@0 {
-								reg = <0>;
-								zedx_ar0234_out0: endpoint {
-									vc-id = <0>;
-									port-index = <2>;
-									opt-csi-port = "c";
-									bus-width = <NUM_LANES>;
-									i2c-cc = <0>;
-									remote-endpoint = <&zedx_csi_in0>;
-								};
-							};
-						};
-					};
-
-					/* ZED X stereo right: GMSL #1 -> dphy out0 -> Orin CSI2, VC1 */
-					zedx_right0: zedx_right_0@20 {
-						compatible = "stereolabs,zedx";
-						reg = <0x20>;
-
-						ZED_ORIN_CLKS
-
-						devnode = "video1";
-						sync_sensor = "ZED_CAM0";
-						sync_sensor_index = <2>;
-
-						zedx-id = "1";
-						channel = "a";
-
-						has-eeprom;
-						eeprom-addr = <0x54>;
-
-						AR0234_MODES("1", "serial_c", "0")
-
-						ports {
-							#address-cells = <1>;
-							#size-cells = <0>;
-							port@0 {
-								reg = <0>;
-								zedx_ar0234_out1: endpoint {
-									vc-id = <1>;
-									port-index = <2>;
-									opt-csi-port = "c";
-									bus-width = <NUM_LANES>;
-									i2c-cc = <0>;
-									remote-endpoint = <&zedx_csi_in1>;
-								};
-							};
-						};
-					};
-
-					/* ZED X One GS (id4): GMSL #0 -> dphy out1 -> Orin CSI3, VC0
-					 * (known-good; restored from swap-test back to its proven output) */
-					zedxone_gs0: zedxone_gs_0@10 {
-						compatible = "stereolabs,zedx";
-						reg = <0x10>;
-
-						ZED_ORIN_CLKS
-
-						devnode = "video2";
-						sync_sensor = "ZEDXONE_CAM0";
-						sync_sensor_index = <1>;
-
-						zedx-id = "4";
-						channel = "a";
-
-						has-eeprom;
-						eeprom-addr = <0x56>;
-
-						AR0234_MODES("0", "serial_d", "0")
-
-						ports {
-							#address-cells = <1>;
-							#size-cells = <0>;
-							port@0 {
-								reg = <0>;
-								zedxone_gs_out0: endpoint {
-									vc-id = <0>;
-									port-index = <3>;
-									opt-csi-port = "d";
-									bus-width = <NUM_LANES>;
-									i2c-cc = <0>;
-									remote-endpoint = <&zedxone_gs_csi_in0>;
-								};
-							};
-						};
-					};
-
-					/* ZED X One GS (id6): GMSL #2 -> dphy out2 -> Orin CSI0, VC0
-					 * MOVED off faulty GMSL link3 input (link3 has bit errors: the camera
-					 * produces a lockable but corrupt stream there). link2 input is healthy.
-					 * 2-lane serial_a/phy2/CSI0 output. */
-					zedxone_gs1: zedxone_gs_1@11 {
-						compatible = "stereolabs,zedx";
-						reg = <0x11>;
-
-						ZED_ORIN_CLKS
-
-						devnode = "video3";
-						sync_sensor = "ZEDXONE_CAM1";
-						sync_sensor_index = <1>;
-
-						zedx-id = "6";
-						channel = "a";
-
-						has-eeprom;
-						eeprom-addr = <0x56>;
-
-						AR0234_MODES("0", "serial_a", "6")
-
-						ports {
-							#address-cells = <1>;
-							#size-cells = <0>;
-							port@0 {
-								reg = <0>;
-								zedxone_gs_out1: endpoint {
-									vc-id = <0>;
-									port-index = <0>;
-									opt-csi-port = "e";
-									bus-width = <NUM_LANES>;
-									i2c-cc = <0>;
-									remote-endpoint = <&zedxone_gs_csi_in1>;
-								};
-							};
-						};
-					};
+					/* ---- serializer candidates: two models for every GMSL link ---- */
+					ZEDX_SERIALIZER(0, 62, 0x62, 0)
+					ZEDX_ONE_GS_SERIALIZER(0, 66, 0x66, 4)
+					ZEDX_SERIALIZER(1, 63, 0x63, 1)
+					ZEDX_ONE_GS_SERIALIZER(1, 67, 0x67, 5)
+					ZEDX_SERIALIZER(2, 64, 0x64, 2)
+					ZEDX_ONE_GS_SERIALIZER(2, 68, 0x68, 6)
+					ZEDX_SERIALIZER(3, 65, 0x65, 3)
+					ZEDX_ONE_GS_SERIALIZER(3, 69, 0x69, 7)
 				};
 			};
 		};
