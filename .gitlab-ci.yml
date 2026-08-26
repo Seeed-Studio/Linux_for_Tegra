@@ -1389,3 +1389,45 @@ build-custom-firmware:
    script:
     - echo "Building custom image for $CONFIG"
     - *build_image_script
+
+# Build the PREEMPT_RT kernel deb only (no MFI image). t234/Orin only.
+# Output: nvidia-l4t-kernel-rt_<ver>_arm64.deb, uploaded to SMB.
+build-rt-kernel-deb:
+  stage: custom-firmware
+  rules:
+    - if: '$START_TASK == "rt-kernel-deb"'
+      when: on_success
+  tags:
+    - x86-shell
+
+  script:
+    - git submodule sync
+    - git submodule update --init --recursive
+    # prepare the compile toolchain
+    - wget  http://192.168.1.77/jetson/aarch64--glibc--stable-2022.08-1.tar.bz2 -q
+    - mkdir -p l4t-gcc
+    - tar xf aarch64--glibc--stable-2022.08-1.tar.bz2 -C ./l4t-gcc
+    - export ARCH=arm64
+    - export CROSS_COMPILE=`realpath .`/l4t-gcc/aarch64--glibc--stable-2022.08-1/bin/aarch64-buildroot-linux-gnu-
+    # clean rootfs for the RT modules install
+    - rm -rf rootfs/*
+    - wget  http://192.168.1.77/jetson/$ROOTFS_NAME -q
+    - tar xpf $ROOTFS_NAME -C rootfs
+    # build RT kernel (same as image build, but with -r)
+    - cd source/
+    - ln -sf ../../../../../../nvethernetrm nvidia-oot/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm
+    - ./nvbuild.sh -r
+    - export INSTALL_MOD_PATH=`realpath ../rootfs/`
+    - ./nvbuild.sh -r -i
+    - cd ..
+    # package the RT deb (reads kernel/nvidia-l4t-kernel_*.deb for the version-locked dependency)
+    - tools/make_rt_kernel_bundle.sh
+    # upload
+    - export DATE_STR=$(TZ='Asia/Hong_Kong' date +%Y-%m-%d)
+    - md5sum kernel/nvidia-l4t-kernel-rt_*.deb > chksum-rt-kernel-deb-$DATE_STR.txt
+    - sha256sum kernel/nvidia-l4t-kernel-rt_*.deb >> chksum-rt-kernel-deb-$DATE_STR.txt
+    - mkdir -p deploy
+    - mount -t cifs -o username=$SMB_USER,password=$SMB_PWD,vers=3.0,uid=`id -u`,gid=`id -g`,rw,file_mode=0664 //192.168.1.77/red_2t/jetson deploy
+    - cp kernel/nvidia-l4t-kernel-rt_*.deb deploy/nvidia-l4t-kernel-rt-$JETPACKVER-$JETSONVER-$DATE_STR.deb
+    - cp chksum-rt-kernel-deb-$DATE_STR.txt deploy/ || true
+    - umount deploy
