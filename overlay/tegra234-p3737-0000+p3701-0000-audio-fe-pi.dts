@@ -1,0 +1,12 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+/*
+ * Device-tree overlay for FE-PI Audio V1 and Z V2 with board
+ * tegra234-p3737-0000-p3701-0000.
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/tegra234-p3737-0000+p3701-0000.h>
+#include <overlay/jetson-audio-fe-pi.dtsi>

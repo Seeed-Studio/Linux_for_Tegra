@@ -1,0 +1,14 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+//
+// ### WARNING ###
+// DO NOT ENABLE TPM DEVICE IN THE IGX DEVICE TREE
+// IF NEEDED, PLEASE REACH OUT TO THE NVIDIA IGX PRODUCT TEAM
+// IT IS ILLEGAL TO ENABLE TPM FOR DEVICE GETTING SHIPPED TO CHINA
+
+/dts-v1/;
+
+#include "tegra234-p3740-0002+p3701-0008.dts"
+#include "tegra234-p3740-0002+p3701-0008-nv-common.dtsi"
+#include "tegra234-p3740-0002+p3701-0008-safety.dtsi"
