@@ -1,0 +1,308 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+#include <dt-bindings/clock/tegra264-clk.h>
+#include <dt-bindings/gpio/tegra264-gpio.h>
+
+/ {
+	fragment@0 {
+		target-path = "/";
+		__overlay__ {
+			tegra-capture-vi {
+				num-channels = <1>;
+				ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					port@0 {
+						reg = <0>;
+						liimx390_vi_in0: endpoint {
+							port-index = <0>;
+							bus-width = <4>;
+							remote-endpoint = <&liimx390_csi_out0>;
+						};
+					};
+				};
+			};
+
+			bus@0 {
+				host1x@8181200000 {
+					nvcsi@8188000000 {
+						num-channels = <1>;
+						#address-cells = <1>;
+						#size-cells = <0>;
+						channel@0 {
+							reg = <0>;
+							ports {
+								#address-cells = <1>;
+								#size-cells = <0>;
+								port@0 {
+									reg = <0>;
+									liimx390_csi_in0: endpoint@0 {
+										port-index = <0>;
+										bus-width = <4>;
+										remote-endpoint = <&liimx390_imx390_out0>;
+									};
+								};
+								port@1 {
+									reg = <1>;
+									liimx390_csi_out0: endpoint@1 {
+										remote-endpoint = <&liimx390_vi_in0>;
+									};
+								};
+							};
+						};
+					};
+				};
+
+				i2c@810c6d0000 {
+					tca9546@70 {
+						i2c@0 {
+							imx390_a@21 {
+								compatible = "sony,imx390";
+								reg = <0x21>;
+								devnode = "video0";
+								/* Physical dimensions of sensor */
+								physical_w = "15.0";
+								physical_h = "12.5";
+								sensor_model ="imx390";
+								/* Define any required hw resources needed by driver */
+								/* ie. clocks, io pins, power sources */
+								/* Defines number of frames to be dropped by driver internally after applying */
+								/* sensor crop settings. Some sensors send corrupt frames after applying */
+								/* crop co-ordinates */
+								post_crop_frame_drop = "0";
+
+								/* Convert Gain to unit of dB (decibel) befor passing to kernel driver */
+
+								/* if true, delay gain setting by one frame to be in sync with exposure */
+
+								/* enable CID_SENSOR_MODE_ID for sensor modes selection */
+								use_sensor_mode_id = "true";
+
+								/* WAR to prevent banding by reducing analog gain. Bug 2229902 */
+
+								/**
+								* ==== Modes ====
+								* A modeX node is required to support v4l2 driver
+								* implementation with NVIDIA camera software stack
+								*
+								* == Signal properties ==
+								*
+								* phy_mode = "";
+								* PHY mode used by the MIPI lanes for this device
+								*
+								* tegra_sinterface = "";
+								* CSI Serial interface connected to tegra
+								* Incase of virtual HW devices, use virtual
+								* For SW emulated devices, use host
+								*
+								* pix_clk_hz = "";
+								* Sensor pixel clock used for calculations like exposure and framerate
+								*
+								* readout_orientation = "0";
+								* Based on camera module orientation.
+								* Only change readout_orientation if you specifically
+								* Program a different readout order for this mode
+								*
+								* == Image format Properties ==
+								*
+								* active_w = "";
+								* Pixel active region width
+								*
+								* active_h = "";
+								* Pixel active region height
+								*
+								* pixel_t = "";
+								* The sensor readout pixel pattern
+								*
+								* line_length = "";
+								* Pixel line length (width) for sensor mode.
+								*
+								* == Source Control Settings ==
+								*
+								* Gain factor used to convert fixed point integer to float
+								* Gain range [min_gain/gain_factor, max_gain/gain_factor]
+								* Gain step [step_gain/gain_factor is the smallest step that can be configured]
+								* Default gain [Default gain to be initialized for the control.
+								*     use min_gain_val as default for optimal results]
+								* Framerate factor used to convert fixed point integer to float
+								* Framerate range [min_framerate/framerate_factor, max_framerate/framerate_factor]
+								* Framerate step [step_framerate/framerate_factor is the smallest step that can be configured]
+								* Default Framerate [Default framerate to be initialized for the control.
+								*     use max_framerate to get required performance]
+								* Exposure factor used to convert fixed point integer to float
+								* For convenience use 1 sec = 1000000us as conversion factor
+								* Exposure range [min_exp_time/exposure_factor, max_exp_time/exposure_factor]
+								* Exposure step [step_exp_time/exposure_factor is the smallest step that can be configured]
+								* Default Exposure Time [Default exposure to be initialized for the control.
+								*     Set default exposure based on the default_framerate for optimal exposure settings]
+								*
+								* gain_factor = ""; (integer factor used for floating to fixed point conversion)
+								* min_gain_val = ""; (ceil to integer)
+								* max_gain_val = ""; (ceil to integer)
+								* step_gain_val = ""; (ceil to integer)
+								* default_gain = ""; (ceil to integer)
+								* Gain limits for mode
+								*
+								* exposure_factor = ""; (integer factor used for floating to fixed point conversion)
+								* min_exp_time = ""; (ceil to integer)
+								* max_exp_time = ""; (ceil to integer)
+								* step_exp_time = ""; (ceil to integer)
+								* default_exp_time = ""; (ceil to integer)
+								* Exposure Time limits for mode (sec)
+								*
+								* framerate_factor = ""; (integer factor used for floating to fixed point conversion)
+								* min_framerate = ""; (ceil to integer)
+								* max_framerate = ""; (ceil to integer)
+								* step_framerate = ""; (ceil to integer)
+								* default_framerate = ""; (ceil to integer)
+								* Framerate limits for mode (fps)
+								*
+								* embedded_metadata_height = "";
+								* Sensor embedded metadata height in units of rows.
+								* If sensor does not support embedded metadata value should be 0.
+								*/
+								mode0 {/*mode IMX390_WDR_MODE_1936X1216_CROP_30FPS*/
+									mclk_khz = "24000";
+									num_lanes = "4";
+									tegra_sinterface = "serial_a";
+									discontinuous_clk = "no";
+									dpcm_enable = "false";
+									cil_settletime = "0";
+									dynamic_pixel_bit_depth = "20";
+									csi_pixel_bit_depth = "12";
+									mode_type = "bayer_wdr_pwl";
+									pixel_phase = "rggb";
+									active_w = "1936";
+									active_h = "1216";
+									readout_orientation = "0";
+									line_length = "3300"; /* HMAX */
+									inherent_gain = "1";
+									mclk_multiplier = "14.58";
+									pix_clk_hz = "83250000"; /* 249.75Mbps/Lane * 4Lane / 12bit = 83.25[MPixel] */
+									serdes_pix_clk_hz = "500000000";
+									gain_factor = "10";
+									min_gain_val = "1";
+									max_gain_val = "420";
+									step_gain_val = "3";
+									default_gain = "1";
+									framerate_factor = "1000000";
+									min_framerate = "30000000";
+									max_framerate = "30000000";
+									step_framerate = "1";
+									default_framerate = "30000000";
+									exposure_factor = "1000000";
+									min_exp_time = "134"; /* (ERRWID_BACK/2) + 2 = 5[line] */
+									max_exp_time = "33227"; /* MODE_VMAX - 1 - (ERRWID_BACK/2) = 1250 - 1 - (6/2) = 1246[line] */
+									step_exp_time = "1";
+									default_exp_time = "11000";/* us */
+									embedded_metadata_height = "0";
+									min_hdr_ratio = "64.0";
+									max_hdr_ratio = "64.0";
+									num_control_point = "9";
+									control_point_x_0 = "0";
+									control_point_x_1 = "469";
+									control_point_x_2 = "1582";
+									control_point_x_3 = "4592";
+									control_point_x_4 = "13446";
+									control_point_x_5 = "39550";
+									control_point_x_6 = "117664";
+									control_point_x_7 = "352265";
+									control_point_x_8 = "1048575";
+									control_point_y_0 = "0";
+									control_point_y_1 = "469";
+									control_point_y_2 = "840";
+									control_point_y_3 = "1270";
+									control_point_y_4 = "1736";
+									control_point_y_5 = "2238";
+									control_point_y_6 = "2792";
+									control_point_y_7 = "3411";
+									control_point_y_8 = "4095";
+								};
+
+								mode1 {/*mode IMX390_SDR_MODE_1936X1216_CROP_30FPS*/
+									mclk_khz = "24000";
+									num_lanes = "4";
+									tegra_sinterface = "serial_a";
+									vc_id = "0";
+									discontinuous_clk = "no";
+									dpcm_enable = "false";
+									cil_settletime = "0";
+									dynamic_pixel_bit_depth = "12";
+									csi_pixel_bit_depth = "12";
+									mode_type = "bayer";
+									pixel_phase = "rggb";
+
+									active_w = "1936";
+									active_h = "1216";
+									readout_orientation = "0";
+									line_length = "3300"; /* HMAX */
+									inherent_gain = "1";
+									pix_clk_hz = "83250000"; /* 249.75Mbps/Lane * 4Lane / 12bit = 83.25[MPixel] */
+									serdes_pix_clk_hz = "200000000";
+
+									gain_factor = "10";
+									min_gain_val = "1";
+									max_gain_val = "420";
+									step_gain_val = "3";
+									default_gain = "1";
+									min_hdr_ratio = "1";
+									max_hdr_ratio = "1";
+									framerate_factor = "1000000";
+									min_framerate = "30000000";
+									max_framerate = "30000000";
+									step_framerate = "1";
+									default_framerate = "30000000";
+									exposure_factor = "1000000";
+									min_exp_time = "134"; /* (ERRWID_BACK/2) + 2 = 5[line] */
+									max_exp_time = "33227"; /* MODE_VMAX - 1 - (ERRWID_BACK/2) = 1250 - 1 - (6/2) = 1246[line] */
+									step_exp_time = "1";
+									default_exp_time = "11000";/* us */
+									embedded_metadata_height = "0";
+								};
+
+								ports {
+									#address-cells = <1>;
+									#size-cells = <0>;
+									port@0 {
+										reg = <0>;
+										liimx390_imx390_out0: endpoint {
+											port-index = <0>;
+											bus-width = <4>;
+											remote-endpoint = <&liimx390_csi_in0>;
+										};
+									};
+								};
+							};
+						};
+					};
+				};
+			};
+
+			tegra-camera-platform {
+				compatible = "nvidia, tegra-camera-platform";
+				/**
+				* The general guideline for naming badge_info contains 3 parts, and is as follows,
+				* The first part is the camera_board_id for the module; if the module is in a FFD
+				* platform, then use the platform name for this part.
+				* The second part contains the position of the module, ex. "rear" or "front".
+				* The third part contains the last 6 characters of a part number which is found
+				* in the module's specsheet from the vender.
+				*/
+				modules {
+					module0 {
+						badge = "imx390_bottomleft_liimx390";
+						position = "bottomleft";
+						orientation = "0";
+						drivernode0 {
+							/* Declare PCL support driver (classically known as guid)  */
+							pcl_id = "v4l2_sensor";
+							/* Declare the device-tree hierarchy to driver instance */
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@810c6d0000/tca9546@70/i2c@0/imx390_a@21";
+						};
+					};
+				};
+			};
+		};
+	};
+};
