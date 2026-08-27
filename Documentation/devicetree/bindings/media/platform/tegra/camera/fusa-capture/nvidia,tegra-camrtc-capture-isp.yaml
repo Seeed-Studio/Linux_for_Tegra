@@ -1,0 +1,67 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/tegra-capture-isp/nvidia,tegra-camrtc-capture-isp.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Tegra Capture-ISP driver
+
+maintainers:
+  - Evgeny Kornev
+
+description: |
+     the compatability = nvidia,tegra-camrtc-capture-isp is mentioned in the following drivers
+        - <TOP>/kernel/nvidia-oot/drivers/media/platform/tegra/camera/fusa-capture/capture-isp.c
+
+     The following nodes use this compatibility
+        - /tegra-capture-isp
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra-camrtc-capture-isp
+
+  required:
+    - compatible
+
+properties:
+
+    nvidia,isp-devices:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+
+    nvidia,isp-max-channels:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x20
+        maximum: 0x20
+
+required:
+    - compatible
+
+examples:
+    - |
+        tegra-capture-isp {
+            compatible = "nvidia,tegra-camrtc-capture-isp";
+            nvidia,isp-devices = <&isp &isp1>;
+            nvidia,isp-max-channels = <32>;
+            status = "disabled";
+        };

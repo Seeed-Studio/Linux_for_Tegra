@@ -1,0 +1,141 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/virt-alt-pcm-oot/nvidia,tegra264-virt-pcm-oot.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Virtual Pulse Code Modulator
+
+maintainers:
+  - Mohan Kumar
+
+description: |
+     The following nodes use this compatibility
+        - /virt-alt-pcm-oot
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra264-virt-pcm-oot
+
+  required:
+    - compatible
+
+properties:
+
+    iommus:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            iommus are given by a tuple of 2 values:
+                - Phandle to the device
+                - Device ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+
+    cardname:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - tegra-virt-pcm-vm1
+
+
+    dmas:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x1
+        maximum: 0x82
+
+    dma-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - rx1
+                - tx1
+                - rx2
+                - tx2
+                - rx3
+                - tx3
+                - rx4
+                - tx4
+                - rx5
+                - tx5
+                - rx6
+                - tx6
+                - rx7
+                - tx7
+                - rx8
+                - tx8
+                - rx9
+                - tx9
+                - rx10
+                - tx10
+                - rx11
+                - tx11
+                - rx12
+                - tx12
+                - rx13
+                - tx13
+                - rx14
+                - tx14
+                - rx15
+                - tx15
+                - rx16
+                - tx16
+                - rx17
+                - tx17
+                - rx18
+                - tx18
+                - rx19
+                - tx19
+                - rx20
+                - tx20
+                - rx21
+                - tx21
+                - rx22
+                - tx22
+                - rx23
+                - tx23
+                - rx24
+                - tx24
+
+
+    ivc_queue:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0xf
+        maximum: 0xa2
+
+    admaif_ch_num:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x18
+        maximum: 0x18
+
+    admaif_ch_list:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x1
+        maximum: 0x18
+
+required:
+    - compatible
+    - iommus
+
+examples:
+    - |
+        virt-alt-pcm-oot {
+        };

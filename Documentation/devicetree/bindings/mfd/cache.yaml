@@ -1,0 +1,260 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/l2-cache-0/cache.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Cache Storage Driver
+
+maintainers:
+  - Rich Wiley
+
+description: |
+     the compatability = cache is mentioned in the following drivers
+        - <TOP>/kernel/nvidia-oot/drivers/mfd/nvidia-vrs-pseq.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/core/rtw_xmit_shortcut.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/core/rtw_ap.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/core/rtw_fsm_wnm.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/core/rtw_mlme_ext.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/core/rtw_sec_cam.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/core/rtw_xmit.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/core/rtw_sta_mgt.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/core/rtw_wow.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/core/rtw_recv_shortcut.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/core/rtw_wnm.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/core/rtw_recv.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/core/rtw_mlme.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/core/mesh/rtw_mesh.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/include/rtw_xmit_shortcut.h
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/include/rtw_recv.h
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/include/drv_types.h
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/include/ieee80211.h
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/include/rtw_mlme_ext.h
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/include/rtw_wnm.h
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/include/rtw_mlme.h
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/include/rtw_sec_cam.h
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/include/rtw_xmit.h
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/include/sta_info.h
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/phl/phl_rx_agg.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/phl/pltfm_ops_windows.h
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/phl/phl_types.h
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/phl/phl_trx_def.h
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/phl/phl_tx.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/phl/phl_config.h
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/phl/pltfm_ops_linux.h
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/phl/phl_rx.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/phl/pltfm_ops_none.h
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/phl/pltfm_ops_macos.h
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/phl/phl_api_drv.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/phl/pltfm_ops_uefi.h
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/phl/phl_init.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/phl/phl_def.h
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/phl/hci/phl_trx_def_pcie.h
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/phl/hci/phl_trx_pcie.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/phl/test/trx_test.h
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/phl/test/trx_test.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/phl/hal_g6/rtl8852c/hal_trx_8852c.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/phl/hal_g6/rtl8852c/pci/hal_trx_8852ce.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/phl/hal_g6/mac/mac_def.h
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/phl/hal_g6/mac/mac_exp_def.h
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/phl/hal_g6/mac/mac_ax/wowlan.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/os_dep/linux/rtw_cfg.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/os_dep/linux/ioctl_cfg80211.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/os_dep/linux/rtw_proc.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/os_dep/linux/rtw_cfgvendor.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/os_dep/linux/rhashtable.h
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/os_dep/linux/pci_intf.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/platform/platform_mips_98d_pci.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/platform/platform_ops.h
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8852ce/platform/platform_linux_pc_pci.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8822ce/core/rtw_wlan_util.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8822ce/core/rtw_ap.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8822ce/core/rtw_mlme_ext.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8822ce/core/rtw_pwrctrl.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8822ce/core/rtw_sta_mgt.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8822ce/core/rtw_debug.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8822ce/core/rtw_wnm.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8822ce/core/rtw_recv.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8822ce/core/rtw_mlme.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8822ce/core/mesh/rtw_mesh.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8822ce/include/hal_com_h2c.h
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8822ce/include/rtw_recv.h
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8822ce/include/drv_types.h
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8822ce/include/hal_com.h
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8822ce/include/ieee80211.h
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8822ce/include/rtw_debug.h
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8822ce/include/rtw_mlme_ext.h
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8822ce/include/rtw_wnm.h
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8822ce/include/rtw_mlme.h
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8822ce/include/rtw_pwrctrl.h
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8822ce/include/rtw_xmit.h
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8822ce/os_dep/linux/rtw_proc.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8822ce/os_dep/linux/rtw_cfgvendor.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8822ce/os_dep/linux/rhashtable.h
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8822ce/os_dep/linux/pci_intf.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8822ce/os_dep/linux/os_intfs.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8822ce/hal/hal_com.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8822ce/hal/hal_halmac.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/wireless/realtek/rtl8822ce/hal/rtl8822c/pci/rtl8822ce_xmit.c
+        - <TOP>/kernel/nvidia-oot/drivers/net/ethernet/mft/mst_backward_compatibility/mst_pci/mst_pci_bc.c
+        - <TOP>/kernel/nvidia-oot/drivers/block/tegra_virt_storage/tegra_hv_vblk.c
+        - <TOP>/kernel/nvidia-oot/drivers/block/tegra_virt_storage/tegra_hv_scsi.c
+        - <TOP>/kernel/nvidia-oot/drivers/firmware/tegra/ivc_ext.c
+        - <TOP>/kernel/nvidia-oot/drivers/media/i2c/nv_imx274.c
+        - <TOP>/kernel/nvidia-oot/drivers/media/i2c/lt6911uxc.c
+        - <TOP>/kernel/nvidia-oot/drivers/media/i2c/nv_imx390_archived.c
+        - <TOP>/kernel/nvidia-oot/drivers/media/i2c/nv_imx318.c
+        - <TOP>/kernel/nvidia-oot/drivers/media/i2c/nv_imx185.c
+        - <TOP>/kernel/nvidia-oot/drivers/media/i2c/pca9570.c
+        - <TOP>/kernel/nvidia-oot/drivers/media/i2c/nv_hawk_owl.c
+        - <TOP>/kernel/nvidia-oot/drivers/media/i2c/max9295.c
+        - <TOP>/kernel/nvidia-oot/drivers/media/i2c/nv_ar0234.c
+        - <TOP>/kernel/nvidia-oot/drivers/media/i2c/nv_imx477.c
+        - <TOP>/kernel/nvidia-oot/drivers/media/i2c/max929x.c
+        - <TOP>/kernel/nvidia-oot/drivers/media/i2c/nv_imx390.c
+        - <TOP>/kernel/nvidia-oot/drivers/media/i2c/max9296.c
+        - <TOP>/kernel/nvidia-oot/drivers/media/i2c/max96712.c
+        - <TOP>/kernel/nvidia-oot/drivers/media/i2c/nv_imx219.c
+        - <TOP>/kernel/nvidia-oot/drivers/media/platform/tegra/camera/fusa-capture/capture-isp.c
+        - <TOP>/kernel/nvidia-oot/drivers/media/platform/tegra/camera/fusa-capture/capture-common.c
+        - <TOP>/kernel/nvidia-oot/drivers/i2c/busses/i2c-nvvrs11.c
+        - <TOP>/kernel/nvidia-oot/drivers/bluetooth/realtek/rtk_misc.c
+        - <TOP>/kernel/nvidia-oot/drivers/bluetooth/realtek/rtk_bt.c
+        - <TOP>/kernel/nvidia-oot/drivers/bluetooth/realtek/rtk_coex.c
+        - <TOP>/kernel/nvidia-oot/drivers/rtc/rtc-max77851.c
+        - <TOP>/kernel/nvidia-oot/drivers/virt/tegra/tegra_hv.c
+        - <TOP>/kernel/nvidia-oot/drivers/gpu/drm/tegra/plane.c
+        - <TOP>/kernel/nvidia-oot/drivers/gpu/drm/tegra/nvjpg.c
+        - <TOP>/kernel/nvidia-oot/drivers/gpu/drm/tegra/nvdec.c
+        - <TOP>/kernel/nvidia-oot/drivers/gpu/drm/tegra/nvenc.c
+        - <TOP>/kernel/nvidia-oot/drivers/gpu/drm/tegra/gem.c
+        - <TOP>/kernel/nvidia-oot/drivers/gpu/drm/tegra/drm.c
+        - <TOP>/kernel/nvidia-oot/drivers/gpu/drm/tegra/vic.c
+        - <TOP>/kernel/nvidia-oot/drivers/gpu/drm/tegra/include/uapi/drm/tegra_drm_next.h
+        - <TOP>/kernel/nvidia-oot/drivers/gpu/host1x/syncpt.c
+        - <TOP>/kernel/nvidia-oot/drivers/gpu/host1x/cdma.c
+        - <TOP>/kernel/nvidia-oot/drivers/gpu/host1x/bus.c
+        - <TOP>/kernel/nvidia-oot/drivers/gpu/host1x/dev.h
+        - <TOP>/kernel/nvidia-oot/drivers/gpu/host1x/dev.c
+        - <TOP>/kernel/nvidia-oot/drivers/gpu/host1x/include/linux/host1x-next.h
+        - <TOP>/kernel/nvidia-oot/drivers/gpu/host1x/hw/syncpt_hw.c
+        - <TOP>/kernel/nvidia-oot/drivers/gpu/host1x-emu/syncpt.c
+        - <TOP>/kernel/nvidia-oot/drivers/gpu/host1x-emu/hw/syncpt_hw.c
+        - <TOP>/kernel/nvidia-oot/drivers/video/tegra/host/nvdla/dla_os_interface.h
+        - <TOP>/kernel/nvidia-oot/drivers/video/tegra/host/pva/pva_vpu_exe.c
+        - <TOP>/kernel/nvidia-oot/drivers/video/tegra/host/pva/fw_include/pva-task.h
+        - <TOP>/kernel/nvidia-oot/drivers/video/tegra/host/pva/fw_include/pva-ucode-header.h
+        - <TOP>/kernel/nvidia-oot/drivers/video/tegra/nvmap/nvmap_fault.c
+        - <TOP>/kernel/nvidia-oot/drivers/video/tegra/nvmap/nvmap_alloc.h
+        - <TOP>/kernel/nvidia-oot/drivers/video/tegra/nvmap/nvmap_alloc.c
+        - <TOP>/kernel/nvidia-oot/drivers/video/tegra/nvmap/nvmap_dev_int.h
+        - <TOP>/kernel/nvidia-oot/drivers/video/tegra/nvmap/nvmap_cache.c
+        - <TOP>/kernel/nvidia-oot/drivers/video/tegra/nvmap/nvmap_ioctl.c
+        - <TOP>/kernel/nvidia-oot/drivers/video/tegra/nvmap/nvmap_heap.c
+        - <TOP>/kernel/nvidia-oot/drivers/video/tegra/nvmap/nvmap_handle.h
+        - <TOP>/kernel/nvidia-oot/drivers/video/tegra/nvmap/nvmap_pp.c
+        - <TOP>/kernel/nvidia-oot/drivers/video/tegra/nvmap/nvmap_dmabuf.c
+        - <TOP>/kernel/nvidia-oot/drivers/video/tegra/nvmap/nvmap_alloc_int.h
+        - <TOP>/kernel/nvidia-oot/drivers/video/tegra/nvmap/nvmap_dev.c
+        - <TOP>/kernel/nvidia-oot/drivers/video/tegra/tsec/tsec_boot.c
+        - <TOP>/kernel/nvidia-oot/drivers/video/tegra/tsec/tsec_linux.h
+        - <TOP>/kernel/nvidia-oot/drivers/video/tegra/tsec/tsec_cmds.h
+        - <TOP>/kernel/nvidia-oot/drivers/video/tegra/tsec/tsec_comms/tsec_comms.c
+        - <TOP>/kernel/nvidia-oot/drivers/video/tegra/virt/tegra_gr_comm.c
+        - <TOP>/kernel/nvidia-oot/drivers/platform/tegra/dce/dce-debug-perf.c
+        - <TOP>/kernel/nvidia-oot/drivers/platform/tegra/dce/include/interface/dce-admin-perf-stats.h
+        - <TOP>/kernel/nvidia-oot/drivers/platform/tegra/dce/include/interface/dce-interface.h
+        - <TOP>/kernel/nvidia-oot/drivers/platform/tegra/uncore_pmu/tegra23x_perf_uncore.c
+        - <TOP>/kernel/nvidia-oot/drivers/platform/tegra/aon/tegra-ivc.c
+        - <TOP>/kernel/nvidia-oot/drivers/platform/tegra/aon/tegra-aon-mail.c
+        - <TOP>/kernel/nvidia-oot/drivers/platform/tegra/mce/mce.c
+        - <TOP>/kernel/nvidia-oot/drivers/platform/tegra/mce/tegra23x-mce.c
+        - <TOP>/kernel/nvidia-oot/drivers/platform/tegra/rtcpu/tegra-rtcpu-trace.c
+        - <TOP>/kernel/nvidia-oot/drivers/platform/tegra/rtcpu/camchar.c
+        - <TOP>/kernel/nvidia-oot/drivers/platform/tegra/nvadsp/dev-t18x.c
+        - <TOP>/kernel/nvidia-oot/drivers/misc/nvscic2c-pcie/stream-extensions.c
+        - <TOP>/kernel/nvidia-oot/drivers/misc/nvscic2c-pcie/iova-alloc.h
+        - <TOP>/kernel/nvidia-oot/drivers/misc/nvscic2c-pcie/pci-client.c
+        - <TOP>/kernel/nvidia-oot/drivers/misc/nvscic2c-pcie/iova-alloc.c
+        - <TOP>/kernel/nvidia-oot/drivers/misc/mods/mods_clock.c
+        - <TOP>/kernel/nvidia-oot/drivers/misc/mods/mods_krnl.c
+        - <TOP>/kernel/nvidia-oot/drivers/misc/mods/mods_internal.h
+        - <TOP>/kernel/nvidia-oot/drivers/misc/mods/mods_mem.c
+        - <TOP>/kernel/nvidia-oot/drivers/misc/mods/mods_pci.c
+
+     The following nodes use this compatibility
+        - /cpus/l2-cache-0
+        - /cpus/l2-cache-1
+        - /cpus/l2-cache-2
+        - /cpus/l2-cache-3
+        - /cpus/l2-cache-4
+        - /cpus/l2-cache-5
+        - /cpus/l2-cache-6
+        - /cpus/l2-cache-7
+        - /cpus/l2-cache-8
+        - /cpus/l2-cache-9
+        - /cpus/l2-cache-10
+        - /cpus/l2-cache-11
+        - /cpus/l2-cache-12
+        - /cpus/l2-cache-13
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - cache
+
+  required:
+    - compatible
+
+properties:
+
+    cache-level:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x2
+        maximum: 0x2
+
+    cache-size:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x100000
+        maximum: 0x100000
+
+    cache-line-size:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x40
+        maximum: 0x40
+
+    cache-sets:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x800
+        maximum: 0x800
+
+    cache-unified:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+required:
+    - compatible
+
+examples:
+    - |
+        l2-cache-0 {
+            compatible = "cache";
+            cache-level = <2>;
+            cache-size = <1048576>;
+            cache-line-size = <64>;
+            cache-sets = <2048>;
+            cache-unified;
+        };

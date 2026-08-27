@@ -1,0 +1,74 @@
+# Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/spi@0/tegra-spidev.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: User mode SPI device interface
+
+maintainers:
+  - Suresh Mangipudi
+
+description: |
+     the compatability = tegra-spidev is mentioned in the following drivers
+        - <TOP>/kernel/kernel-oot/drivers/spi/spidev.c
+
+     The following nodes use this compatibility
+        - /bus@0/spi@c6c0000/spi@0
+        - /bus@0/spi@810c590000/spi@0
+        - /bus@0/spi@810c440000/spi@0
+        - /bus@0/spi@810c450000/spi@0
+        - /bus@0/spi@810c460000/spi@0
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - tegra-spidev
+
+  required:
+    - compatible
+
+properties:
+
+    reg:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Register is specified as a value.
+        items:
+            minItems: 1
+            maxItems: 1
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+
+    spi-max-frequency:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x2faf080
+        maximum: 0x2faf080
+
+required:
+    - compatible
+    - reg
+
+examples:
+    - |
+        spi@0 {
+            compatible = "tegra-spidev";
+            reg = <0x0>;
+            spi-max-frequency = <0x2faf080>;
+        };

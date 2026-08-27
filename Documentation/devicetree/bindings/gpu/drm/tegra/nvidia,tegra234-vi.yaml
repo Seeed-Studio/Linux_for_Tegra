@@ -1,0 +1,117 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/vi0@8188400000/nvidia,tegra234-vi.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Tegra Video Interface Module
+
+maintainers:
+  - Chinniah Poosapadi
+
+description: |
+     the compatability = nvidia,tegra234-vi is mentioned in the following drivers
+        - <TOP>/kernel/nvidia-oot/drivers/gpu/drm/tegra/drm.c
+        - <TOP>/kernel/nvidia-oot/drivers/gpu/drm/tegra/vic.c
+        - <TOP>/kernel/nvidia-oot/drivers/video/tegra/host/capture/capture-support.c
+        - <TOP>/kernel/nvidia-oot/drivers/video/tegra/host/vi/vi5.c
+
+     The following nodes use this compatibility
+        - /bus@0/host1x@8181200000/vi0@8188400000
+        - /bus@0/host1x@8181200000/vi1@8188c00000
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra234-vi
+
+  required:
+    - compatible
+
+properties:
+
+    resets:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Resets are given by a tuple of 2 values:
+                - Phandle to the device
+                - Reset ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x2e
+                  maximum: 0x2f
+
+    reset-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - vi
+                - vi2
+
+
+    clocks:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Clocks are given by a tuple of 2 values:
+                - Phandle to the device
+                - Clock ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x39
+                  maximum: 0x39
+
+    clock-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - vi
+
+
+    nvidia,vi-falcon-device:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+
+    non-coherent:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+required:
+    - compatible
+    - resets
+    - reset-names
+    - clocks
+    - clock-names
+
+examples:
+    - |
+        vi0@8188400000 {
+            compatible = "nvidia,tegra234-vi";
+            resets = <&bpmp TEGRA264_RESET_VI>;
+            reset-names = "vi";
+            clocks = <&bpmp TEGRA264_CLK_VI>;
+            clock-names = "vi";
+            nvidia,vi-falcon-device = <&vi0_thi>;
+            iommus = <&smmu0_mmu TEGRA_SID_VI_VM1>;
+            non-coherent;
+            status = "disabled";
+        };
