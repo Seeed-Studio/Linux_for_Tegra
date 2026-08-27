@@ -1,0 +1,19 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+//
+// This file contains the DT nodes of T234 which are not in base/tegra234.dtsi
+
+/dts-v1/;
+/plugin/;
+
+/ {
+	overlay-name = "dummy overlay";
+	fragment-t234-dtbo-dummy@0 {
+		target-path = "/";
+		 __overlay__ {
+			dummy_node {
+				dummy_property = "dummy overlay applied";
+			};
+		};
+	};
+};
