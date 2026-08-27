@@ -1,0 +1,120 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/ucf_uapmu@140c0000/arm,coresight-pmu.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Coresight Performance Monitoring Unit (PMU)
+
+maintainers:
+  - Besar Wicaksono
+
+description: |
+     the compatability = arm,coresight-pmu is mentioned in the following drivers
+        - <TOP>/kernel/kernel-oot/drivers/perf/arm_cspmu/arm_cspmu.c
+
+     The following nodes use this compatibility
+        - /ucf_uapmu@140c0000
+        - /disp_usb_apmu@8808900000
+        - /ucf_gpu_apmu@810c248000
+        - /uphy_apmu@a808880000
+        - /vision_apmu@818a000000
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - arm,coresight-pmu
+
+  required:
+    - compatible
+
+properties:
+
+    reg:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Registers are given by a tuple of two values:
+                - register address:
+                - register block size.
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0xa8
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x8880000
+                  maximum: 0x8a000000
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x1000
+                  maximum: 0x1000
+
+    cpus:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+
+    interrupts:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Interrupts are give by a tuple of 3 values:
+                - interrupt specifier (GIC_SPI = 0, GIC_PPI = 1)
+                  definitions in dt-bindings/interrupt-controller/arm-gic.h
+                - interrupt number
+                - trigger type (rising edge, falling edge, both, etc)
+                  definitions in dt-bindings/interrupt-controller/irq.h
+        items:
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x33
+                  maximum: 0x342
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x4
+                  maximum: 0x4
+
+required:
+    - compatible
+    - reg
+    - interrupts
+
+examples:
+    - |
+        ucf_uapmu@140c0000 {
+            compatible = "arm,coresight-pmu";
+            status = "disabled";
+            reg = <0x0 0x140c0000 0x0 0x1000>;
+            cpus = <&cpu_0>,
+                   < &cpu_1>,
+                   < &cpu_2>,
+                   < &cpu_3>,
+                   <&cpu_4>,
+                   < &cpu_5>,
+                   < &cpu_6>,
+                   < &cpu_7>,
+                   <&cpu_8>,
+                   < &cpu_9>,
+                   < &cpu_10>,
+                   < &cpu_11>,
+                   <&cpu_12>,
+                   < &cpu_13>;
+            interrupts = <GIC_SPI 51 IRQ_TYPE_LEVEL_HIGH>;
+        };

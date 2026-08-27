@@ -1,0 +1,47 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/hsp/nvidia,tegra194-pva0-hsp.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Progrmable Vision Accelerator (PVA) Hypervisor Hardware Syncronization Primatives (HSP)
+
+maintainers:
+  - Omar Nemri
+
+description: |
+     The following nodes use this compatibility
+        - /bus@0/host1x@8181200000/pva0@818c000000/hsp
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra194-pva0-hsp
+
+  required:
+    - compatible
+
+properties:
+
+required:
+    - compatible
+
+examples:
+    - |
+        hsp {
+            compatible = "nvidia,tegra194-pva0-hsp";
+        };

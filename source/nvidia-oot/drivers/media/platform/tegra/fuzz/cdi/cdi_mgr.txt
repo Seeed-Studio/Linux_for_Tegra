@@ -1,0 +1,51 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+include <uapi/linux/fcntl.h>
+include <uapi/media/cdi-mgr.h>
+
+resource fd_cdi_mgr[fd]
+
+#There are differences between the device trees of Orin and Thor. Please pay attention to the distinction when using them.
+#orin "/dev/cdi-mgr.0.a", "/dev/cdi-mgr.2.e", "/dev/cdi-mgr.3.c", "/dev/cdi-mgr.7.g"
+#thor "/dev/cdi-mgr.0.d", "/dev/cdi-mgr.1.g", "/dev/cdi-mgr.12.e", "/dev/cdi-mgr.3.b", "/dev/cdi-mgr.7.a", "/dev/cdi-mgr.9.c"
+cdi_mgr_dev_file_list = "/dev/cdi-mgr.0.d", "/dev/cdi-mgr.1.g", "/dev/cdi-mgr.12.e", "/dev/cdi-mgr.3.b", "/dev/cdi-mgr.7.a", "/dev/cdi-mgr.9.c"
+openat$cdi_mgr(fd const[AT_FDCWD], file ptr[in, string[cdi_mgr_dev_file_list]], flags flags[open_flags], mode const[0]) fd_cdi_mgr
+
+ioctl$CDI_MGR_IOCTL_DEV_ADD(fd fd_cdi_mgr, cmd const[CDI_MGR_IOCTL_DEV_ADD], arg ptr[in, cdi_mgr_dev])
+
+ioctl$CDI_MGR_IOCTL_INTR_CONFIG(fd fd_cdi_mgr, cmd const[CDI_MGR_IOCTL_INTR_CONFIG], arg ptr[in, cdi_mgr_gpio_info])
+
+ioctl$CDI_MGR_IOCTL_INTR_ENABLE(fd fd_cdi_mgr, cmd const[CDI_MGR_IOCTL_INTR_ENABLE], arg const[0])
+
+ioctl$CDI_MGR_IOCTL_INTR_WAIT(fd fd_cdi_mgr, cmd const[CDI_MGR_IOCTL_INTR_WAIT], arg ptr[out, cdi_mgr_gpio_intr])
+
+ioctl$CDI_MGR_IOCTL_INTR_WAIT_ABORT(fd fd_cdi_mgr, cmd const[CDI_MGR_IOCTL_INTR_WAIT_ABORT], arg const[0])
+
+ioctl$CDI_MGR_IOCTL_ENABLE_DES_POWER(fd fd_cdi_mgr, cmd const[CDI_MGR_IOCTL_ENABLE_DES_POWER], arg const[0])
+
+ioctl$CDI_MGR_IOCTL_DISABLE_DES_POWER(fd fd_cdi_mgr, cmd const[CDI_MGR_IOCTL_DISABLE_DES_POWER], arg const[0])
+
+close$cdi_mgr(fd fd_cdi_mgr)
+
+cdi_mgr_dev {
+	addr			flags[dev_addr, int16]
+	reg_bits		flags[dev_reg_bits, int8]
+	val_bits		flags[dev_val_bits, int8]
+	drv_name		string["/dev/cdi-dev"]
+}[align[8]]
+
+dev_addr = 0x00, 0x20, 0x40, 0x60, 0x80
+dev_reg_bits = 0, 8, 16
+dev_val_bits = 0, 4, 8, 12, 16
+
+cdi_mgr_gpio_info {
+	idx			int32[0:8]
+	timeout_ms		int32[0:2000000]
+}[align[8]]
+
+cdi_mgr_gpio_intr {
+	idx			int32
+	code			int32
+}[align[8]]
+

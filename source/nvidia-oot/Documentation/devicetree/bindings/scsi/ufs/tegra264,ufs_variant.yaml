@@ -1,0 +1,314 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/ufshci@a80b8d0000/tegra264,ufs_variant.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Tegra UFS Controller Module
+
+maintainers:
+  - Suresh Mangipudi
+
+description: |
+     the compatability = tegra264,ufs_variant is mentioned in the following drivers
+        - <TOP>/kernel/nvidia-oot/drivers/scsi/ufs/ufs-tegra-common.c
+
+     The following nodes use this compatibility
+        - /ufshci@a80b8d0000
+        - /ufshci@a80b8d0000/ufs_variant
+
+select:
+  properties:
+    compatible:
+        minItems: 2
+        maxItems: 2
+        items:
+            enum:
+                - tegra264,ufs_variant
+                - tegra234,ufs_variant
+
+  required:
+    - compatible
+
+properties:
+
+    reg:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Registers are given by a tuple of two values:
+                - register address:
+                - register block size.
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0xa8
+                  maximum: 0xa8
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0xb8d0000
+                  maximum: 0xb920000
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x8000
+                  maximum: 0x10000
+
+    interrupts:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Interrupts are give by a tuple of 3 values:
+                - interrupt specifier (GIC_SPI = 0, GIC_PPI = 1)
+                  definitions in dt-bindings/interrupt-controller/arm-gic.h
+                - interrupt number
+                - trigger type (rising edge, falling edge, both, etc)
+                  definitions in dt-bindings/interrupt-controller/irq.h
+        items:
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x3b7
+                  maximum: 0x3b7
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x4
+                  maximum: 0x4
+
+    iommus:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            iommus are given by a tuple of 2 values:
+                - Phandle to the device
+                - Device ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x2a00
+                  maximum: 0x2a00
+
+    dma-coherent:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+    clocks:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Clocks are given by a tuple of 2 values:
+                - Phandle to the device
+                - Clock ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x1
+                  maximum: 0x1af
+
+    clock-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - pllrefe_vcoout
+                - mphy_core_pll_fixed
+                - mphy_l0_tx_symb
+                - mphy_tx_1mhz_ref
+                - mphy_l0_rx_ana
+                - mphy_l0_rx_symb
+                - mphy_l0_tx_ls_3xbit
+                - mphy_l0_rx_ls_bit
+                - mphy_l1_rx_ana
+                - ufshc
+                - ufshc_div
+                - ufsdev_ref
+                - pll_p
+                - mphy_l0_tx_ls_3xbit_div
+                - mphy_l0_tx_ls_symb_div
+                - mphy_l0_rx_ls_bit_div
+                - mphy_l0_rx_ls_symb_div
+                - mphy_l0_tx_hs_symb_div
+                - mphy_l0_rx_hs_symb_div
+                - osc
+                - mphy_l0_uphy_tx_fifo
+                - uphy_pll3
+                - isc_cpu
+                - utmi_pll1
+
+
+    resets:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Resets are given by a tuple of 2 values:
+                - Phandle to the device
+                - Reset ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x5
+                  maximum: 0x36
+
+    reset-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - mphy-l0-rx-rst
+                - mphy-l0-tx-rst
+                - mphy-l1-rx-rst
+                - mphy-l1-tx-rst
+                - mphy-clk-ctl-rst
+                - ufs-rst
+                - ufs-axi-m-rst
+                - ufshc-lp-rst
+
+
+    nvidia,enable-x2-config:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+    nvidia,enable-auto-hibern8:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+    nvidia,configure-uphy-pll3:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+    nvidia,mask-fast-auto-mode:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+    nvidia,enable-hs-mode:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+    nvidia,max-hs-gear:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x4
+        maximum: 0x4
+
+    nvidia,max-pwm-gear:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0x0
+
+    vcc-max-microamp:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0x0
+
+    vccq-max-microamp:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0x0
+
+    vccq2-max-microamp:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0x0
+
+    nvidia,enable-ufs-provisioning:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+    numa-node-id:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0x0
+
+required:
+    - compatible
+    - reg
+    - interrupts
+    - iommus
+    - clocks
+    - clock-names
+    - resets
+    - reset-names
+
+examples:
+    - |
+        ufshci@a80b8d0000 {
+            compatible = "tegra264,ufs_variant",
+                         "tegra234,ufs_variant";
+            status = "disabled";
+            reg = <0xa8 0x0b8d0000 0x0 0x10000>,
+                  <0xa8 0x0b8e0000 0x0 0x8000>,
+                  <0xa8 0x0b8e8000 0x0 0x8000>,
+                  <0xa8 0x0b8f0000 0x0 0x10000>,
+                  <0xa8 0x0b910000 0x0 0x10000>,
+                  <0xa8 0x0b920000 0x0 0x10000>;
+            interrupts = <GIC_SPI 951 IRQ_TYPE_LEVEL_HIGH>;
+            iommus = <&smmu1_mmu TEGRA_SID_UFS>;
+            dma-coherent;
+            clocks = <&bpmp TEGRA264_CLK_PLLREFUFS_CLKOUT624>,
+                     <&bpmp TEGRA264_CLK_MPHY_CORE_PLL_FIXED>,
+                     <&bpmp TEGRA264_CLK_MPHY_L0_TX_SYMB>,
+                     <&bpmp TEGRA264_CLK_MPHY_TX_1MHZ_REF>,
+                     < &bpmp TEGRA264_CLK_MPHY_L0_RX_ANA>,
+                     <&bpmp TEGRA264_CLK_MPHY_L0_RX_SYMB>,
+                     <&bpmp TEGRA264_CLK_MPHY_L0_TX_LS_3XBIT>,
+                     <&bpmp TEGRA264_CLK_MPHY_L0_RX_LS_BIT>,
+                     <&bpmp TEGRA264_CLK_MPHY_L1_RX_ANA>,
+                     <&bpmp TEGRA264_CLK_UFSHC_CG_SYS>,
+                     <&bpmp TEGRA264_CLK_UFSHC_CG_SYS_DIV>,
+                     <&bpmp TEGRA264_CLK_PLLREFUFS_UFSDEV_REFCLKOUT>,
+                     <&bpmp TEGRA264_CLK_PLLP_OUT0>,
+                     <&bpmp TEGRA264_CLK_MPHY_L0_TX_LS_3XBIT_DIV>,
+                     <&bpmp TEGRA264_CLK_MPHY_L0_TX_LS_SYMB_DIV>,
+                     <&bpmp TEGRA264_CLK_MPHY_L0_RX_LS_BIT_DIV>,
+                     <&bpmp TEGRA264_CLK_MPHY_L0_RX_LS_SYMB_DIV>,
+                     <&bpmp TEGRA264_CLK_MPHY_L0_TX_HS_SYMB_DIV>,
+                     <&bpmp TEGRA264_CLK_MPHY_L0_RX_HS_SYMB_DIV>,
+                     <&bpmp TEGRA264_CLK_OSC>,
+                     <&bpmp TEGRA264_CLK_MPHY_L0_UPHY_TX_FIFO>,
+                     <&bpmp TEGRA264_CLK_UPHY0_PLL4_XDIG>,
+                     <&bpmp TEGRA264_CLK_ISC_CPU_ROOT>,
+                     <&bpmp TEGRA264_CLK_UTMI_PLL1_CLKOUT480>;
+            clock-names = "pllrefe_vcoout, mphy_core_pll_fixed, mphy_l0_tx_symb",
+                          "mphy_tx_1mhz_ref, mphy_l0_rx_ana",
+                          "mphy_l0_rx_symb, mphy_l0_tx_ls_3xbit",
+                          "mphy_l0_rx_ls_bit, mphy_l1_rx_ana",
+                          "ufshc, ufshc_div, ufsdev_ref, pll_p",
+                          "mphy_l0_tx_ls_3xbit_div, mphy_l0_tx_ls_symb_div",
+                          "mphy_l0_rx_ls_bit_div, mphy_l0_rx_ls_symb_div",
+                          "mphy_l0_tx_hs_symb_div, mphy_l0_rx_hs_symb_div",
+                          "osc",
+                          "mphy_l0_uphy_tx_fifo",
+                          "uphy_pll3",
+                          "isc_cpu",
+                          "utmi_pll1";
+            resets = <&bpmp TEGRA264_RESET_MPHY_L0_RX>,
+                     <&bpmp TEGRA264_RESET_MPHY_L0_TX>,
+                     <&bpmp TEGRA264_RESET_MPHY_L1_RX>,
+                     <&bpmp TEGRA264_RESET_MPHY_L1_TX>,
+                     <&bpmp TEGRA264_RESET_MPHY_CLK_CTL>,
+                     <&bpmp TEGRA264_RESET_UFSHC>,
+                     <&bpmp TEGRA264_RESET_UFSHC_AXI_M>,
+                     <&bpmp TEGRA264_RESET_UFSHC_LP_SEQ>;
+            reset-names = "mphy-l0-rx-rst, mphy-l0-tx-rst, mphy-l1-rx-rst",
+                          "mphy-l1-tx-rst, mphy-clk-ctl-rst, ufs-rst",
+                          "ufs-axi-m-rst, ufshc-lp-rst";
+            nvidia,enable-x2-config;
+            nvidia,enable-auto-hibern8;
+            nvidia,configure-uphy-pll3;
+            nvidia,mask-fast-auto-mode;
+            nvidia,enable-hs-mode;
+            nvidia,max-hs-gear = <4>;
+            nvidia,max-pwm-gear = <0>;
+            vcc-max-microamp = <0>;
+            vccq-max-microamp = <0>;
+            vccq2-max-microamp = <0>;
+            nvidia,enable-ufs-provisioning;
+            numa-node-id = <0x0>;
+        };

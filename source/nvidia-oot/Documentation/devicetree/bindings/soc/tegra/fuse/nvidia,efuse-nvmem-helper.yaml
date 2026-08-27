@@ -1,0 +1,63 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/efuse-helper/nvidia,efuse-nvmem-helper.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Tegra efuse Memory Helper
+
+maintainers:
+  - Suresh Mangipudi
+
+description: |
+     the compatability = nvidia,efuse-nvmem-helper is mentioned in the following drivers
+        - <TOP>/kernel/kernel-oot/drivers/soc/tegra/fuse/tegra-efuse-nvmem-helper.c
+
+     The following nodes use this compatibility
+        - /bus@0/efuse-helper
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,efuse-nvmem-helper
+
+  required:
+    - compatible
+
+properties:
+
+    nvmem:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+
+    nvmem-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - efuse
+
+
+required:
+    - compatible
+
+examples:
+    - |
+        efuse-helper {
+            compatible = "nvidia,efuse-nvmem-helper";
+            nvmem = <&tegra_efuse0>;
+            nvmem-names = "efuse";
+            status = "disabled";
+        };

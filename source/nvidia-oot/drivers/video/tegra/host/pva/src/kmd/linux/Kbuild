@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only
+
+obj-m := pva_kmd_linux.o
+
+pva_kmd_linux-objs += ${PVA_KMD_LINUX_SRC}
+
+ccflags-y += ${PVA_KMD_LINUX_INC}
+ccflags-y += ${PVA_KMD_LINUX_DEF}
+ccflags-y += ${PVA_KMD_LINUX_CFLAGS}
+ccflags-y += -std=gnu11

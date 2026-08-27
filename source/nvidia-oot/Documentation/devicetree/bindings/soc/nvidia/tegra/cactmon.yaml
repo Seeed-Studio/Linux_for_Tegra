@@ -1,0 +1,215 @@
+# SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/soc/nvidia/tegra/cactmon.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Device tree binding for NVIDIA Tegra central actmon
+
+maintainers:
+  - Laxman Dewangan <ldewangan@nvidia.com>
+
+description: |
+   The Tegra central actmon is the device to monitor activity of various hw devices,
+   for e.g. external memory controller hw. It has dedicated actmon device to capture
+   activity of each EMC client. Emc clients can be added as child node to parent node.
+   For e.g. "mc_all" is one of the client of emc and captures rd/wr memory access by
+   all the emc clients. Therefore "mc_all" can be added as child node of the
+   "nvidia,tegra<hw>-cactmon" node.
+
+properties:
+  compatible:
+    enum:
+      - nvidia,tegra234-cactmon
+      - nvidia,tegra194-cactmon
+      - nvidia,tegra186-cactmon
+  reg:
+    maxItems: 1
+    description: |
+       Physical base address and length of registers for actmon HW.
+
+  interrupts:
+    maxItems: 1
+    description: |
+       IRQ number for actmon HW.
+
+  clocks:
+    maxItems: 1
+    description: |
+       Specifies the actmon hw ref clock.
+
+  clock-names:
+    description: |
+      Specifies the name actmon hw ref clock. Valid name is "actmon".
+
+  resets:
+    maxItems: 1
+    description: |
+       Specifies the reset line.
+
+  reset-names:
+    description: |
+      Specifies the name of the reset line. Valid name is "actmon_rst".
+
+  nvidia,sample_period:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    description: |
+       Actmon sample period.
+
+
+required:
+  - compatible
+  - interrupts
+  - reg
+  - clocks
+  - clock-names
+  - resets
+  - reset-names
+  - nvidia,sample_period
+
+unevaluatedProperties: false
+
+patternProperties:
+  "^.*-actdev$":
+    type: object
+    description: |
+       Actmon devices for mc clients.
+    properties:
+      clocks:
+         maxItems: 1
+         description: |
+            Specifies the submodule HW ref clock.
+
+      clock-names:
+         description: |
+            Specifies the name actmon hw ref clock. Valid name is "actmon".
+
+      nvidia,reg_offs:
+         $ref: /schemas/types.yaml#/definitions/uint32
+         description: |
+            register offset for actmon device
+
+      nvidia,irq_mask:
+         $ref: /schemas/types.yaml#/definitions/uint32
+         description: |
+            irq mask for actmon debvice.
+
+      nvidia,suspend_freq:
+         $ref: /schemas/types.yaml#/definitions/uint32
+         description: |
+            actmon device freq when mc client goes in suspend
+
+      nvidia,boost_freq_step:
+         $ref: /schemas/types.yaml#/definitions/uint32
+         description: |
+            base freq of boost freq component
+
+      nvidia,boost_up_coef:
+         $ref: /schemas/types.yaml#/definitions/uint32
+         description: |
+            percentage of times want to boost up the freq
+
+      nvidia,boost_down_coef:
+         $ref: /schemas/types.yaml#/definitions/uint32
+         description: |
+            percentage of times want to boost down the freq
+
+      nvidia,boost_up_threshold:
+         $ref: /schemas/types.yaml#/definitions/uint32
+         description: |
+            Up threshold, crossing that boost up interrupt triggeres
+
+      nvidia,boost_down_threshold:
+         $ref: /schemas/types.yaml#/definitions/uint32
+         description: |
+            Down threshold, crossing that boost down interrupt triggeres
+
+      nvidia,up_wmark_window:
+         $ref: /schemas/types.yaml#/definitions/uint32
+         description: |
+            Count crossing that many times of boost_up_threshold, boost interrupt triggeres
+
+      nvidia,down_wmark_window:
+         $ref: /schemas/types.yaml#/definitions/uint32
+         description: |
+            Count crossing that many times of boost_up_threshold, boost interrupt triggeres
+
+      nvidia,avg_window_log2:
+         $ref: /schemas/types.yaml#/definitions/uint32
+         description: |
+            K value for moving average of 2^k windows
+
+      nvidia,count_weight:
+         $ref: /schemas/types.yaml#/definitions/uint32
+         description: |
+            scaling factor
+
+      nvidia,type:
+         $ref: /schemas/types.yaml#/definitions/uint32
+         description: |
+            Freq sampler or Load sampler.
+
+      nvidia,max_dram_channels:
+         $ref: /schemas/types.yaml#/definitions/uint32
+         description: |
+            Number of DRAM channels if it is MC client.
+
+    required:
+      - clocks
+      - clock-names
+      - nvidia,reg_offs
+      - nvidia,irq_mask
+
+examples:
+  - |
+    #include <dt-bindings/interrupt-controller/irq.h>
+    #define TEGRA234_IRQ_ACTMON                    210
+    #define TEGRA234_RESET_ACTMON                  1U
+    #define TEGRA234_CLK_ACTMON                    1U
+    #define TEGRA234_CLK_EMC                       31U
+    soc {
+        #address-cells = <2>;
+        #size-cells = <2>;
+        actmon@d230000 {
+            /* tegra194 central actmon */
+            compatible = "nvidia,tegra234-cactmon";
+            reg = <0x0 0x0d230000 0x0 0x1000>; /* ACTMON_BASE */
+            interrupts = <0 TEGRA234_IRQ_ACTMON IRQ_TYPE_LEVEL_HIGH>;
+            clocks = <&bpmp_clks TEGRA234_CLK_ACTMON>;
+            clock-names = "actmon";
+            resets = <&bpmp_resets TEGRA234_RESET_ACTMON>;
+            reset-names = "actmon_rst";
+            nvidia,sample_period = /bits/ 8 <20>;
+
+            mc_all-actdev {        /* MC_ALL actmon device */
+                nvidia,reg_offs = <0x100>;
+                nvidia,irq_mask = <0x2>;
+                /* EMC_PLLP_FREQ + 2000 */
+                nvidia,suspend_freq = <204000>;
+                nvidia,boost_freq_step = <204000>;
+                nvidia,boost_up_coef = <200>;
+                nvidia,boost_down_coef = <50>;
+                nvidia,boost_up_threshold = <30>;
+                nvidia,boost_down_threshold = <20>;
+                nvidia,up_wmark_window = /bits/ 8 <3>;
+                nvidia,down_wmark_window = /bits/ 8 <2>;
+                nvidia,avg_window_log2 = /bits/ 8 <6>;
+                /*
+                 * count_weight(W) = no of dram clks needed to access N atoms
+                 * N = atoms per dvfs pulse = (2^7+1) = 256 atoms
+                 * 1 atom = 64bytes
+                 * t194 has 256 max dram width (16 channels x 16 bits per channel)
+                 * 1 dram clock cycle provides 256*2 bits = 64bytes
+                 * (i.e) 1 dram clock provides 1 atom
+                 * so 256 dram clocks needed for 256 atoms
+                 * W = 256
+                 */
+                nvidia,count_weight = <0x100>;
+                nvidia,max_dram_channels = /bits/ 8 <16>;
+                nvidia,type = <1>;
+                clocks = <&bpmp_clks TEGRA234_CLK_EMC>;
+                clock-names = "emc";
+            };
+        };
+     };
+...

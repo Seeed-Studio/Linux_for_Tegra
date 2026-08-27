@@ -1,0 +1,102 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/nvscic2c-pcie-s0-c4-epf/nvidia,tegra-nvscic2c-pcie-epf.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: NVIDIA Chip-to-Chip transfer module for PCIeEP
+
+maintainers:
+  - Manikanta Maddireddy
+
+description: |
+     the compatability = nvidia,tegra-nvscic2c-pcie-epf is mentioned in the following drivers
+        - <TOP>/kernel/nvidia-oot/drivers/misc/nvscic2c-pcie/dt.c
+
+     The following nodes use this compatibility
+        - /nvscic2c-pcie-s0-c4-epf
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra-nvscic2c-pcie-epf
+
+  required:
+    - compatible
+
+properties:
+
+    nvidia,host1x:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x19
+        maximum: 0x19
+
+    nvidia,pcie-edma:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x7c
+        maximum: 0x7c
+
+    nvidia,pci-dev-id:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x22cc
+        maximum: 0x22cc
+
+    nvidia,board-id:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0x0
+
+    nvidia,soc-id:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0x0
+
+    nvidia,cntrlr-id:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x4
+        maximum: 0x5
+
+    nvidia,bar-win-size:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x40000000
+        maximum: 0x40000000
+
+    nvidia,endpoint-db:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - nvscic2c_pcie_s0_c4_1,   16,  00032768, 67108864, 26101
+                - nvscic2c_pcie_s0_c4_2,   16,  00032768, 67108864, 26102
+                - nvscic2c_pcie_s0_c4_3,   16,  00032768, 67108864, 26103
+                - nvscic2c_pcie_s0_c4_4,   16,  00032768, 67108864, 26104
+                - nvscic2c_pcie_s0_c4_5,   16,  00032768, 67108864, 26105
+                - nvscic2c_pcie_s0_c4_6,   16,  00032768, 67108864, 26106
+                - nvscic2c_pcie_s0_c4_7,   16,  00032768, 67108864, 26107
+                - nvscic2c_pcie_s0_c4_8,   16,  00032768, 67108864, 26108
+                - nvscic2c_pcie_s0_c4_9,   16,  00032768, 67108864, 26109
+                - nvscic2c_pcie_s0_c4_10,  16,  00032768, 67108864, 26110
+                - nvscic2c_pcie_s0_c4_11,  16,  00032768, 67108864, 26111
+                - nvscic2c_pcie_s0_c4_12,  16,  00000064, 0, 26112
+
+
+required:
+    - compatible
+
+examples:
+    - |
+        nvscic2c-pcie-s0-c4-epf {
+        };

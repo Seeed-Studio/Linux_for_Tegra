@@ -1,0 +1,116 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/tegra-utc@c4e0000/nvidia,tegra264-utc.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Tegra UART Trace Controller
+
+maintainers:
+  - Suresh Mangipudi
+
+description: |
+     the compatability = nvidia,tegra264-utc is mentioned in the following drivers
+        - <TOP>/kernel/kernel-oot/drivers/tty/serial/tegra-utc.c
+
+     The following nodes use this compatibility
+        - /bus@0/tegra-utc@c4e0000
+        - /bus@0/tegra-utc@c5a0000
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra264-utc
+
+  required:
+    - compatible
+
+properties:
+
+    reg:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Registers are given by a tuple of two values:
+                - register address:
+                - register block size.
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0xc4e0000
+                  maximum: 0xc5a8000
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x8000
+                  maximum: 0x8000
+
+    reg-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - rx
+                - tx
+
+
+    interrupts:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Interrupts are give by a tuple of 3 values:
+                - interrupt specifier (GIC_SPI = 0, GIC_PPI = 1)
+                  definitions in dt-bindings/interrupt-controller/arm-gic.h
+                - interrupt number
+                - trigger type (rising edge, falling edge, both, etc)
+                  definitions in dt-bindings/interrupt-controller/irq.h
+        items:
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x203
+                  maximum: 0x20f
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x4
+                  maximum: 0x4
+
+    current-speed:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x1c200
+        maximum: 0x1c200
+
+required:
+    - compatible
+    - reg
+    - interrupts
+
+examples:
+    - |
+        tegra-utc@c4e0000 {
+            compatible = "nvidia,tegra264-utc";
+            reg = <0x0 0x0c4e8000 0x0 0x8000>,
+                  <0x0 0x0c4e0000 0x0 0x8000>;
+            reg-names = "rx, tx";
+            interrupts = <GIC_SPI 515 IRQ_TYPE_LEVEL_HIGH>;
+            current-speed = <115200>;
+            status = "disabled";
+        };

@@ -1,0 +1,86 @@
+# SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/soc/nvidia/tegra/fuse-burn.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: NVIDIA Tegra fuse burn DT binding
+
+maintainers:
+  - Laxman Dewangan <ldewangan@nvidia.com>
+
+description: |
+   This driver burn the fuse on NVIDIA Tegra SOCs.
+
+properties:
+  compatible:
+    enum:
+      - nvidia,tegra194-efuse-burn
+      - nvidia,tegra234-efuse-burn
+
+  reg:
+    items:
+      - description: Base register address and size of the MISC.
+      - description: Base register address and size of the Fuse.
+
+  clocks:
+    maxItems: 2
+    description: |
+       Two entries, first one is for fuse clock and secon one is for the PGM clock.
+
+  clock-names:
+     description: |
+        Name of the clock source. The valid names are "fuse-clk" and "pgm-clk".
+
+  nvidia,temp-range:
+     $ref: /schemas/types.yaml#/definitions/uint32-array
+     description: |
+        Temperature range in degC. It has two entries for lower and upper range.
+
+  nvidia,redundant-aid-war:
+     $ref: /schemas/types.yaml#/definitions/flag
+     description: |
+        If this property present then add WAR for the AID fuse to have redundancy.
+
+  thermal-zone:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    description: |
+       Thermal zone ID for the fuse.
+
+  thermal-zone-type:
+    $ref: /schemas/types.yaml#/definitions/string
+    description: |
+       Thermal zone type.
+
+  nvidia,bpmp:
+    $ref: /schemas/types.yaml#/definitions/phandle
+    description: |
+      Handle of the BPMP node.
+
+required:
+  - compatible
+  - reg
+  - clocks
+  - clock-names
+  - nvidia,bpmp
+
+unevaluatedProperties: false
+
+examples:
+  - |
+    #define TEGRA234_CLK_FUSE         40U
+    #define TEGRA234_CLK_CLK_M        14U
+    soc {
+        #address-cells = <2>;
+        #size-cells = <2>;
+        efuse-burn@3810000 {
+           compatible = "nvidia,tegra234-efuse-burn";
+           reg = <0x0 0x0c3a0000 0x0 0x10000>,
+                 <0x0 0x03810000 0x0 0x19000>;
+           clocks = <&bpmp_clks TEGRA234_CLK_FUSE>,
+                 <&bpmp_clks TEGRA234_CLK_CLK_M>;
+           clock-names = "fuse-clk", "pgm-clk";
+           nvidia,bpmp = <&bpmp>;
+        };
+    };
+...
