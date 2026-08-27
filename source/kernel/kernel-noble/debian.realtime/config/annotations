@@ -1,0 +1,205 @@
+# Menu: HEADER
+# FORMAT: 4
+# ARCH: amd64 arm64
+# FLAVOUR: amd64-realtime arm64-realtime
+
+include "../../debian.master/config/annotations"
+
+CONFIG_ARM64_CONTPTE                            policy<{'arm64': '-'}>
+CONFIG_ARM64_CONTPTE                            note<'Not supported in the real-time kernel'>
+
+CONFIG_BLK_CGROUP_IOLATENCY                     policy<{'amd64': 'y', 'arm64': 'y'}>
+CONFIG_BLK_CGROUP_IOLATENCY                     note<'LP: #1961588'>
+
+CONFIG_DEBUG_PREEMPT                            policy<{'amd64': 'n', 'arm64': 'n'}>
+CONFIG_DEBUG_PREEMPT                            note<'LP: #2071853'>
+
+CONFIG_IRQ_TIME_ACCOUNTING                      policy<{'amd64': 'y', 'arm64': 'y'}>
+CONFIG_IRQ_TIME_ACCOUNTING                      note<'LP: #1961588'>
+
+CONFIG_KVM                                      policy<{'amd64': 'm', 'arm64': 'n'}>
+CONFIG_KVM                                      note<'must be disabled on arm64 to enable PREEMPT_RT'>
+
+CONFIG_NO_HZ_IDLE                               policy<{'amd64': 'n', 'arm64': 'n'}>
+CONFIG_NO_HZ_IDLE                               note<'LP:1413968'>
+
+CONFIG_NUMA_BALANCING_DEFAULT_ENABLED           policy<{'amd64': '-', 'arm64': '-'}>
+CONFIG_NUMA_BALANCING_DEFAULT_ENABLED           note<'LP:1557690'>
+
+CONFIG_OSNOISE_TRACER                           policy<{'amd64': 'y', 'arm64': 'y'}>
+CONFIG_OSNOISE_TRACER                           note<'LP: #1961588'>
+
+CONFIG_PREEMPT_DYNAMIC                          policy<{'amd64': '-', 'arm64': '-'}>
+CONFIG_PREEMPT_DYNAMIC                          note<'LP: #2051342'>
+
+CONFIG_PREEMPT_RT                               policy<{'amd64': 'y', 'arm64': 'y'}>
+CONFIG_PREEMPT_RT                               note<'must be enabled in the real-time kernel'>
+
+CONFIG_RCU_LAZY                                 policy<{'amd64': 'n', 'arm64': 'n'}>
+CONFIG_RCU_LAZY                                 note<'LP: #2051342'>
+
+CONFIG_RCU_LAZY_DEFAULT_OFF                     policy<{'amd64': '-', 'arm64': '-'}>
+CONFIG_RCU_LAZY_DEFAULT_OFF                     note<'LP: #2051342'>
+
+CONFIG_RUST                                     policy<{'amd64': '-'}>
+CONFIG_RUST                                     note<'Disable Rust for realtime'>
+
+CONFIG_RUST_IS_AVAILABLE                        policy<{'amd64': '-', 'arm64': '-'}>
+CONFIG_RUST_IS_AVAILABLE                        note<'Disable Rust for realtime'>
+
+CONFIG_TIMERLAT_TRACER                          policy<{'amd64': 'y', 'arm64': 'y'}>
+CONFIG_TIMERLAT_TRACER                          note<'LP: #1961588'>
+
+CONFIG_WQ_POWER_EFFICIENT_DEFAULT               policy<{'amd64': 'n', 'arm64': 'n'}>
+CONFIG_WQ_POWER_EFFICIENT_DEFAULT               note<'LP: #1961588'>
+
+
+# ---- Annotations without notes ----
+
+CONFIG_AAEON_IWMI_WDT                           policy<{'amd64': '-'}>
+CONFIG_ARCH_ENABLE_THP_MIGRATION                policy<{'amd64': '-', 'arm64': '-'}>
+CONFIG_ARCH_INLINE_READ_LOCK                    policy<{'arm64': '-'}>
+CONFIG_ARCH_INLINE_READ_LOCK_BH                 policy<{'arm64': '-'}>
+CONFIG_ARCH_INLINE_READ_LOCK_IRQ                policy<{'arm64': '-'}>
+CONFIG_ARCH_INLINE_READ_LOCK_IRQSAVE            policy<{'arm64': '-'}>
+CONFIG_ARCH_INLINE_READ_UNLOCK                  policy<{'arm64': '-'}>
+CONFIG_ARCH_INLINE_READ_UNLOCK_BH               policy<{'arm64': '-'}>
+CONFIG_ARCH_INLINE_READ_UNLOCK_IRQ              policy<{'arm64': '-'}>
+CONFIG_ARCH_INLINE_READ_UNLOCK_IRQRESTORE       policy<{'arm64': '-'}>
+CONFIG_ARCH_INLINE_SPIN_LOCK                    policy<{'arm64': '-'}>
+CONFIG_ARCH_INLINE_SPIN_LOCK_BH                 policy<{'arm64': '-'}>
+CONFIG_ARCH_INLINE_SPIN_LOCK_IRQ                policy<{'arm64': '-'}>
+CONFIG_ARCH_INLINE_SPIN_LOCK_IRQSAVE            policy<{'arm64': '-'}>
+CONFIG_ARCH_INLINE_SPIN_TRYLOCK                 policy<{'arm64': '-'}>
+CONFIG_ARCH_INLINE_SPIN_TRYLOCK_BH              policy<{'arm64': '-'}>
+CONFIG_ARCH_INLINE_SPIN_UNLOCK                  policy<{'arm64': '-'}>
+CONFIG_ARCH_INLINE_SPIN_UNLOCK_BH               policy<{'arm64': '-'}>
+CONFIG_ARCH_INLINE_SPIN_UNLOCK_IRQ              policy<{'arm64': '-'}>
+CONFIG_ARCH_INLINE_SPIN_UNLOCK_IRQRESTORE       policy<{'arm64': '-'}>
+CONFIG_ARCH_INLINE_WRITE_LOCK                   policy<{'arm64': '-'}>
+CONFIG_ARCH_INLINE_WRITE_LOCK_BH                policy<{'arm64': '-'}>
+CONFIG_ARCH_INLINE_WRITE_LOCK_IRQ               policy<{'arm64': '-'}>
+CONFIG_ARCH_INLINE_WRITE_LOCK_IRQSAVE           policy<{'arm64': '-'}>
+CONFIG_ARCH_INLINE_WRITE_UNLOCK                 policy<{'arm64': '-'}>
+CONFIG_ARCH_INLINE_WRITE_UNLOCK_BH              policy<{'arm64': '-'}>
+CONFIG_ARCH_INLINE_WRITE_UNLOCK_IRQ             policy<{'arm64': '-'}>
+CONFIG_ARCH_INLINE_WRITE_UNLOCK_IRQRESTORE      policy<{'arm64': '-'}>
+CONFIG_ARCH_SUPPORTS_RT                         policy<{'amd64': 'y', 'arm64': 'y'}>
+CONFIG_ARCH_WANT_PMD_MKWRITE                    policy<{'amd64': '-', 'arm64': '-'}>
+CONFIG_ARM64_ERRATUM_834220                     policy<{'arm64': '-'}>
+CONFIG_AX88796B_RUST_PHY                        policy<{'amd64': '-'}>
+CONFIG_BINDGEN_VERSION_TEXT                     policy<{'amd64': '-'}>
+CONFIG_CC_VERSION_TEXT                          policy<{'amd64': '"x86_64-linux-gnu-gcc-13 (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0"', 'arm64': '"aarch64-linux-gnu-gcc-13 (Ubuntu 13.3.0-6ubuntu2~24.04) 13.3.0"'}>
+CONFIG_CEC_GPIO                                 policy<{'amd64': 'm', 'arm64': 'n'}>
+CONFIG_CEC_PIN                                  policy<{'amd64': 'y', 'arm64': '-'}>
+CONFIG_CEC_PIN_ERROR_INJ                        policy<{'amd64': 'y', 'arm64': '-'}>
+CONFIG_COMPACT_UNEVICTABLE_DEFAULT              policy<{'amd64': '0', 'arm64': '0'}>
+CONFIG_CONSTRUCTORS                             policy<{'amd64': '-'}>
+CONFIG_CONTEXT_TRACKING_FORCE                   policy<{'amd64': '-', 'arm64': '-'}>
+CONFIG_DEBUG_MUTEXES                            policy<{'amd64': '-', 'arm64': '-'}>
+CONFIG_DEV_DAX                                  policy<{'amd64': '-', 'arm64': '-'}>
+CONFIG_DEV_DAX_CXL                              policy<{'amd64': '-', 'arm64': '-'}>
+CONFIG_DEV_DAX_KMEM                             policy<{'amd64': '-', 'arm64': '-'}>
+CONFIG_DEV_DAX_PMEM                             policy<{'amd64': '-', 'arm64': '-'}>
+CONFIG_DEV_DAX_PMEM_COMPAT                      policy<{'amd64': '-', 'arm64': '-'}>
+CONFIG_FORCE_MAX_ZONEORDER                      policy<{'arm64': '-'}>
+CONFIG_FS_DAX_PMD                               policy<{'amd64': '-', 'arm64': '-'}>
+CONFIG_GPIO_AAEON                               policy<{'amd64': 'n'}>
+CONFIG_GUEST_PERF_EVENTS                        policy<{'amd64': 'y', 'arm64': '-'}>
+CONFIG_HAVE_KVM_ARCH_TLB_FLUSH_ALL              policy<{'arm64': '-'}>
+CONFIG_HAVE_KVM_CPU_RELAX_INTERCEPT             policy<{'amd64': 'y', 'arm64': '-'}>
+CONFIG_HAVE_KVM_DIRTY_RING                      policy<{'amd64': 'y', 'arm64': '-'}>
+CONFIG_HAVE_KVM_DIRTY_RING_ACQ_REL              policy<{'amd64': 'y', 'arm64': '-'}>
+CONFIG_HAVE_KVM_EVENTFD                         policy<{'amd64': '-', 'arm64': '-'}>
+CONFIG_HAVE_KVM_IRQCHIP                         policy<{'amd64': 'y', 'arm64': '-'}>
+CONFIG_HAVE_KVM_IRQFD                           policy<{'amd64': '-', 'arm64': '-'}>
+CONFIG_HAVE_KVM_IRQ_BYPASS                      policy<{'amd64': 'y', 'arm64': '-'}>
+CONFIG_HAVE_KVM_IRQ_ROUTING                     policy<{'amd64': 'y', 'arm64': '-'}>
+CONFIG_HAVE_KVM_MSI                             policy<{'amd64': 'y', 'arm64': '-'}>
+CONFIG_HAVE_KVM_VCPU_RUN_PID_CHANGE             policy<{'arm64': '-'}>
+CONFIG_HAVE_PAGE_SIZE_4KB                       policy<{'amd64': 'y', 'arm64': 'y'}>
+CONFIG_HAVE_PREEMPT_AUTO                        policy<{'amd64': 'y'}>
+CONFIG_HAVE_PREEMPT_LAZY                        policy<{'amd64': '-', 'arm64': '-'}>
+CONFIG_HAVE_SCHED_AVG_IRQ                       policy<{'amd64': 'y', 'arm64': 'y'}>
+CONFIG_INLINE_READ_LOCK                         policy<{'arm64': '-'}>
+CONFIG_INLINE_READ_LOCK_BH                      policy<{'arm64': '-'}>
+CONFIG_INLINE_READ_LOCK_IRQ                     policy<{'arm64': '-'}>
+CONFIG_INLINE_READ_LOCK_IRQSAVE                 policy<{'arm64': '-'}>
+CONFIG_INLINE_READ_UNLOCK                       policy<{'amd64': '-', 'arm64': '-'}>
+CONFIG_INLINE_READ_UNLOCK_BH                    policy<{'arm64': '-'}>
+CONFIG_INLINE_READ_UNLOCK_IRQ                   policy<{'amd64': '-', 'arm64': '-'}>
+CONFIG_INLINE_READ_UNLOCK_IRQRESTORE            policy<{'arm64': '-'}>
+CONFIG_INLINE_SPIN_LOCK                         policy<{'arm64': '-'}>
+CONFIG_INLINE_SPIN_LOCK_BH                      policy<{'arm64': '-'}>
+CONFIG_INLINE_SPIN_LOCK_IRQ                     policy<{'arm64': '-'}>
+CONFIG_INLINE_SPIN_LOCK_IRQSAVE                 policy<{'arm64': '-'}>
+CONFIG_INLINE_SPIN_TRYLOCK                      policy<{'arm64': '-'}>
+CONFIG_INLINE_SPIN_TRYLOCK_BH                   policy<{'arm64': '-'}>
+CONFIG_INLINE_SPIN_UNLOCK_BH                    policy<{'arm64': '-'}>
+CONFIG_INLINE_SPIN_UNLOCK_IRQ                   policy<{'amd64': '-', 'arm64': '-'}>
+CONFIG_INLINE_SPIN_UNLOCK_IRQRESTORE            policy<{'arm64': '-'}>
+CONFIG_INLINE_WRITE_LOCK                        policy<{'arm64': '-'}>
+CONFIG_INLINE_WRITE_LOCK_BH                     policy<{'arm64': '-'}>
+CONFIG_INLINE_WRITE_LOCK_IRQ                    policy<{'arm64': '-'}>
+CONFIG_INLINE_WRITE_LOCK_IRQSAVE                policy<{'arm64': '-'}>
+CONFIG_INLINE_WRITE_UNLOCK                      policy<{'amd64': '-', 'arm64': '-'}>
+CONFIG_INLINE_WRITE_UNLOCK_BH                   policy<{'arm64': '-'}>
+CONFIG_INLINE_WRITE_UNLOCK_IRQ                  policy<{'amd64': '-', 'arm64': '-'}>
+CONFIG_INLINE_WRITE_UNLOCK_IRQRESTORE           policy<{'arm64': '-'}>
+CONFIG_IRQ_BYPASS_MANAGER                       policy<{'amd64': 'm', 'arm64': 'm'}>
+CONFIG_KVM_COMMON                               policy<{'amd64': 'y', 'arm64': '-'}>
+CONFIG_KVM_GENERIC_DIRTYLOG_READ_PROTECT        policy<{'amd64': 'y', 'arm64': '-'}>
+CONFIG_KVM_GENERIC_HARDWARE_ENABLING            policy<{'amd64': 'y', 'arm64': '-'}>
+CONFIG_KVM_GENERIC_MMU_NOTIFIER                 policy<{'amd64': 'y', 'arm64': '-'}>
+CONFIG_KVM_MMIO                                 policy<{'amd64': 'y', 'arm64': '-'}>
+CONFIG_KVM_VFIO                                 policy<{'amd64': 'y', 'arm64': '-'}>
+CONFIG_KVM_XFER_TO_GUEST_WORK                   policy<{'amd64': 'y', 'arm64': '-'}>
+CONFIG_LEDS_AAEON                               policy<{'amd64': 'n'}>
+CONFIG_LEDS_TRIGGER_CPU                         policy<{'amd64': '-', 'arm64': '-'}>
+CONFIG_MARVELL_GTI_WDT                          policy<{'arm64': 'y'}>
+CONFIG_MESON_EFUSE                              policy<{'arm64': '-'}>
+CONFIG_MESON_SECURE_PM_DOMAINS                  policy<{'arm64': 'm'}>
+CONFIG_MESON_SM                                 policy<{'arm64': 'm'}>
+CONFIG_MFD_AAEON                                policy<{'amd64': 'n'}>
+CONFIG_NEED_KVM_DIRTY_RING_WITH_BITMAP          policy<{'arm64': '-'}>
+CONFIG_NUMA_BALANCING                           policy<{'amd64': '-', 'arm64': '-'}>
+CONFIG_NVHE_EL2_DEBUG                           policy<{'arm64': '-'}>
+CONFIG_PAGE_SHIFT                               policy<{'amd64': '12', 'arm64': '12'}>
+CONFIG_PAGE_SIZE_4KB                            policy<{'amd64': 'y', 'arm64': 'y'}>
+CONFIG_PREEMPTIRQ_TRACEPOINTS                   policy<{'amd64': 'y'}>
+CONFIG_PREEMPT_AUTO                             policy<{'amd64': 'n'}>
+CONFIG_PREEMPT_BUILD                            policy<{'amd64': 'y', 'arm64': '-'}>
+CONFIG_PREEMPT_BUILD_AUTO                       policy<{'amd64': 'y'}>
+CONFIG_PREEMPT_LAZY                             policy<{'amd64': '-', 'arm64': '-'}>
+CONFIG_PREEMPT_NOTIFIERS                        policy<{'amd64': 'y', 'arm64': '-'}>
+CONFIG_PREEMPT_TRACER                           policy<{'amd64': 'y', 'arm64': 'n'}>
+CONFIG_PREEMPT_VOLUNTARY                        policy<{'amd64': 'n', 'arm64': 'n'}>
+CONFIG_QUEUED_RWLOCKS                           policy<{'amd64': '-', 'arm64': '-'}>
+CONFIG_RCU_BOOST                                policy<{'amd64': 'y', 'arm64': 'y'}>
+CONFIG_RCU_BOOST_DELAY                          policy<{'amd64': '500', 'arm64': '500'}>
+CONFIG_RCU_NOCB_CPU_CB_BOOST                    policy<{'amd64': 'y', 'arm64': 'y'}>
+CONFIG_READ_ONLY_THP_FOR_FS                     policy<{'amd64': '-', 'arm64': '-'}>
+CONFIG_RING_BUFFER_ALLOW_SWAP                   policy<{'amd64': 'y'}>
+CONFIG_RUSTC_VERSION_TEXT                       policy<{'amd64': '-'}>
+CONFIG_RUST_BUILD_ASSERT_ALLOW                  policy<{'amd64': '-'}>
+CONFIG_RUST_DEBUG_ASSERTIONS                    policy<{'amd64': '-'}>
+CONFIG_RUST_OVERFLOW_CHECKS                     policy<{'amd64': '-'}>
+CONFIG_RUST_PHYLIB_ABSTRACTIONS                 policy<{'amd64': '-'}>
+CONFIG_RV_MON_WIP                               policy<{'amd64': 'n'}>
+CONFIG_SAMPLES_RUST                             policy<{'amd64': '-'}>
+CONFIG_SENSORS_AAEON                            policy<{'amd64': 'n'}>
+CONFIG_SLAB                                     policy<{'amd64': '-', 'arm64': '-'}>
+CONFIG_SLAB_DEPRECATED                          policy<{'amd64': '-', 'arm64': '-'}>
+CONFIG_SLOB                                     policy<{'amd64': '-', 'arm64': '-'}>
+CONFIG_SOFTIRQ_ON_OWN_STACK                     policy<{'amd64': '-', 'arm64': '-'}>
+CONFIG_TEE_STMM_EFI                             policy<{'arm64': 'n'}>
+CONFIG_TEST_HMM                                 policy<{'amd64': '-', 'arm64': '-'}>
+CONFIG_THP_SWAP                                 policy<{'amd64': '-', 'arm64': '-'}>
+CONFIG_TICK_CPU_ACCOUNTING                      policy<{'amd64': '-', 'arm64': '-'}>
+CONFIG_TRACER_SNAPSHOT_PER_CPU_SWAP             policy<{'amd64': 'y', 'arm64': 'n'}>
+CONFIG_TRACE_PREEMPT_TOGGLE                     policy<{'amd64': 'y'}>
+CONFIG_TRANSPARENT_HUGEPAGE                     policy<{'amd64': '-', 'arm64': '-'}>
+CONFIG_TRANSPARENT_HUGEPAGE_ALWAYS              policy<{'amd64': '-', 'arm64': '-'}>
+CONFIG_TRANSPARENT_HUGEPAGE_MADVISE             policy<{'amd64': '-', 'arm64': '-'}>
+CONFIG_TRANSPARENT_HUGEPAGE_NEVER               policy<{'amd64': '-', 'arm64': '-'}>
+CONFIG_UNINLINE_SPIN_UNLOCK                     policy<{'amd64': 'y', 'arm64': '-'}>

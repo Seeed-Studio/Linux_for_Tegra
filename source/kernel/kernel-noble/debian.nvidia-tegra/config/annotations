@@ -1,0 +1,471 @@
+# Menu: HEADER
+# FORMAT: 4
+# ARCH: arm64
+# FLAVOUR: arm64-nvidia-tegra arm64-nvidia-tegra-rt
+# FLAVOUR_DEP: {'arm64-nvidia-tegra': 'arm64-realtime', 'arm64-nvidia-tegra-rt': 'arm64-realtime'}
+
+include "../../debian.realtime/config/annotations"
+
+CONFIG_ACCESSIBILITY                            policy<{'arm64': 'n'}>
+CONFIG_ACCESSIBILITY                            note<'LP: #1967702'>
+
+CONFIG_ARCH_TEGRA_264_SOC                       policy<{'arm64': 'y'}>
+CONFIG_ARCH_TEGRA_264_SOC                       note<'LP: #2120190'>
+
+CONFIG_ARM_FFA_TRANSPORT                        policy<{'arm64': 'y'}>
+CONFIG_ARM_FFA_TRANSPORT                        note<'LP: #2120190'>
+
+CONFIG_ARM_SMMU_V3_SVA                          policy<{'arm64': 'y'}>
+CONFIG_ARM_SMMU_V3_SVA                          note<'LP: #2120190'>
+
+CONFIG_BACKLIGHT_CLASS_DEVICE                   policy<{'arm64': 'y'}>
+CONFIG_BACKLIGHT_CLASS_DEVICE                   note<'LP: #2120190'>
+
+CONFIG_BINFMT_MISC                              policy<{'arm64': 'y'}>
+CONFIG_BINFMT_MISC                              note<'LP: #2080908'>
+
+CONFIG_CFS_BANDWIDTH                            policy<{'arm64': 'y'}>
+CONFIG_CFS_BANDWIDTH                            note<'LP: #2120190'>
+
+CONFIG_CORESIGHT                                policy<{'arm64': 'm'}>
+CONFIG_CORESIGHT                                note<'LP: #2142340'>
+
+CONFIG_CORESIGHT_CATU                           policy<{'arm64': 'm'}>
+CONFIG_CORESIGHT_CATU                           note<'LP: #2142340'>
+
+CONFIG_CORESIGHT_CPU_DEBUG                      policy<{'arm64': 'm'}>
+CONFIG_CORESIGHT_CPU_DEBUG                      note<'LP: #2142340'>
+
+CONFIG_CORESIGHT_CTI                            policy<{'arm64': 'm'}>
+CONFIG_CORESIGHT_CTI                            note<'LP: #2142340'>
+
+CONFIG_CORESIGHT_LINK_AND_SINK_TMC              policy<{'arm64': 'm'}>
+CONFIG_CORESIGHT_LINK_AND_SINK_TMC              note<'LP: #2142340'>
+
+CONFIG_CORESIGHT_SINK_ETBV10                    policy<{'arm64': 'm'}>
+CONFIG_CORESIGHT_SINK_ETBV10                    note<'LP: #2142340'>
+
+CONFIG_CORESIGHT_SINK_TPIU                      policy<{'arm64': 'm'}>
+CONFIG_CORESIGHT_SINK_TPIU                      note<'LP: #2142340'>
+
+CONFIG_CORESIGHT_SOURCE_ETM4X                   policy<{'arm64': 'm'}>
+CONFIG_CORESIGHT_SOURCE_ETM4X                   note<'LP: #2142340'>
+
+CONFIG_CORESIGHT_STM                            policy<{'arm64': 'm'}>
+CONFIG_CORESIGHT_STM                            note<'LP: #2142340'>
+
+CONFIG_CORESIGHT_TRBE                           policy<{'arm64': 'm'}>
+CONFIG_CORESIGHT_TRBE                           note<'LP: #2142340'>
+
+CONFIG_CRYPTO_USER_API                          policy<{'arm64': 'm'}>
+CONFIG_CRYPTO_USER_API                          note<'LP: #2120190'>
+
+CONFIG_CRYPTO_USER_API_AEAD                     policy<{'arm64': 'm'}>
+CONFIG_CRYPTO_USER_API_AEAD                     note<'LP: #2120190'>
+
+CONFIG_CRYPTO_USER_API_HASH                     policy<{'arm64': 'm'}>
+CONFIG_CRYPTO_USER_API_HASH                     note<'LP: #2120190'>
+
+CONFIG_CRYPTO_USER_API_RNG                      policy<{'arm64': 'm'}>
+CONFIG_CRYPTO_USER_API_RNG                      note<'LP: #2120190'>
+
+CONFIG_CRYPTO_USER_API_SKCIPHER                 policy<{'arm64': 'm'}>
+CONFIG_CRYPTO_USER_API_SKCIPHER                 note<'LP: #2120190'>
+
+CONFIG_CXL_BUS                                  policy<{'arm64': 'y'}>
+CONFIG_CXL_BUS                                  note<'LP: #2141529'>
+
+CONFIG_DMATEST                                  policy<{'arm64': 'm'}>
+CONFIG_DMATEST                                  note<'LP: #2060337'>
+
+CONFIG_DRM_SIMPLEDRM                            policy<{'arm64': 'y'}>
+CONFIG_DRM_SIMPLEDRM                            note<'LP: #2136605'>
+
+CONFIG_EXFAT_FS                                 policy<{'arm64': 'y'}>
+CONFIG_EXFAT_FS                                 note<'LP: #2120190'>
+
+CONFIG_FB_EFI                                   policy<{'arm64': 'y'}>
+CONFIG_FB_EFI                                   note<'LP: #2120190'>
+
+CONFIG_FRAME_WARN                               policy<{'arm64': '2048'}>
+CONFIG_FRAME_WARN                               note<'LP: #2109728'>
+
+CONFIG_INFINIBAND                               policy<{'arm64': 'm'}>
+CONFIG_INFINIBAND                               note<'LP: #2120190'>
+
+CONFIG_INFINIBAND_IPOIB                         policy<{'arm64': 'm'}>
+CONFIG_INFINIBAND_IPOIB                         note<'LP: #2120190'>
+
+CONFIG_INFINIBAND_USER_ACCESS                   policy<{'arm64': 'm'}>
+CONFIG_INFINIBAND_USER_ACCESS                   note<'LP: #2120190'>
+
+CONFIG_INFINIBAND_USER_MAD                      policy<{'arm64': 'm'}>
+CONFIG_INFINIBAND_USER_MAD                      note<'LP: #2120190'>
+
+CONFIG_INTEGRITY_ASYMMETRIC_KEYS                policy<{'arm64': 'y'}>
+CONFIG_INTEGRITY_ASYMMETRIC_KEYS                note<'LP: #2120190'>
+
+CONFIG_INTEGRITY_PLATFORM_KEYRING               policy<{'arm64': 'y'}>
+CONFIG_INTEGRITY_PLATFORM_KEYRING               note<'LP: #2120190'>
+
+CONFIG_INTEGRITY_SIGNATURE                      policy<{'arm64': 'y'}>
+CONFIG_INTEGRITY_SIGNATURE                      note<'LP: #2120190'>
+
+CONFIG_IP6_NF_IPTABLES                          policy<{'arm64': 'm'}>
+CONFIG_IP6_NF_IPTABLES                          note<'LP: #2120190'>
+
+CONFIG_IP6_NF_MATCH_HL                          policy<{'arm64': 'm'}>
+CONFIG_IP6_NF_MATCH_HL                          note<'LP: #2120190'>
+
+CONFIG_IP6_NF_MATCH_RT                          policy<{'arm64': 'm'}>
+CONFIG_IP6_NF_MATCH_RT                          note<'LP: #2120190'>
+
+CONFIG_IP_ADVANCED_ROUTER                       policy<{'arm64': 'y'}>
+CONFIG_IP_ADVANCED_ROUTER                       note<'LP: #2120190'>
+
+CONFIG_IP_MULTIPLE_TABLES                       policy<{'arm64': 'y'}>
+CONFIG_IP_MULTIPLE_TABLES                       note<'LP: #2120190'>
+
+CONFIG_IP_NF_MATCH_RPFILTER                     policy<{'arm64': 'm'}>
+CONFIG_IP_NF_MATCH_RPFILTER                     note<'LP: #2120190'>
+
+CONFIG_IP_NF_TARGET_REDIRECT                    policy<{'arm64': 'm'}>
+CONFIG_IP_NF_TARGET_REDIRECT                    note<'LP: #2120190'>
+
+CONFIG_IP_NF_TARGET_REJECT                      policy<{'arm64': 'm'}>
+CONFIG_IP_NF_TARGET_REJECT                      note<'LP: #2120190'>
+
+CONFIG_IP_SCTP                                  policy<{'arm64': 'm'}>
+CONFIG_IP_SCTP                                  note<'LP: #2120190'>
+
+CONFIG_IP_SET                                   policy<{'arm64': 'm'}>
+CONFIG_IP_SET                                   note<'LP: #2120190'>
+
+CONFIG_IP_SET_MAX                               policy<{'arm64': '512'}>
+CONFIG_IP_SET_MAX                               note<'LP: #2127135'>
+
+CONFIG_ISO9660_FS                               policy<{'arm64': 'y'}>
+CONFIG_ISO9660_FS                               note<'LP: #2080908'>
+
+CONFIG_KVM                                      policy<{'arm64': 'y'}>
+CONFIG_KVM                                      note<'LP: #2127981'>
+
+CONFIG_LATENCYTOP                               policy<{'arm64': 'y'}>
+CONFIG_LATENCYTOP                               note<'https://lists.ubuntu.com/archives/kernel-team/2014-July/045006.html, LP#1655986'>
+
+CONFIG_LOGO                                     policy<{'arm64': 'n'}>
+CONFIG_LOGO                                     note<'LP: #2120190'>
+
+CONFIG_MLX5_INFINIBAND                          policy<{'arm64': 'm'}>
+CONFIG_MLX5_INFINIBAND                          note<'LP: #2120190'>
+
+CONFIG_MMC_SDHCI                                policy<{'arm64': 'y'}>
+CONFIG_MMC_SDHCI                                note<'LP: #2080908'>
+
+CONFIG_MMC_SDHCI_PLTFM                          policy<{'arm64': 'y'}>
+CONFIG_MMC_SDHCI_PLTFM                          note<'LP: #2080908'>
+
+CONFIG_MMC_SDHCI_TEGRA                          policy<{'arm64': 'y'}>
+CONFIG_MMC_SDHCI_TEGRA                          note<'LP: #2080908'>
+
+CONFIG_MMC_TEST                                 policy<{'arm64': 'm'}>
+CONFIG_MMC_TEST                                 note<'LP: #2072591'>
+
+CONFIG_NETFILTER_XT_MARK                        policy<{'arm64': 'm'}>
+CONFIG_NETFILTER_XT_MARK                        note<'LP: #2120190'>
+
+CONFIG_NETFILTER_XT_MATCH_BPF                   policy<{'arm64': 'm'}>
+CONFIG_NETFILTER_XT_MATCH_BPF                   note<'LP: #2120190'>
+
+CONFIG_NETFILTER_XT_MATCH_COMMENT               policy<{'arm64': 'm'}>
+CONFIG_NETFILTER_XT_MATCH_COMMENT               note<'LP: #2120190'>
+
+CONFIG_NETFILTER_XT_MATCH_HASHLIMIT             policy<{'arm64': 'm'}>
+CONFIG_NETFILTER_XT_MATCH_HASHLIMIT             note<'LP: #2120190'>
+
+CONFIG_NETFILTER_XT_MATCH_IPVS                  policy<{'arm64': 'm'}>
+CONFIG_NETFILTER_XT_MATCH_IPVS                  note<'LP: #2120190'>
+
+CONFIG_NETFILTER_XT_MATCH_LIMIT                 policy<{'arm64': 'm'}>
+CONFIG_NETFILTER_XT_MATCH_LIMIT                 note<'LP: #2120190'>
+
+CONFIG_NETFILTER_XT_MATCH_STATISTIC             policy<{'arm64': 'm'}>
+CONFIG_NETFILTER_XT_MATCH_STATISTIC             note<'LP: #2120190'>
+
+CONFIG_NETFILTER_XT_MATCH_U32                   policy<{'arm64': 'm'}>
+CONFIG_NETFILTER_XT_MATCH_U32                   note<'LP: #2120190'>
+
+CONFIG_NETFILTER_XT_SET                         policy<{'arm64': 'm'}>
+CONFIG_NETFILTER_XT_SET                         note<'LP: #2120190'>
+
+CONFIG_NET_CLS_BASIC                            policy<{'arm64': 'y'}>
+CONFIG_NET_CLS_BASIC                            note<'LP: #2127135'>
+
+CONFIG_NET_CLS_BPF                              policy<{'arm64': 'y'}>
+CONFIG_NET_CLS_BPF                              note<'LP: #2127135'>
+
+CONFIG_NET_CLS_FLOWER                           policy<{'arm64': 'y'}>
+CONFIG_NET_CLS_FLOWER                           note<'LP: #2127135'>
+
+CONFIG_NET_CLS_FW                               policy<{'arm64': 'y'}>
+CONFIG_NET_CLS_FW                               note<'LP: #2127135'>
+
+CONFIG_NET_CLS_U32                              policy<{'arm64': 'y'}>
+CONFIG_NET_CLS_U32                              note<'LP: #2127135'>
+
+CONFIG_NET_SCH_CODEL                            policy<{'arm64': 'y'}>
+CONFIG_NET_SCH_CODEL                            note<'LP: #2127135'>
+
+CONFIG_NET_SCH_FQ                               policy<{'arm64': 'y'}>
+CONFIG_NET_SCH_FQ                               note<'LP: #2127135'>
+
+CONFIG_NET_SCH_FQ_CODEL                         policy<{'arm64': 'y'}>
+CONFIG_NET_SCH_FQ_CODEL                         note<'LP: #2127135'>
+
+CONFIG_NET_SCH_HFSC                             policy<{'arm64': 'y'}>
+CONFIG_NET_SCH_HFSC                             note<'LP: #2127135'>
+
+CONFIG_NET_SCH_HTB                              policy<{'arm64': 'y'}>
+CONFIG_NET_SCH_HTB                              note<'LP: #2127135'>
+
+CONFIG_NET_SCH_INGRESS                          policy<{'arm64': 'y'}>
+CONFIG_NET_SCH_INGRESS                          note<'LP: #2127135'>
+
+CONFIG_NET_SCH_PIE                              policy<{'arm64': 'y'}>
+CONFIG_NET_SCH_PIE                              note<'LP: #2127135'>
+
+CONFIG_NET_SCH_SFQ                              policy<{'arm64': 'y'}>
+CONFIG_NET_SCH_SFQ                              note<'LP: #2127135'>
+
+CONFIG_NET_SCH_TBF                              policy<{'arm64': 'y'}>
+CONFIG_NET_SCH_TBF                              note<'LP: #2127135'>
+
+CONFIG_NFT_COMPAT                               policy<{'arm64': 'm'}>
+CONFIG_NFT_COMPAT                               note<'LP: #2120190'>
+
+CONFIG_NFT_MASQ                                 policy<{'arm64': 'm'}>
+CONFIG_NFT_MASQ                                 note<'LP: #2120190'>
+
+CONFIG_NFT_NAT                                  policy<{'arm64': 'm'}>
+CONFIG_NFT_NAT                                  note<'LP: #2120190'>
+
+CONFIG_NTFS_FS                                  policy<{'arm64': 'y'}>
+CONFIG_NTFS_FS                                  note<'LP: #2080908'>
+
+CONFIG_OVERLAY_FS                               policy<{'arm64': 'y'}>
+CONFIG_OVERLAY_FS                               note<'LP: #2072591'>
+
+CONFIG_PCIE_ECRC                                policy<{'arm64': 'y'}>
+CONFIG_PCIE_ECRC                                note<'LP: #2080908'>
+
+CONFIG_PCIE_EDR                                 policy<{'arm64': 'n'}>
+CONFIG_PCIE_EDR                                 note<'LP: #1965241'>
+
+CONFIG_PCI_MESON                                policy<{'arm64': 'n'}>
+CONFIG_PCI_MESON                                note<'LP: #2007745'>
+
+CONFIG_PCI_PASID                                policy<{'arm64': 'y'}>
+CONFIG_PCI_PASID                                note<'LP: #2120190'>
+
+CONFIG_PHY_TEGRA_XUSB                           policy<{'arm64': 'y'}>
+CONFIG_PHY_TEGRA_XUSB                           note<'LP: #2080908'>
+
+CONFIG_PINCTRL_TEGRA264                         policy<{'arm64': 'y'}>
+CONFIG_PINCTRL_TEGRA264                         note<'LP: #2120190'>
+
+CONFIG_PPP_ASYNC                                policy<{'arm64': 'y'}>
+CONFIG_PPP_ASYNC                                note<'LP: #2080908'>
+
+CONFIG_PPS_CLIENT_KTIMER                        policy<{'arm64': 'm'}>
+CONFIG_PPS_CLIENT_KTIMER                        note<'LP: #2072591'>
+
+CONFIG_PREEMPT_DYNAMIC                          policy<{'arm64': '-', 'arm64-nvidia-tegra': 'y'}>
+CONFIG_PREEMPT_DYNAMIC                          note<'LP: #2051342'>
+
+CONFIG_PREEMPT_RT                               policy<{'arm64': 'y', 'arm64-nvidia-tegra': 'n'}>
+CONFIG_PREEMPT_RT                               note<'must be enabled in the real-time kernel'>
+
+CONFIG_PSTORE_BLK                               policy<{'arm64': 'y'}>
+CONFIG_PSTORE_BLK                               note<'LP: #2120190'>
+
+CONFIG_PSTORE_CONSOLE                           policy<{'arm64': 'y'}>
+CONFIG_PSTORE_CONSOLE                           note<'LP: #2120190'>
+
+CONFIG_PSTORE_RAM                               policy<{'arm64': 'm'}>
+CONFIG_PSTORE_RAM                               note<'LP: #2120190'>
+
+CONFIG_QFMT_V2                                  policy<{'arm64': 'm'}>
+CONFIG_QFMT_V2                                  note<'LP: #2120190'>
+
+CONFIG_R8169                                    policy<{'arm64': 'n'}>
+CONFIG_R8169                                    note<'LP: 2080908'>
+
+CONFIG_RODATA_FULL_DEFAULT_ENABLED              policy<{'arm64': 'n'}>
+CONFIG_RODATA_FULL_DEFAULT_ENABLED              note<'LP: #2080908'>
+
+CONFIG_SCSI_UFSHCD                              policy<{'arm64': 'y'}>
+CONFIG_SCSI_UFSHCD                              note<'LP: #2127135'>
+
+CONFIG_SCSI_UFSHCD_PLATFORM                     policy<{'arm64': 'y'}>
+CONFIG_SCSI_UFSHCD_PLATFORM                     note<'LP: #2127135'>
+
+CONFIG_SCSI_UFS_DWC_TC_PLATFORM                 policy<{'arm64': 'y'}>
+CONFIG_SCSI_UFS_DWC_TC_PLATFORM                 note<'LP: #2127135'>
+
+CONFIG_SENSORS_INA238                           policy<{'arm64': 'm'}>
+CONFIG_SENSORS_INA238                           note<'LP: #2120190'>
+
+CONFIG_SPEAKUP                                  policy<{'arm64': '-'}>
+CONFIG_SPEAKUP                                  note<'LP: #1967702'>
+
+CONFIG_SYSFB_SIMPLEFB                           policy<{'arm64': 'n'}>
+CONFIG_SYSFB_SIMPLEFB                           note<'LP: #2120190, required for Thor IGX'>
+
+CONFIG_SYSTEM_BLACKLIST_KEYRING                 policy<{'arm64': 'y'}>
+CONFIG_SYSTEM_BLACKLIST_KEYRING                 note<'LP: #2120190'>
+
+CONFIG_TEGRA241_CMDQV                           policy<{'arm64': 'y'}>
+CONFIG_TEGRA241_CMDQV                           note<'LP: #2127135'>
+
+CONFIG_TEGRA_EPL                                policy<{'arm64': 'y'}>
+CONFIG_TEGRA_EPL                                note<'LP: #2072591'>
+
+CONFIG_TEGRA_HV_DRIVER                          policy<{'arm64': 'y'}>
+CONFIG_TEGRA_HV_DRIVER                          note<'LP: #2120190'>
+
+CONFIG_UBSAN                                    policy<{'arm64': 'n'}>
+CONFIG_UBSAN                                    note<'LP#1942215'>
+
+CONFIG_UIO                                      policy<{'arm64': 'm'}>
+CONFIG_UIO                                      note<'LP: #2120190'>
+
+CONFIG_USB_IPHETH                               policy<{'arm64': 'm'}>
+CONFIG_USB_IPHETH                               note<'LP: #2120190'>
+
+CONFIG_USB_NET_RNDIS_HOST                       policy<{'arm64': 'm'}>
+CONFIG_USB_NET_RNDIS_HOST                       note<'LP: #2120190'>
+
+CONFIG_USB_XHCI_TEGRA                           policy<{'arm64': 'y'}>
+CONFIG_USB_XHCI_TEGRA                           note<'LP: #2080908'>
+
+CONFIG_VFIO_PCI                                 policy<{'arm64': 'm'}>
+CONFIG_VFIO_PCI                                 note<'LP: #2120190'>
+
+CONFIG_VIDEO_IMX219                             policy<{'arm64': 'n'}>
+CONFIG_VIDEO_IMX219                             note<'LP: #2072591'>
+
+CONFIG_VIRT_DRIVERS                             policy<{'arm64': 'y'}>
+CONFIG_VIRT_DRIVERS                             note<'LP: #2120190'>
+
+CONFIG_VMWARE_VMCI                              policy<{'arm64': 'n'}>
+CONFIG_VMWARE_VMCI                              note<'LP: #1978145'>
+
+CONFIG_VMWARE_VMCI_VSOCKETS                     policy<{'arm64': '-'}>
+CONFIG_VMWARE_VMCI_VSOCKETS                     note<'LP: #1978145'>
+
+CONFIG_VXLAN                                    policy<{'arm64': 'm'}>
+CONFIG_VXLAN                                    note<'LP: #2120190'>
+
+CONFIG_ZONE_DEVICE                              policy<{'arm64': 'y'}>
+CONFIG_ZONE_DEVICE                              note<'LP: #2120190'>
+
+CONFIG_ZRAM                                     policy<{'arm64': 'm'}>
+CONFIG_ZRAM                                     note<'LP: #2120190'>
+
+
+# ---- Annotations without notes ----
+
+CONFIG_A11Y_BRAILLE_CONSOLE                     policy<{'arm64': '-'}>
+CONFIG_ARM64_ERRATUM_1902691                    policy<{'arm64': 'y'}>
+CONFIG_ARM64_ERRATUM_2038923                    policy<{'arm64': 'y'}>
+CONFIG_ARM64_ERRATUM_2064142                    policy<{'arm64': 'y'}>
+CONFIG_ARM64_ERRATUM_2119858                    policy<{'arm64': 'y'}>
+CONFIG_ARM64_ERRATUM_2139208                    policy<{'arm64': 'y'}>
+CONFIG_ARM64_ERRATUM_2224489                    policy<{'arm64': 'y'}>
+CONFIG_ARM64_ERRATUM_2253138                    policy<{'arm64': 'y'}>
+CONFIG_ARM64_ERRATUM_834220                     policy<{'arm64': 'y'}>
+CONFIG_ARM64_WORKAROUND_TRBE_OVERWRITE_FILL_MODE policy<{'arm64': 'y'}>
+CONFIG_ARM64_WORKAROUND_TRBE_WRITE_OUT_OF_RANGE policy<{'arm64': 'y'}>
+CONFIG_CC_HAS_UBSAN_BOUNDS_STRICT               policy<{'arm64': '-'}>
+CONFIG_COMPACT_UNEVICTABLE_DEFAULT              policy<{'arm64': '0', 'arm64-nvidia-tegra': '1'}>
+CONFIG_CORESIGHT_CPU_DEBUG_DEFAULT_ON           policy<{'arm64': 'n'}>
+CONFIG_CORESIGHT_CTI_INTEGRATION_REGS           policy<{'arm64': 'n'}>
+CONFIG_CORESIGHT_DUMMY                          policy<{'arm64': 'n'}>
+CONFIG_CORESIGHT_LINKS_AND_SINKS                policy<{'arm64': 'm'}>
+CONFIG_CORESIGHT_TPDA                           policy<{'arm64': 'n'}>
+CONFIG_CORESIGHT_TPDM                           policy<{'arm64': 'n'}>
+CONFIG_CRYPTO_DEV_TEGRA                         policy<{'arm64': 'm'}>
+CONFIG_CRYPTO_SUPPORT_TEGRA_TESTS               policy<{'arm64': 'y'}>
+CONFIG_CXL_PORT                                 policy<{'arm64': 'y'}>
+CONFIG_DEBUG_MUTEXES                            policy<{'arm64': '-', 'arm64-nvidia-tegra': 'n'}>
+CONFIG_ETM4X_IMPDEF_FEATURE                     policy<{'arm64': 'n'}>
+CONFIG_GUEST_PERF_EVENTS                        policy<{'arm64': 'y'}>
+CONFIG_HAVE_KVM_CPU_RELAX_INTERCEPT             policy<{'arm64': 'y'}>
+CONFIG_HAVE_KVM_DIRTY_RING                      policy<{'arm64': 'y'}>
+CONFIG_HAVE_KVM_DIRTY_RING_ACQ_REL              policy<{'arm64': 'y'}>
+CONFIG_HAVE_KVM_IRQCHIP                         policy<{'arm64': 'y'}>
+CONFIG_HAVE_KVM_IRQ_BYPASS                      policy<{'arm64': 'y'}>
+CONFIG_HAVE_KVM_IRQ_ROUTING                     policy<{'arm64': 'y'}>
+CONFIG_HAVE_KVM_MSI                             policy<{'arm64': 'y'}>
+CONFIG_HAVE_KVM_VCPU_RUN_PID_CHANGE             policy<{'arm64': 'y'}>
+CONFIG_IRQ_BYPASS_MANAGER                       policy<{'arm64': 'y'}>
+CONFIG_KERNEL_BUILD_WITH_PROD_DEFCONFIG         policy<{'arm64': 'n'}>
+CONFIG_KVM_COMMON                               policy<{'arm64': 'y'}>
+CONFIG_KVM_GENERIC_DIRTYLOG_READ_PROTECT        policy<{'arm64': 'y'}>
+CONFIG_KVM_GENERIC_HARDWARE_ENABLING            policy<{'arm64': 'y'}>
+CONFIG_KVM_GENERIC_MMU_NOTIFIER                 policy<{'arm64': 'y'}>
+CONFIG_KVM_MMIO                                 policy<{'arm64': 'y'}>
+CONFIG_KVM_VFIO                                 policy<{'arm64': 'y'}>
+CONFIG_KVM_XFER_TO_GUEST_WORK                   policy<{'arm64': 'y'}>
+CONFIG_LEDS_TRIGGER_CPU                         policy<{'arm64': '-', 'arm64-nvidia-tegra': 'n'}>
+CONFIG_MMC_CQHCI                                policy<{'arm64': 'y'}>
+CONFIG_NEED_KVM_DIRTY_RING_WITH_BITMAP          policy<{'arm64': 'y'}>
+CONFIG_NUMA_BALANCING                           policy<{'arm64': '-', 'arm64-nvidia-tegra': 'n'}>
+CONFIG_NVHE_EL2_DEBUG                           policy<{'arm64': 'n'}>
+CONFIG_PID_IN_CONTEXTIDR                        policy<{'arm64': 'y'}>
+CONFIG_PREEMPT_BUILD                            policy<{'arm64': '-', 'arm64-nvidia-tegra': 'y'}>
+CONFIG_PREEMPT_NONE                             policy<{'arm64': 'n', 'arm64-nvidia-tegra': 'y'}>
+CONFIG_PREEMPT_NONE_BUILD                       policy<{'arm64-nvidia-tegra': '-'}>
+CONFIG_PREEMPT_NOTIFIERS                        policy<{'arm64': 'y'}>
+CONFIG_PSTORE_BLK_CONSOLE_SIZE                  policy<{'arm64': '64'}>
+CONFIG_PSTORE_ZONE                              policy<{'arm64': 'y'}>
+CONFIG_QUEUED_RWLOCKS                           policy<{'arm64': '-', 'arm64-nvidia-tegra': 'y'}>
+CONFIG_R8169_LEDS                               policy<{'arm64': '-'}>
+CONFIG_RCU_BOOST                                policy<{'arm64': 'y', 'arm64-nvidia-tegra': '-'}>
+CONFIG_RCU_BOOST_DELAY                          policy<{'arm64': '500', 'arm64-nvidia-tegra': '-'}>
+CONFIG_RCU_NOCB_CPU_CB_BOOST                    policy<{'arm64': 'y', 'arm64-nvidia-tegra': '-'}>
+CONFIG_SAMPLE_CORESIGHT_SYSCFG                  policy<{'arm64': 'n'}>
+CONFIG_SCSI_UFSHCD_QUERY_EXPORT                 policy<{'arm64': 'y'}>
+CONFIG_SOC_TEGRA_MSSNVLINK                      policy<{'arm64': 'y'}>
+CONFIG_SOC_TEGRA_PLATFORM_HELPER                policy<{'arm64': '-'}>
+CONFIG_SOFTIRQ_ON_OWN_STACK                     policy<{'arm64': '-', 'arm64-nvidia-tegra': 'y'}>
+CONFIG_SPEAKUP_SYNTH_ACNTSA                     policy<{'arm64': '-'}>
+CONFIG_SPEAKUP_SYNTH_APOLLO                     policy<{'arm64': '-'}>
+CONFIG_SPEAKUP_SYNTH_AUDPTR                     policy<{'arm64': '-'}>
+CONFIG_SPEAKUP_SYNTH_BNS                        policy<{'arm64': '-'}>
+CONFIG_SPEAKUP_SYNTH_DECEXT                     policy<{'arm64': '-'}>
+CONFIG_SPEAKUP_SYNTH_DECTLK                     policy<{'arm64': '-'}>
+CONFIG_SPEAKUP_SYNTH_DUMMY                      policy<{'arm64': '-'}>
+CONFIG_SPEAKUP_SYNTH_LTLK                       policy<{'arm64': '-'}>
+CONFIG_SPEAKUP_SYNTH_SOFT                       policy<{'arm64': '-'}>
+CONFIG_SPEAKUP_SYNTH_SPKOUT                     policy<{'arm64': '-'}>
+CONFIG_SPEAKUP_SYNTH_TXPRT                      policy<{'arm64': '-'}>
+CONFIG_TEGRA_HSIERRRPTINJ                       policy<{'arm64': 'y'}>
+CONFIG_TEGRA_PLATFORM_DEVICES                   policy<{'arm64': 'y'}>
+CONFIG_TEGRA_PROD_LEGACY                        policy<{'arm64': 'y'}>
+CONFIG_TEST_UBSAN                               policy<{'arm64': '-'}>
+CONFIG_TRANSPARENT_HUGEPAGE                     policy<{'arm64': '-', 'arm64-nvidia-tegra': 'n'}>
+CONFIG_UBSAN_ALIGNMENT                          policy<{'arm64': '-'}>
+CONFIG_UBSAN_BOOL                               policy<{'arm64': '-'}>
+CONFIG_UBSAN_BOUNDS                             policy<{'arm64': '-'}>
+CONFIG_UBSAN_BOUNDS_STRICT                      policy<{'arm64': '-'}>
+CONFIG_UBSAN_DIV_ZERO                           policy<{'arm64': '-'}>
+CONFIG_UBSAN_ENUM                               policy<{'arm64': '-'}>
+CONFIG_UBSAN_SANITIZE_ALL                       policy<{'arm64': '-'}>
+CONFIG_UBSAN_SHIFT                              policy<{'arm64': '-'}>
+CONFIG_UBSAN_TRAP                               policy<{'arm64': '-'}>
+CONFIG_UBSAN_UNREACHABLE                        policy<{'arm64': '-'}>
+CONFIG_ULTRASOC_SMB                             policy<{'arm64': 'n'}>
+CONFIG_UNINLINE_SPIN_UNLOCK                     policy<{'arm64': '-', 'arm64-nvidia-tegra': 'y'}>
+CONFIG_USB_CONN_GPIO                            policy<{'arm64': 'y'}>
+CONFIG_USB_GPIO_VBUS                            policy<{'arm64': '-'}>
