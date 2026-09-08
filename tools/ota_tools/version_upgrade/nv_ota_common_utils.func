@@ -1,0 +1,70 @@
+#!/bin/bash
+
+# SPDX-FileCopyrightText: Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: MIT
+#
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the "Software"),
+# to deal in the Software without restriction, including without limitation
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+# DEALINGS IN THE SOFTWARE.
+
+# shellcheck disable=SC2034
+EXT_DEV="external_device"
+# shellcheck disable=SC2034
+INT_DEV="internal_device"
+
+get_interm_dirs()
+{
+	local work_dir="$1"
+	local -n dirs="$2"
+	local dev="${3}"
+	local name_pattern="${4:-}"
+
+	# shellcheck disable=SC2164
+	pushd "${work_dir}/${dev}" > /dev/null
+	while IFS=  read -r dir; do
+		dirs+=("${work_dir}/${dev}/${dir}")
+	done < <(ls -d -v images-*"${name_pattern}")
+	# shellcheck disable=SC2164
+	popd > /dev/null
+}
+
+get_msi_interm_dirs()
+{
+	local work_dir="$1"
+	local dev="$2"
+	local interm_dirs=()
+	get_interm_dirs "${work_dir}" interm_dirs "${dev}" "R35i"
+	echo "${interm_dirs[@]}"
+}
+
+get_first_interm_dir()
+{
+	local work_dir="$1"
+	local dev="$2"
+	local interm_dirs=()
+	get_interm_dirs "${work_dir}" interm_dirs "${dev}"
+	echo "${interm_dirs[0]}"
+}
+
+get_last_interm_dir()
+{
+	local work_dir="$1"
+	local dev="$2"
+	local interm_dirs=()
+	get_interm_dirs "${work_dir}" interm_dirs "${dev}"
+	echo "${interm_dirs[-1]}"
+}

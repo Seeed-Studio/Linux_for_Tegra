@@ -1,0 +1,496 @@
+#!/bin/bash
+
+# SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: MIT
+#
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the "Software"),
+# to deal in the Software without restriction, including without limitation
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+# DEALINGS IN THE SOFTWARE.
+
+# This script defines functions that are required to update "alt" partitions
+
+usage()
+{
+    echo -e "
+Usage: $0 [ -c <sha1sum file> ] <part name> <image file>
+Where,
+    -c <sha1sum file>: specify the sha1 checksum file path of the <image_file>.
+    <part name>: specify the partition name to be updated, support \"esp\" and \"recovery\".
+    <image file>: specify the image file path to be written to <part name>
+
+This script updates the partitions that are a pair of \"<part name>\" and \"<part name>_alt\" with the
+specified \"<image file>\" in following flow:
+1. Check whether \"<part name>\" contains the same image as the latest one.
+If yes, go to step 3 to run cleanup procedure.
+If no, go to step 2 to run update procedure.
+
+2. Run update procedure
+  2.1 Verify the sha1sum of specified \"<image file>\", Write the \"<image file>\" to
+      \"<part name>_alt\" partition.
+  2.2 Swap the partition name of \"<part name>\" and \"<part name>_alt\" partitions.
+      Swap the partition type guid as well if \"<part name>\" is esp.
+  2.3 Go to step 3 to run cleanup procedure.
+
+3. Run cleanup procedure:
+  3.1 Erase the \"<part name>_alt\" partition.
+  3.2 Go to end
+
+For example:
+1. update the esp partition with sha1sum file: $0 -c /opt/esp.img.sha1sum esp /opt/esp.img
+2. update the esp partition without sha1sum file: $0 esp /opt/esp.img
+    "; echo;
+    exit 1
+}
+
+find_partition_node()
+{
+    # Get the device node and partition index of input partition on active boot storage.
+    # Usage:
+    #    find_partition_node ${part_name} {ret_part_node} {ret_part_index} ${target_dir}
+
+    local part_name="${1}"
+    local ret_part_node="${2}"
+    local ret_part_index="${3}"
+    local target_dir="${4}"
+    local matched_dev_node=""
+    local matched_idx=""
+    local mount_dev_name
+    local active_storage
+    local active_dev_node
+    local num_of_partitions
+    local partlabel
+
+    if [ "${target_dir}" != "" ]; then
+        mount_dev_name=$( findmnt -n -o SOURCE --target "${target_dir}" )
+    else
+        mount_dev_name=$( findmnt -n -o SOURCE --target / )
+    fi
+    active_storage=$( lsblk -sl "${mount_dev_name}" -o NAME,TYPE | grep "disk" | awk '{print $1}' )
+    active_dev_node="/dev/${active_storage}"
+    num_of_partitions=$( partx -g "${active_dev_node}" | wc -l )
+
+    # shellcheck disable=SC2086
+    for idx in $(seq 1 ${num_of_partitions});
+    do
+        partlabel=$( sfdisk --part-label "${active_dev_node}" "${idx}" )
+        if [ "${partlabel}" = "${part_name}" ]; then
+            matched_dev_node="${active_dev_node}"
+            matched_idx="${idx}"
+            break
+        fi
+    done
+
+    if [ "${matched_dev_node}" = "" ] || [ "${matched_idx}" = "" ]; then
+        ota_log "Failed to find ${part_name} node. Exiting..."
+        return 1
+    fi
+
+    eval "${ret_part_node}=${matched_dev_node}"
+    eval "${ret_part_index}=${matched_idx}"
+
+    return 0
+}
+
+create_part_node_name()
+{
+    # Provide the specified partition based on the device node and partition index.
+    # Usage:
+    #    create_part_node_name ${node} ${index} {ret_part_node}
+
+    local node="${1}"
+    local index="${2}"
+    local ret_part_node="${3}"
+
+    if [[ "${node}" =~ mmcblk || "${node}" =~ nvme ]]; then
+        eval "${ret_part_node}=${node}p${index}"
+    elif [[ "${node}" =~ sd ]]; then
+        eval "${ret_part_node}=${node}${index}"
+    else
+        ota_log "Error: unsupported device ${node}"
+        return 1
+    fi
+
+    return 0
+}
+
+#
+# Predefined sha1 checksum table for erased partition
+#
+# 1. part_name: partition name
+#
+# 2. part_size: partition size
+#
+# 3. sha1sum: sha1 checksum of erased partition
+#
+erased_part_sha1sum_table=(
+    #part_name       #part_size   #sha1sum
+    'esp             67108864     7986d50bf01b8e40a02997ca049097a4d36ac224'
+    'recovery        83886080     0098a9b84f7a7f61d0ba6fb72b79da3b6d10a488'
+    'recovery-dtb    524288       70cb20ce948a4bae27b047b5596a2030d8371100'
+)
+
+write_partition()
+{
+    # Check and write specified partition with specified image.
+    # Usage:
+    #    write_partition ${part_name} ${part_image} ${part_image_sha1sum} ${target_dir}
+
+    local part_name="${1}"
+    local part_image="${2}"
+    local part_image_sha1sum="${3}"
+    local target_dir="${4}"
+    local node
+    local index
+    local part_node
+    local part_size
+    local part_image_size
+
+    ota_log "Start checking and writing ${part_name}."
+
+    # Verify image
+    if ! sha1sum_verify "${part_image}" "${part_image_sha1sum}"; then
+        ota_log "Failed to run \"sha1sum_verify ${part_image} ${part_image_sha1sum}\""
+        return 1
+    fi
+
+    # Check whether partition ${part_name} exist
+    if ! find_partition_node "${part_name}" "node" "index" "${target_dir}"; then
+        return 1
+    fi
+    if ! create_part_node_name "${node}" "${index}" "part_node"; then
+        return 1
+    fi
+
+    # Verify image size is less than partition size
+    # shellcheck disable=SC2012
+    part_image_size=$( ls -al "${part_image}" | cut -d\  -f 5 )
+    part_size=$( blockdev -q --getsize64 "${part_node}" )
+    if [ "${part_image_size}" -gt "${part_size}" ]; then
+        ota_log "Image size too large. Exiting..."
+        return 1
+    fi
+
+    # Write image to partition ${part_name}
+    ota_log "Write ${part_image} to ${part_node}."
+    dd if="${part_image}" of="${part_node}" >/dev/null 2>&1
+    sync
+
+    # Read back and verify
+    local tmp_image="/tmp/${part_name}.tmp"
+    ota_log "Read back ${part_name} into ${tmp_image} and verify it."
+    if ! read_part_opt "${part_node}" "${tmp_image}" "${part_image_size}"; then
+        ota_log "Failed to read back ${part_image_size} bytes from ${part_node} to ${tmp_image}."
+        return 1
+    fi
+    if ! sha1sum_verify "${tmp_image}" "${part_image_sha1sum}"; then
+        ota_log "Failed to run \"sha1sum_verify ${tmp_image} ${part_image_sha1sum}\""
+        ota_log "Write ${part_image} to ${part_name}(${part_node}) failed. Exiting..."
+        return 1
+    fi
+
+    ota_log "Write ${part_image} to ${part_name}(${part_node}) successfully."
+    return 0
+}
+
+swap_part_name_and_guid()
+{
+    # Swap the partition name of partition ${part_name} and ${part_name}_alt.
+    # Swap the partition guid if ${part_name} is esp.
+    # Usage:
+    #    swap_part_name_and_guid ${part_name} ${target_dir}
+
+    local part_name="${1}"
+    local part_alt_name="${1}_alt"
+    local target_dir="${2}"
+    local node
+    local index
+    local guid
+    local alt_node
+    local alt_index
+    local part_node
+    local alt_part_node
+    local alt_guid
+    local esp_mnt="/boot/efi"
+    local fstab_file
+
+    ota_log "Start swapping partition name and guid."
+
+    # Find partition nodes of ${part_name} and ${part_name}_alt
+    if ! find_partition_node "${part_name}" "node" "index" "${target_dir}"; then
+        return 1
+    fi
+    if ! find_partition_node "${part_alt_name}" "alt_node" "alt_index" "${target_dir}"; then
+        return 1
+    fi
+
+    # ${part_name} and ${part_name}_alt must be allocated on the same device.
+    if [ "${node}" != "${alt_node}" ]; then
+        ota_log "${part_name}(${node}) and ${part_alt_name}(${alt_node}) on different device."
+        return 1
+    fi
+
+    if ! create_part_node_name "${node}" "${index}" "part_node"; then
+        return 1
+    fi
+    if ! create_part_node_name "${alt_node}" "${alt_index}" "alt_part_node"; then
+        return 1
+    fi
+
+    # Swap both guids and partition names if ${part_name} is esp,
+    # otherwise swap partition names only.
+    if [ "${part_name}" = "esp" ]; then
+        # Get partition guid of esp and esp_alt
+        guid=$( sfdisk --part-type "${node}" "${index}" )
+        if [ "${guid}" = "" ]; then
+            ota_log "Failed to get guid of ${part_node}"
+            return 1
+        fi
+        alt_guid=$( sfdisk --part-type "${alt_node}" "${alt_index}" )
+        if [ "${alt_guid}" = "" ]; then
+            ota_log "Failed to get guid of ${alt_part_node}"
+            return 1
+        fi
+
+        # Swap the guid and partition name of ${part_name} and ${part_alt_name}
+        ota_log "Swap guid by setting ${alt_guid} to ${part_name}(${part_node}),"
+        ota_log "and setting ${guid} to ${part_alt_name}(${alt_part_node})."
+        ota_log "Set name ${part_alt_name} to ${part_node} and ${part_name} to ${alt_part_node}."
+        if ! sgdisk -c "${index}":"${part_alt_name}" -t "${index}":"${alt_guid}" \
+            -c "${alt_index}":"${part_name}" -t "${alt_index}":"${guid}" "${node}" >/dev/null 2>&1; then
+            ota_log "Failed to swap partition names and guids."
+            return 1
+        fi
+        ota_log "Swap partition name and guid successfully."
+
+	# Clean up /etc/fstab by deleting the entry for mounting ESP
+	# partition as this entry should not exist in the cleanup
+	# rootfs (after fresh flash or OTA).
+	# Actually this entry is dynamically added in the first boot.
+	fstab_file="/etc/fstab"
+	if [ -f "${fstab_file}" ]; then
+		ota_log "Clean up ${fstab_file}"
+		sed -i '/^[^#].*'"${esp_mnt//\//\\/}"'/d' "${fstab_file}"
+	fi
+    else
+        # Swap partition names
+        ota_log "Set name ${part_alt_name} to ${part_node} and ${part_name} to ${alt_part_node}."
+        if ! sgdisk -c "${index}":"${part_alt_name}" -c "${alt_index}":"${part_name}" "${node}" >/dev/null 2>&1; then
+            ota_log "Failed to swap partition names."
+            return 1
+        fi
+        ota_log "Swap partition name successfully."
+    fi
+
+    # Refresh the new table in kernel with partprobe
+    partprobe
+
+    return 0
+}
+
+erase_partition()
+{
+    # Erase the specified partition ${part_name}.
+    # Usage:
+    #    erase_partition ${part_name} ${target_dir}
+
+    local part_name="${1}"
+    local target_dir="${2}"
+    local node
+    local index
+    local part_node
+
+    ota_log "Start erasing ${part_name}."
+
+    if ! find_partition_node "${part_name}" "node" "index" "${target_dir}"; then
+        return 1
+    fi
+
+    if ! create_part_node_name "${node}" "${index}" "part_node"; then
+        return 1
+    fi
+
+    dd if=/dev/zero  | tr '\000' '\377' > "${part_node}" 2>/dev/null
+    sync
+
+    ota_log "Erase ${part_name}(${part_node}) successfully."
+    return 0
+}
+
+check_partitions()
+{
+    # Check whether the ${part_name} partition contains the
+    # latest image
+    # Usage:
+    #    check_partitions ${part_name} ${part_image} \
+    #        ${part_image_sha1sum} ${target_dir}
+
+    local part_name="${1}"
+    local part_alt_name="${1}_alt"
+    local part_image="${2}"
+    local image_sha1sum="${3}"
+    local target_dir="${4}"
+    local node=""
+    local index=""
+    local alt_node=""
+    local alt_index=""
+    local part_node=""
+    local image_size=""
+
+    # Find partition nodes of ${part_name} and ${part_name}_alt
+    if ! find_partition_node "${part_name}" "node" "index" "${target_dir}"; then
+        return 1
+    fi
+    if ! find_partition_node "${part_alt_name}" "alt_node" "alt_index" "${target_dir}"; then
+        return 1
+    fi
+
+    # ${part_name} and ${part_name}_alt must be allocated on the same device.
+    if [ "${node}" != "${alt_node}" ]; then
+        ota_log "${part_name}(${node}) and ${part_alt_name}(${alt_node}) on different device."
+        exit 1
+    fi
+
+    if ! create_part_node_name "${node}" "${index}" "part_node"; then
+        return 1
+    fi
+
+    # Dump ${part_name} image
+    # shellcheck disable=SC2012
+    image_size=$( ls -al "${part_image}" | cut -d\  -f 5 )
+    local tmp_image="/tmp/${part_name}_image.tmp"
+    ota_log "Dump ${part_name} of ${image_size} into ${tmp_image}."
+    if ! read_part_opt "${part_node}" "${tmp_image}" "${image_size}"; then
+        ota_log "Failed to read ${image_size} bytes from ${part_node} to ${tmp_image}."
+        exit 1
+    fi
+
+    # Compare the sha1sum of ${part_name} image and part_image
+    if sha1sum_verify "${tmp_image}" "${image_sha1sum}"; then
+        ota_log "${part_name} contains the image to be updated already."
+        return 0
+    else
+        ota_log "${part_name} does not contain the image to be updated."
+        return 1
+    fi
+}
+
+do_update()
+{
+    # Run the update procedure
+    # The steps are:
+    # 1. Write latest image into ${part_name}_alt partition
+    # 2. Swap name on ${part_name} and ${part_name}_alt partitions
+    # Usage:
+    #    do_update ${part_name} ${part_image} \
+    #        ${part_image_sha1sum} ${target_dir}
+    local part_name="${1}"
+    local part_image="${2}"
+    local part_image_sha1sum="${3}"
+    local target_dir="${4}"
+
+    ota_log "Start update procedure."
+
+    # Write specified ${part_name}_alt partition
+    if ! write_partition "${part_name}_alt" "${part_image}" "${part_image_sha1sum}" "${target_dir}"; then
+        ota_log "Failed to update ${part_name} partition."
+        return 1
+    fi
+    ota_log "Writing ${part_name}_alt partition is done"
+
+    # Swap the partition name and guid of ${part_name} and ${part_name}_alt
+    # according to the ${part_name}.
+    if ! swap_part_name_and_guid "${part_name}" "${target_dir}"; then
+        ota_log "Failed to swap partition name and guid of ${part_name} and ${part_name}_alt."
+        return 1
+    fi
+    ota_log "Swapping name and guid on ${part_name} and ${part_name}_alt partitions is done"
+
+    ota_log "Update procedure is finished."
+    return 0
+}
+
+do_cleanup()
+{
+    # Run the cleanup procedure
+    # The only step is erasing the ${part_name}_alt partition.
+    # Usage:
+    #    do_cleanup ${part_name} ${target_dir}
+    local part_name="${1}"
+    local target_dir="${2}"
+
+    ota_log "Start cleanup procedure."
+
+    # Erase specified alt partition
+    if ! erase_partition "${part_name}_alt" "${target_dir}"; then
+        ota_log "Failed to erase ${part_name}_alt partition."
+        return 1
+    fi
+    ota_log "Erasing ${part_name}_alt partition is done"
+
+    ota_log "Cleanup procedure is finished."
+    return 0
+}
+
+update_specified_partitions_alt()
+{
+    # Update specified partitions which are pair of ${part_name} and ${part_name}_alt
+    # with the specified image.
+    # Usage:
+    #    update_specified_partitions_alt ${part_name} ${part_image} \
+    #        ${part_image_sha1sum} ${target_dir}
+
+    local part_name="${1}"
+    local part_image="${2}"
+    local part_image_sha1sum="${3}"
+    local target_dir="${4}"
+
+    if ! check_partitions "${part_name}" "${part_image}" \
+        "${part_image_sha1sum}" "${target_dir}"; then
+        if ! do_update "${part_name}" "${part_image}" \
+            "${part_image_sha1sum}" "${target_dir}"; then
+            ota_log "Failed to run update procedure on ${part_name}. Exiting..."
+            return 1
+        fi
+    fi
+
+    if ! do_cleanup "${part_name}" "${target_dir}"; then
+        ota_log "Failed to run cleanup procedure on ${part_name}. Exiting..."
+        return 1
+    fi
+
+    return 0
+}
+
+prerequisite_check_alt()
+{
+    local part_name="${1}"
+    local found=""
+
+    # Check whether ${part_name} is in the predefined table.
+    for j in "${!erased_part_sha1sum_table[@]}"; do
+        local _part_name
+        _part_name=$( echo "${erased_part_sha1sum_table[$j]}" | awk '{print $1}' )
+        if [ "${_part_name}" = "${part_name}" ]; then
+            found="true"
+            break
+        fi
+    done
+    if [ "${found}" = "" ]; then
+        ota_log "Unsupported partition: ${part_name}. Exiting..."
+        exit 1
+    fi
+}
