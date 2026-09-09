@@ -241,16 +241,12 @@ update_kernel_dtb()
 	local images_dir
 	local kernel_dtb_name=
 
-	# Get valid kernel-dtb file. Board variants append an optional
-	# "-<suffix>" before ".dtb" (e.g. "-nv-super.dtb", "-nv-px1.dtb",
-	# "-nv-safety.dtb", "-nv-taylor-high.dtb"), so accept any
-	# "-nv[-suffix].dtb" name.
+	# Get valid kernel-dtb file
 	images_dir="${work_dir}/${dev}/${_TOT_IMAGES_DIR}"
-	set +e
-	kernel_dtb_name="$(ls "${images_dir}"/*.dtb | grep -oE "kernel_.*-nv(-[a-z0-9-]+)?\.dtb" )"
-	set -e
+	idx_file="${images_dir}/flash.idx"
+	kernel_dtb_name="$(grep -E ":kernel-dtb,|:A_kernel-dtb," "${idx_file}" | cut -d, -f 5 | sed 's/^ //' -)"
 	if [ "${kernel_dtb_name}" == "" ]; then
-		echo "Failed to found valid kernel-dtb in ${images_dir}"
+		echo "Failed to found valid kernel-dtb in ${idx_file}"
 		return 1
 	fi
 

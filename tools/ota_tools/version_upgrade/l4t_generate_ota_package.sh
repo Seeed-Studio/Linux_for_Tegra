@@ -86,6 +86,9 @@ SUPPORTED_EXTERNAL_DEVICES=(
 	'jetson-orin-nano-devkit-super-maxn:nvme0n1'
 	'jetson-agx-thor-devkit:nvme0n1'
 	'jetson-agx-thor-t4000:nvme0n1'
+	# Seeed carrier boards (NVMe boot)
+	'recomputer-orin-j401:nvme0n1'
+	'seeed-agx-orin-kit:nvme0n1'
 )
 T234_NVME_CFG="${LINUX_BASE_DIR}/tools/kernel_flash/flash_l4t_t234_nvme.xml"
 T234_NVME_ROOTFS_AB_CFG="${LINUX_BASE_DIR}/tools/kernel_flash/flash_l4t_t234_nvme_rootfs_ab.xml"
@@ -253,6 +256,11 @@ function construct_board_spec_name()
 		'jetson-orin-nano-devkit-super:0005'
 		'jetson-orin-nano-devkit-super-maxn:0001'
 		'jetson-agx-thor-t4000:0000'
+		'recomputer-orin-j401:0001'
+		'recomputer-orin-j401:0003'
+		'recomputer-orin-j401:0004'
+		'seeed-agx-orin-kit:0004'
+		'seeed-agx-orin-kit:0005'
 	)
 	local temp="${board}:${boardsku}"
 	local entry=
@@ -1157,10 +1165,14 @@ function construct_board_spec_entry()
 		# as these specs only include entries for external device.
 		# For other devices, only keep the board spec entry for
 		# internal device.
+		# Seeed carrier boards are NVMe-only too: keep all entries for them.
 		if [[ "${item}" == *jetson-orin-nano-devkit* ]] \
 			|| [[ "${item}" == *jetson-orin-nanoe8gb-devkit* ]] \
 			|| [[ "${item}" == *jetson-agx-thor-* ]] \
-			|| [[ "${item}" == *internal* ]]; then
+			|| [[ "${item}" == *internal* ]] \
+			|| [[ "${item}" == *recomputer-* ]] \
+			|| [[ "${item}" == *reserver-* ]] \
+			|| [[ "${item}" == *seeed-* ]]; then
 			echo "'${item}'" >>"${tmp_board_spec_file}"
 		fi
 	done
