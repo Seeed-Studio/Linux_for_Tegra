@@ -87,10 +87,10 @@
 
 		gpio_aon_default: default {
 			gpio-input = <
-				TEGRA234_AON_GPIO(EE, 2)
 				TEGRA234_AON_GPIO(EE, 4)
 				>;
 			gpio-output-low = <
+				TEGRA234_AON_GPIO(EE, 2)
 				TEGRA234_AON_GPIO(CC, 0)
 				TEGRA234_AON_GPIO(CC, 2)
 				TEGRA234_AON_GPIO(CC, 3)
