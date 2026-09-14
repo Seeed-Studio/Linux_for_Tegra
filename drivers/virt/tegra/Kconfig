@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+config TEGRA_HV_DRIVER
+	bool "Tegra Hypervisor Driver"
+	default y
+	depends on ARCH_TEGRA
+	help
+	  Tegra Hypervisor Driver used for tegra virtualized environment.
