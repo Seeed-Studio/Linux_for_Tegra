@@ -1,0 +1,309 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/sdhci@810c570000/nvidia,tegra264-sdhci.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: SDHCI driver for Tegra
+
+maintainers:
+  - Suresh Mangipudi
+
+description: |
+     the compatability = nvidia,tegra264-sdhci is mentioned in the following drivers
+        - <TOP>/kernel/kernel-oot/drivers/mmc/host/sdhci-tegra.c
+
+     The following nodes use this compatibility
+        - /bus@0/sdhci@810c570000
+
+select:
+  properties:
+    compatible:
+        minItems: 2
+        maxItems: 2
+        items:
+            enum:
+                - nvidia,tegra264-sdhci
+                - nvidia,tegra194-sdhci
+
+  required:
+    - compatible
+
+properties:
+
+    reg:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Registers are given by a tuple of two values:
+                - register address:
+                - register block size.
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x81
+                  maximum: 0x81
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0xc570000
+                  maximum: 0xc570000
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x10000
+                  maximum: 0x10000
+
+    interrupts:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Interrupts are give by a tuple of 3 values:
+                - interrupt specifier (GIC_SPI = 0, GIC_PPI = 1)
+                  definitions in dt-bindings/interrupt-controller/arm-gic.h
+                - interrupt number
+                - trigger type (rising edge, falling edge, both, etc)
+                  definitions in dt-bindings/interrupt-controller/irq.h
+        items:
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0xa2
+                  maximum: 0xa2
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x4
+                  maximum: 0x4
+
+    sd-uhs-sdr104:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+    sd-uhs-sdr50:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+    sd-uhs-sdr25:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+    sd-uhs-sdr12:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+    mmc-hs200-1_8v:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+    iommus:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            iommus are given by a tuple of 2 values:
+                - Phandle to the device
+                - Device ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x1200
+                  maximum: 0x1200
+
+    dma-coherent:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+    nvidia,pad-autocal-pull-up-offset-3v3-timeout:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x7
+        maximum: 0x7
+
+    nvidia,pad-autocal-pull-down-offset-3v3-timeout:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x7
+        maximum: 0x7
+
+    nvidia,pad-autocal-pull-up-offset-1v8-timeout:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x6
+        maximum: 0x6
+
+    nvidia,pad-autocal-pull-down-offset-1v8-timeout:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x7
+        maximum: 0x7
+
+    nvidia,pad-autocal-pull-up-offset-sdr104:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0x0
+
+    nvidia,pad-autocal-pull-down-offset-sdr104:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0x0
+
+    interconnects:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 3
+            maxItems: 3
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x1c2
+                  maximum: 0x1c3
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+
+    interconnect-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - dma-mem
+                - write
+
+
+    pinctrl-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - sdmmc-3v3
+                - sdmmc-1v8
+
+
+    pinctrl-0:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+
+    pinctrl-1:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+
+    nvidia,default-tap:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x6
+        maximum: 0x6
+
+    nvidia,default-trim:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0x0
+
+    assigned-clocks:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x95
+                  maximum: 0x96
+
+    assigned-clock-parents:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x93
+                  maximum: 0x95
+
+    resets:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Resets are given by a tuple of 2 values:
+                - Phandle to the device
+                - Reset ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x22
+                  maximum: 0x22
+
+    reset-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - sdhci
+
+
+    clocks:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Clocks are given by a tuple of 2 values:
+                - Phandle to the device
+                - Clock ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x96
+                  maximum: 0x97
+
+    clock-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - sdhci
+                - tmclk
+
+
+required:
+    - compatible
+    - reg
+    - interrupts
+    - iommus
+    - resets
+    - reset-names
+    - clocks
+    - clock-names
+
+examples:
+    - |
+        sdhci@810c570000 {
+            compatible = "nvidia,tegra264-sdhci, nvidia,tegra194-sdhci";
+            status = "disabled";
+            reg = <0x81 0xc570000 0x00 0x10000>;
+            interrupts = <GIC_SPI 162 IRQ_TYPE_LEVEL_HIGH>;
+            sd-uhs-sdr104;
+            sd-uhs-sdr50;
+            sd-uhs-sdr25;
+            sd-uhs-sdr12;
+            mmc-hs200-1_8v;
+            iommus = <&smmu2_mmu TEGRA_SID_SDMMC0>;
+            dma-coherent;
+            nvidia,pad-autocal-pull-up-offset-3v3-timeout = <0x07>;
+            nvidia,pad-autocal-pull-down-offset-3v3-timeout = <0x07>;
+            nvidia,pad-autocal-pull-up-offset-1v8-timeout = <0x06>;
+            nvidia,pad-autocal-pull-down-offset-1v8-timeout = <0x07>;
+            nvidia,pad-autocal-pull-up-offset-sdr104 = <0x00>;
+            nvidia,pad-autocal-pull-down-offset-sdr104 = <0x00>;
+            interconnects = <&mc TEGRA264_MEMORY_CLIENT_SDMMC0R &emc>,
+                            <&mc TEGRA264_MEMORY_CLIENT_SDMMC0W &emc>;
+            interconnect-names = "dma-mem, write";
+            pinctrl-names = "sdmmc-3v3, sdmmc-1v8";
+            pinctrl-0 = <&sdmmc1_3v3>;
+            pinctrl-1 = <&sdmmc1_1v8>;
+            nvidia,default-tap = <6>;
+            nvidia,default-trim = <0>;
+            assigned-clocks = <&bpmp TEGRA264_CLK_SDMMC1>,
+                              <&bpmp TEGRA264_CLK_PLLC4_MUXED>;
+            assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLC4_MUXED>,
+                                     <&bpmp TEGRA264_CLK_PLLC4_OUT0>;
+            resets = <&bpmp TEGRA264_RESET_SDMMC1>;
+            reset-names = "sdhci";
+            clocks = <&bpmp TEGRA264_CLK_SDMMC1>,
+                     <&bpmp TEGRA264_CLK_SDMMC_LEGACY_TM>;
+            clock-names = "sdhci, tmclk";
+        };

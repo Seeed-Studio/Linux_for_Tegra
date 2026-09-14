@@ -1,0 +1,73 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/nvdisplay-niso/nvidia,tegra264-display-niso.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Nvidia Tegra Display Driver
+
+maintainers:
+  - Mihir Pradeep Garude
+
+description: |
+     The compatibility = nvidia,tegra264-display-niso is mentioned in the following drivers
+        - For DisplayServer <TOP>/display/drivers/drivers/
+        - For OpenRM <TOP>/gpu/drv/
+
+     The following nodes use this compatibility
+        - /display@8808c00000/nvdisplay-niso
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra264-display-niso
+
+  required:
+    - compatible
+
+properties:
+
+    iommus:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            iommus are given by a tuple of 2 values:
+                - Phandle to the device
+                - Device ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x901
+                  maximum: 0x901
+
+    dma-coherent:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+required:
+    - compatible
+    - iommus
+
+examples:
+    - |
+        nvdisplay-niso {
+            compatible = "nvidia,tegra264-display-niso";
+            iommus = <&smmu3_mmu 0x901>;
+            dma-coherent;
+            status = "disabled";
+        };

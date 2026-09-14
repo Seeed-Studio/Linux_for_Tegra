@@ -1,0 +1,144 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/pinctrl/pinctrl-max77851.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+maintainers:
+  - Joan Na<Joan.na@maximintegrated.com>
+  - Shubhi Garg <shgarg@nvidia.com>
+
+description: |
+  Pincontrol driver for MAX77851 Power management IC from Maxim Semiconductor.
+
+  Device has 8 GPIO pins & 4 FPSO pins which can be configured as GPIO as well as the
+  special IO functions.
+
+  Please refer file <devicetree/bindings/pinctrl/pinctrl-bindings.txt>
+  for details of the common pinctrl bindings used by client devices,
+  including the meaning of the phrase "pin configuration node".
+
+properties:
+# Optional Pinmux properties:
+# --------------------------
+# Following properties are required if default setting of pins are required
+# at boot.
+
+  pinctrl-names:
+    description:
+      A pinctrl state named per <pinctrl-bindings.txt>.
+
+patternProperties:
+  pinctrl-[0...n]:
+    description:
+      Properties to contain the phandle for pinctrl states per
+        <pinctrl-bindings.txt>.
+
+The pin configurations are defined as child of the pinctrl states node. Each
+sub-node have following properties:
+
+required:
+- pins: List of pins. Valid values of pins properties are:
+              gpio0, gpio1, gpio2, gpio3, gpio4, gpio5, gpio6, gpio7, fpso0, fpso1, fpso2, fpso3.
+
+additionalProperties:
+Following are optional properties defined as pinmux DT binding document
+<pinctrl-bindings.txt>. Absence of properties will leave the configuration
+on default.
+    function,
+    drive-push-pull,
+    drive-open-drain,
+    bias-pull-up,
+    bias-pull-down.
+
+Valid values for function properties are:
+        gpio-high-z
+        gpio-input
+        gpio-output
+        gpio-fps-digital-input
+        gpio-fps-digital-output
+        src-enable-digital-input
+        src-boot-dvs-digital-input
+        src-clock-digital-input
+        src-fpwm-digital-input
+        src-pok-gpio-digital-output
+        clk-32k-out
+        lb-alarm-output
+        o-type-reset
+        test-digital-input
+        test-digital-output
+        test-analog-in-out
+
+        fpso-high-z
+        fpso-digital-output
+        fpso-fps-digital-output
+        fpso-buck-sense
+
+        nrstio-high-z
+        nrstio-digital-input
+        nrstio-digital-output
+        nrstio-fps-digital-output
+        nrstio-lb-digital-output
+
+Theres is also customised properties for the GPIO1, GPIO2 and GPIO3. These
+customised properties are required to configure FPS configuration parameters
+of these GPIOs. Please refer <devicetree/bindings/mfd/max77851.txt> for more
+detail of Flexible Power Sequence (FPS).
+
+- maxim,pd-slpy-master-slot: FPS Master Power-Up / Sleep Exit
+- maxim,pu-slpx-master-slot: FPS Master Power-Down / Sleep Entry.
+                Valid values are:
+                    - MAX77851_FPS_MASTER_SLOT_0
+                        FPS Mater is FPS0.
+                    - MAX77851_FPS_MASTER_SLOT_1
+                        FPS Mater is FPS1
+                    - MAX77851_FPS_MASTER_SLOT_2
+                        FPS Mater is FPS2
+                    - MAX77851_FPS_MASTER_SLOT_3.
+                        FPS Mater is FPS2
+
+- maxim,pu-slot:    FPS Power-Up Slot
+- maxim,pd-slot:    FPS Power-Down Slot
+- maxim,slpx-slot:    FPS Sleep Exit Slot
+- maxim,slpy-slot:    FPS Sleep Enter Slot
+                Valid values are 0 to F.
+
+examples:
+  - |
+    #include <dt-bindings/mfd/max77851.h>
+    ...
+    max77851@3c {
+
+        pinctrl-names = "default";
+        pinctrl-0 = <&max77851_default>;
+
+        max77851_default: pinmux@0 {
+            pin_gpio0 {
+                pins = "gpio0";
+                function = "clk-32k-out";
+                drive-push-pull = <1>;
+
+                maxim,polarity = <MAX77851_PIN_ACTIVE_HIGH>;
+                maxim,input_debounce_filter = <MAX77851_NO_RESYNC_NO_DEB>;
+                maxim,input_suppy = <MAX77851_INPUT_VDD>;
+            };
+            pin_gpio1 {
+                pins = "gpio1";
+                function = "gpio-fps-digital-output";
+                drive-open-drain = <1>;
+
+                maxim,polarity = <MAX77851_PIN_ACTIVE_LOW>;
+                maxim,input_debounce_filter = <MAX77851_RESYNC_NO_DEB>;
+                maxim,input_suppy = <MAX77851_INPUT_VDD>;
+
+                maxim,pu-slpx-master-slot = <MAX77851_FPS_MASTER_SLOT_1>;
+                maxim,pd-slpy-master-slot = <MAX77851_FPS_MASTER_SLOT_1>;
+                maxim,pu-slot = <MAX77851_FPS_SLOT_3>;
+                maxim,pd-slot = <MAX77851_FPS_SLOT_7>;
+                maxim,slpx-slot = <MAX77851_FPS_SLOT_0>;
+                maxim,slpy-slot = <MAX77851_FPS_SLOT_1>;
+            };
+        };
+    };
+    ...

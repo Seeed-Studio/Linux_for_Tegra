@@ -1,0 +1,186 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/mttcan@81102f0000/nvidia,tegra264-mttcan.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Platform CAN bus driver for Bosch M_TTCAN controller
+
+maintainers:
+  - Shubhi Garg
+
+description: |
+     the compatability = nvidia,tegra264-mttcan is mentioned in the following drivers
+        - <TOP>/kernel/nvidia-oot/drivers/net/can/mttcan/native/m_ttcan_linux.c
+
+     The following nodes use this compatibility
+        - /bus@0/mttcan@81102f0000
+        - /bus@0/mttcan@8110300000
+        - /bus@0/mttcan@8110330000
+        - /bus@0/mttcan@8110340000
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra264-mttcan
+
+  required:
+    - compatible
+
+properties:
+
+    reg:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Registers are given by a tuple of two values:
+                - register address:
+                - register block size.
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x81
+                  maximum: 0x81
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x102f0000
+                  maximum: 0x10342000
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x32
+                  maximum: 0x1000
+
+    reg-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - can-regs
+                - glue-regs
+                - msg-ram
+
+
+    interrupts:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Interrupts are give by a tuple of 3 values:
+                - interrupt specifier (GIC_SPI = 0, GIC_PPI = 1)
+                  definitions in dt-bindings/interrupt-controller/arm-gic.h
+                - interrupt number
+                - trigger type (rising edge, falling edge, both, etc)
+                  definitions in dt-bindings/interrupt-controller/irq.h
+        items:
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x44
+                  maximum: 0x4a
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x4
+                  maximum: 0x4
+
+    mram-params:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 9
+            maxItems: 9
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x10
+                  maximum: 0x10
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x10
+                  maximum: 0x10
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x20
+                  maximum: 0x20
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x10
+                  maximum: 0x10
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x10
+                  maximum: 0x10
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x10
+                  maximum: 0x10
+
+    tx-config:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x10
+                  maximum: 0x10
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x40
+                  maximum: 0x40
+
+    rx-config:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 3
+            maxItems: 3
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x40
+                  maximum: 0x40
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x40
+                  maximum: 0x40
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x40
+                  maximum: 0x40
+
+required:
+    - compatible
+    - reg
+    - interrupts
+
+examples:
+    - |
+        mttcan@81102f0000 {
+            compatible = "nvidia,tegra264-mttcan";
+            reg = <0x81 0x102f0000 0x00 0x144>,
+                  <0x81 0x102f1000 0x00 0x32>,
+                  <0x81 0x102f2000 0x00 0x1000>;
+            reg-names = "can-regs, glue-regs, msg-ram";
+            interrupts = <GIC_SPI 68 IRQ_TYPE_LEVEL_HIGH>;
+            mram-params = <0 16 16 32 0 0 16 16 16>;
+            tx-config = <0 16 0 64>;
+            rx-config = <64 64 64>;
+            status = "disabled";
+        };

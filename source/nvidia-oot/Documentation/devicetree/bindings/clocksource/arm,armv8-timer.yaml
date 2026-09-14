@@ -1,0 +1,86 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/timer/arm,armv8-timer.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: ARM Architecture Timer
+
+maintainers:
+  - Suresh Mangipudi
+
+description: |
+     the compatability = arm,armv8-timer is mentioned in the following drivers
+        - <TOP>/kernel/kernel-oot/drivers/clocksource/arm_arch_timer.c
+
+     The following nodes use this compatibility
+        - /timer
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - arm,armv8-timer
+
+  required:
+    - compatible
+
+properties:
+
+    interrupts:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Interrupts are give by a tuple of 3 values:
+                - interrupt specifier (GIC_SPI = 0, GIC_PPI = 1)
+                  definitions in dt-bindings/interrupt-controller/arm-gic.h
+                - interrupt number
+                - trigger type (rising edge, falling edge, both, etc)
+                  definitions in dt-bindings/interrupt-controller/irq.h
+        items:
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x1
+                  maximum: 0x1
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0xa
+                  maximum: 0xe
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x8
+                  maximum: 0x8
+
+    interrupt-parent:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+
+    always-on:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+required:
+    - compatible
+    - interrupts
+
+examples:
+    - |
+        timer {
+            compatible = "arm,armv8-timer";
+            status = "disabled";
+            interrupts = <GIC_PPI 13 8>,
+                         <GIC_PPI 14 8>,
+                         <GIC_PPI 11 8>,
+                         <GIC_PPI 10 8>,
+                         <GIC_PPI 12 8>;
+            interrupt-parent = <&gic>;
+            always-on;
+        };

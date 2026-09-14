@@ -1,0 +1,81 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/hsp-vm1/nvidia,tegra-camrtc-hsp-vm.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Tegra Hypervisor HSP Client Mailbox
+
+maintainers:
+  - Evgeny Kornev
+
+description: |
+     the compatability = nvidia,tegra-camrtc-hsp-vm is mentioned in the following drivers
+        - <TOP>/kernel/nvidia-oot/drivers/platform/tegra/rtcpu/hsp-mailbox-client.c
+
+     The following nodes use this compatibility
+        - /rtcpu@81893d0000/hsp-vm1
+        - /rtcpu@81893d0000/hsp-vm2
+        - /rtcpu@81893d0000/hsp-vm3
+        - /rtcpu@81893d0000/hsp-vm4
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra-camrtc-hsp-vm
+
+  required:
+    - compatible
+
+properties:
+
+    mboxes:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 3
+            maxItems: 3
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x1
+                  maximum: 0x2
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x80000007
+
+    mbox-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - vm-tx
+                - vm-rx
+                - vm-ss
+
+
+required:
+    - compatible
+
+examples:
+    - |
+        hsp-vm1 {
+            compatible = "nvidia,tegra-camrtc-hsp-vm";
+            mboxes = <&rce_hsp0 TEGRA_HSP_MBOX_TYPE_SM TEGRA_HSP_SM_TX(0)>,
+                     <&rce_hsp0 TEGRA_HSP_MBOX_TYPE_SM TEGRA_HSP_SM_RX(1)>,
+                     <&rce_hsp0 TEGRA_HSP_MBOX_TYPE_SS 0>;
+            mbox-names = "vm-tx, vm-rx, vm-ss";
+            status = "disabled";
+        };

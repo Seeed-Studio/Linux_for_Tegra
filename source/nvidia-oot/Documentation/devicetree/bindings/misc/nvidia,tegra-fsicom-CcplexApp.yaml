@@ -1,0 +1,57 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/FsiComAppChConfCcplexApp/nvidia,tegra-fsicom-CcplexApp.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: FSI Communication Application Configuration
+
+maintainers:
+  - Rahul Bedarkar
+
+description: |
+     The following nodes use this compatibility
+        - /FsiComAppChConfCcplexApp
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra-fsicom-CcplexApp
+
+  required:
+    - compatible
+
+properties:
+
+    channelid_list:
+        description: |
+            List of IVC channel IDs that CcplexApp uses for communication. Only channel IDs 1 and 2 are defined for CcplexApp.
+        $ref: "/schemas/types.yaml#/definitions/uint32-array"
+        items:
+          - const: 1
+
+required:
+    - compatible
+    - channelid_list
+
+examples:
+    - |
+        FsiComAppChConfCcplexApp{
+            compatible = "nvidia,tegra-fsicom-CcplexApp";
+            status = "okay";
+            channelid_list = <2 1>;
+        };

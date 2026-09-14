@@ -1,0 +1,86 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/cc7/arm,idle-state.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: ARM/ARM64 generic CPU idle driver
+
+maintainers:
+  - Rich Wiley
+
+
+description: |
+     the compatability = arm,idle-state is mentioned in the following drivers
+        - <TOP>/kernel/kernel-oot/drivers/cpuidle/cpuidle-psci.c
+        - <TOP>/kernel/kernel-oot/drivers/cpuidle/cpuidle-big_little.c
+        - <TOP>/kernel/kernel-oot/drivers/cpuidle/cpuidle-arm.c
+
+     The following nodes use this compatibility
+        - /cpus/idle-states/cc7
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - arm,idle-state
+
+  required:
+    - compatible
+
+properties:
+
+    state-name:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - Cluster Powergate
+
+
+    entry-latency-us:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x1388
+        maximum: 0x1388
+
+    exit-latency-us:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x1388
+        maximum: 0x1388
+
+    min-residency-us:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x61a8
+        maximum: 0x61a8
+
+    arm,psci-suspend-param:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x40000007
+        maximum: 0x40000007
+
+required:
+    - compatible
+
+examples:
+    - |
+        cc7 {
+            compatible = "arm,idle-state";
+            state-name = "Cluster Powergate";
+            entry-latency-us = <5000>;
+            exit-latency-us = <5000>;
+            min-residency-us = <25000>;
+            arm,psci-suspend-param = <0x40000007>;
+            status = "disabled";
+        };

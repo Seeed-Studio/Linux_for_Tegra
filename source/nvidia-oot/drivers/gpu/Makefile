@@ -1,0 +1,49 @@
+# SPDX-License-Identifier: GPL-2.0
+# Copyright (c) 2022-2025, NVIDIA CORPORATION.  All rights reserved.
+
+ifneq ($(filter y, $(CONFIG_ARCH_TEGRA_2x_SOC) $(CONFIG_ARCH_TEGRA_3x_SOC) \
+	$(CONFIG_ARCH_TEGRA_114_SOC) $(CONFIG_ARCH_TEGRA_124_SOC) $(CONFIG_ARCH_TEGRA_132_SOC) \
+	$(CONFIG_ARCH_TEGRA_210_SOC) $(CONFIG_ARCH_TEGRA_186_SOC)),)
+export CONFIG_HOST1X_HAVE_SYNCPT_BASE=y
+subdir-ccflags-y += -DCONFIG_HOST1X_HAVE_SYNCPT_BASE
+endif
+
+ifneq ($(filter y, $(CONFIG_ARCH_TEGRA_2x_SOC) $(CONFIG_ARCH_TEGRA_3x_SOC) \
+	$(CONFIG_ARCH_TEGRA_114_SOC) $(CONFIG_ARCH_TEGRA_124_SOC) $(CONFIG_ARCH_TEGRA_132_SOC) \
+	$(CONFIG_ARCH_TEGRA_210_SOC) $(CONFIG_ARCH_TEGRA_186_SOC) $(CONFIG_ARCH_TEGRA_194_SOC)),)
+export CONFIG_DRM_TEGRA_HAVE_DISPLAY=y
+subdir-ccflags-y += -DCONFIG_DRM_TEGRA_HAVE_DISPLAY
+endif
+
+ifeq ($(NV_OOT_NVHOST_NATIVE_DIS),y)
+export CONFIG_TEGRA_DRM_NATIVE_DIS=y
+subdir-ccflags-y += -DCONFIG_TEGRA_DRM_NATIVE_DIS
+endif
+
+ifeq ($(NV_OOT_NVHOST_DISABLE_LEGACY_IOCTL),y)
+export CONFIG_TEGRA_DRM_DISABLE_LEGACY_IOCTL=y
+subdir-ccflags-y += -DCONFIG_TEGRA_DRM_DISABLE_LEGACY_IOCTL
+endif
+
+ifeq ($(NV_OOT_NVHOST_DISABLE_LEGACY_INTERFACE),y)
+export CONFIG_TEGRA_DRM_DISABLE_LEGACY_INTERFACE=y
+subdir-ccflags-y += -DCONFIG_TEGRA_DRM_DISABLE_LEGACY_INTERFACE
+endif
+
+# Enable legacy DRM Tegra firewall for pre-T186 chips only
+# Post-T186 Host1x HW has native capability to detect illegal opcodes
+ifeq ($(NV_OOT_ENABLE_LEGACY_DRM_TEGRA_FIREWALL),y)
+export CONFIG_DRM_TEGRA_LEGACY_FIREWALL=y
+subdir-ccflags-y += -DCONFIG_DRM_TEGRA_LEGACY_FIREWALL
+endif
+
+ifdef CONFIG_DRM
+obj-m += drm/tegra/
+endif
+obj-m += host1x/
+obj-m += host1x-fence/
+ifneq ($(NV_OOT_NVHOST_DISABLE_LEGACY_INTERFACE),y)
+obj-m += host1x-nvhost/
+endif
+obj-m += power/tegra/
+

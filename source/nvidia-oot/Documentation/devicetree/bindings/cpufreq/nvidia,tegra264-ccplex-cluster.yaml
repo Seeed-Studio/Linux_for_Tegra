@@ -1,0 +1,82 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/ccplex@8120000000/nvidia,tegra264-ccplex-cluster.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: NVIDIA Tegra T264 cpufreq driver
+
+maintainers:
+  - Sumit Gupta
+  - Mikko Perttunen
+  - Rich Wiley
+
+description: |
+     the compatability = nvidia,tegra264-ccplex-cluster is mentioned in the following drivers
+        - <TOP>/kernel/kernel-oot/drivers/cpufreq/tegra194-cpufreq.c
+
+     The following nodes use this compatibility
+        - /bus@0/ccplex@8120000000
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra264-ccplex-cluster
+
+  required:
+    - compatible
+
+properties:
+
+    nvidia,bpmp:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+
+    reg:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Registers are given by a tuple of two values:
+                - register address:
+                - register block size.
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x81
+                  maximum: 0x81
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x30000000
+                  maximum: 0x30000000
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0xcf0000
+                  maximum: 0xcf0000
+
+required:
+    - compatible
+    - reg
+
+examples:
+    - |
+        ccplex@8120000000 {
+            compatible = "nvidia,tegra264-ccplex-cluster";
+            status = "disabled";
+            nvidia,bpmp = <&bpmp>;
+            reg = <0x81 0x30000000 0x0 0xcf0000>;
+        };

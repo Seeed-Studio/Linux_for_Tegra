@@ -1,0 +1,51 @@
+# SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
+# Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/platform/tegra/tegra23x-mce.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Device tree binding for NVIDIA Tegra23x MCE
+
+maintainers:
+  - Sanjay Chandrashekara <sanjayc@nvidia.com>
+  - Eric Funsten <efunsten@nvidia.com>
+
+description: |
+   The tegra23x-mce driver provides an interface for sending ARI requests to MCE
+
+properties:
+  compatible:
+    enum:
+      - nvidia,t23x-mce
+
+  reg:
+    minItems: 12
+    maxItems: 12
+    description: |
+       Address and size pairs of NS-ARI MMCRAB registers.
+
+required:
+  - compatible
+  - reg
+
+additionalProperties: false
+
+examples:
+  - |
+    tegra_mce@e100000 {
+				compatible = "nvidia,t23x-mce";
+				reg =   <0x0 0x0E100000 0x0 0x00010000>, /* ARI BASE Core 0*/
+						<0x0 0x0E110000 0x0 0x00010000>,
+						<0x0 0x0E120000 0x0 0x00010000>,
+						<0x0 0x0E130000 0x0 0x00010000>,
+						<0x0 0x0E140000 0x0 0x00010000>,
+						<0x0 0x0E150000 0x0 0x00010000>,
+						<0x0 0x0E160000 0x0 0x00010000>,
+						<0x0 0x0E170000 0x0 0x00010000>,
+						<0x0 0x0E180000 0x0 0x00010000>,
+						<0x0 0x0E190000 0x0 0x00010000>,
+						<0x0 0x0E1A0000 0x0 0x00010000>,
+						<0x0 0x0E1B0000 0x0 0x00010000>;
+    };
+...

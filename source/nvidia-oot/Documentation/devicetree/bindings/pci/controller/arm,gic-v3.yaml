@@ -1,0 +1,153 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/interrupt-controller@8146000000/arm,gic-v3.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: ARM GIC Interrupt Controller Chip
+
+maintainers:
+  - Suresh Mangipudi
+
+description: |
+     the compatability = arm,gic-v3 is mentioned in the following drivers
+        - <TOP>/kernel/kernel-oot/drivers/pci/controller/pcie-iproc.c
+        - <TOP>/kernel/kernel-oot/drivers/irqchip/irq-gic-v3-its-fsl-mc-msi.c
+        - <TOP>/kernel/kernel-oot/drivers/irqchip/irq-gic-v3-its-platform-msi.c
+        - <TOP>/kernel/kernel-oot/drivers/irqchip/irq-ti-sci-inta.c
+        - <TOP>/kernel/kernel-oot/drivers/irqchip/irq-gic-v3-its.c
+        - <TOP>/kernel/kernel-oot/drivers/irqchip/irq-gic-v3-its-pci-msi.c
+        - <TOP>/kernel/kernel-oot/drivers/irqchip/irq-gic-v3.c
+        - <TOP>/kernel/kernel-oot/drivers/irqchip/irq-ti-sci-intr.c
+
+     The following nodes use this compatibility
+        - /interrupt-controller@8146000000
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - arm,gic-v3
+
+  required:
+    - compatible
+
+properties:
+
+    '#interrupt-cells':
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x3
+        maximum: 0x3
+
+    '#address-cells':
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x2
+        maximum: 0x2
+
+    '#size-cells':
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x2
+        maximum: 0x2
+
+    '#redistributor-regions':
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x1
+        maximum: 0x1
+
+    interrupt-controller:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+    reg:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Registers are given by a tuple of two values:
+                - register address:
+                - register block size.
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x81
+                  maximum: 0x81
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x46000000
+                  maximum: 0x46080000
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x10000
+                  maximum: 0x400000
+
+    interrupt-parent:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+
+    interrupts:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Interrupts are give by a tuple of 3 values:
+                - interrupt specifier (GIC_SPI = 0, GIC_PPI = 1)
+                  definitions in dt-bindings/interrupt-controller/arm-gic.h
+                - interrupt number
+                - trigger type (rising edge, falling edge, both, etc)
+                  definitions in dt-bindings/interrupt-controller/irq.h
+        items:
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x1
+                  maximum: 0x1
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x9
+                  maximum: 0x9
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x8
+                  maximum: 0x8
+
+    redistributor-stride:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x40000
+                  maximum: 0x40000
+
+required:
+    - compatible
+    - reg
+    - interrupts
+
+examples:
+    - |
+        interrupt-controller@8146000000 {
+            compatible = "arm,gic-v3";
+            status = "disabled";
+            #interrupt-cells = <3>;
+            #address-cells = <2>;
+            #size-cells = <2>;
+            interrupt-controller;
+            reg = <0x81 0x46000000 0x0 0x010000>,
+                  <0x81 0x46080000 0x0 0x00400000>;
+            interrupt-parent = <&gic>;
+            interrupts = <GIC_PPI 9 8>;
+            redistributor-stride = <0x00 0x40000>;
+            ranges;
+        };

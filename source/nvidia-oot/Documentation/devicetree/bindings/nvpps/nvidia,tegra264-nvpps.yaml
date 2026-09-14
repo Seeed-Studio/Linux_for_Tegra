@@ -1,0 +1,271 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/nvpps/nvidia,tegra264-nvpps.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: NVidia Tegra PPS Driver
+
+maintainers:
+  - Sheetal Tigadoli
+
+description: |
+  NVIDIA nvpps is a Linux Kernel mode driver to support reading timestamp from multiple
+  time domains like PTP, TSC etc. It also support concurrent timestamping of PTP and TSC
+  time domain using GPIO interrupt or TIMER based events
+
+  The compatibility = nvidia,tegra264-nvpps is mentioned in the following drivers:
+    - <TOP>/kernel/nvidia-oot/drivers/nvpps/nvpps_main.c
+
+  The following nodes use this compatibility:
+    - /dev/nvpps
+
+select:
+  properties:
+    compatible:
+      minItems: 1
+      maxItems: 1
+      items:
+        enum:
+          - nvidia,tegra264-nvpps
+
+  required:
+    - compatible
+
+properties:
+
+  reg:
+    $ref: /schemas/types.yaml#/definitions/uint32-matrix
+    description: |
+      TSC module register address and size. Required when ptp_tsc_sync_dis is not set.
+      Registers are given as a tuple of 2 values:
+        - register address
+        - register block size
+    items:
+      minItems: 4
+      maxItems: 4
+      items:
+        - $ref: "/schemas/types.yaml#/definitions/uint32"
+          minimum: 0x0
+          maximum: 0x0
+        - $ref: "/schemas/types.yaml#/definitions/uint32"
+          minimum: 0xc230000
+          maximum: 0xc230000
+        - $ref: "/schemas/types.yaml#/definitions/uint32"
+          minimum: 0x0
+          maximum: 0x0
+        - $ref: "/schemas/types.yaml#/definitions/uint32"
+          minimum: 0x238
+          maximum: 0x238
+
+  primary-emac:
+    $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+    description: |
+      Primary ethernet MAC device DT node used to calculate PTP time.
+      This is the primary ethernet MAC device utilized to calculate PTP time.
+      For example, if MGBE3 is used to calculate the PTP time, then phandle
+      of the device tree node corresponding to MGBE3 needs to be passed.
+      primary-emac is given as a value:
+                - Phandle to the device
+    items:
+      minItems: 1
+      maxItems: 1
+      items:
+        - $ref: "/schemas/types.yaml#/definitions/uint32"
+
+  sec-emac:
+    $ref: /schemas/types.yaml#/definitions/phandle
+    description: |
+      Secondary ethernet MAC device DT node to be used to calculate PTP time.
+      sec-emac is given as a value:
+                - Phandle to the device
+    items:
+      minItems: 1
+      maxItems: 1
+      items:
+        - $ref: "/schemas/types.yaml#/definitions/uint32"
+
+  nvpps-event-mode-init:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    description: |
+      Property that specifies the initial operating mode of the NvPPS driver.
+      Valid values are 1 (GPIO mode) and 2 (TIMER mode).
+    items:
+      minItems: 1
+      maxItems: 1
+      items:
+        - $ref: "/schemas/types.yaml#/definitions/uint32"
+          minimum: 0x1
+          maximum: 0x2
+
+  ptp_tsc_sync_dis:
+    $ref: /schemas/types.yaml#/definitions/flag
+    description: |
+      Boolean flag to disable PTP TSC rate sync logic in nvpps driver.
+      The default behaviour is to keep PTP TSC sync logic enabled.
+
+  ptp_tsc_lock_threshold:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    description: |
+      Threshold value in nanoseconds used by HW to determine if the TSC PTP sync/Lock is lost.
+      The lock is deemed to be lost if the HW determined absolute diff between PTP & TSC time
+      domains exceed this value.
+      On Thor platforms, the Min & Max values are 1ns & 16.777215ms. The default value used is 20us.
+      1ns is specified as 0x1 and 16.777215ms is specified as 0xFFFFFF.
+    items:
+      minItems: 1
+      maxItems: 1
+      items:
+        - $ref: "/schemas/types.yaml#/definitions/uint32"
+          minimum: 0x1
+          maximum: 0xFFFFFF
+
+  ptp_tsc_sync_trig_interval:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    description: |
+      Interval (in terms of PPS edge count) at which PTP-TSC sync alignment should be re-triggered
+	  if PTP & TSC are out of sync.  For example, if value 3 is provided, then an attempt is made
+	  to sync TSC with PTP (if not synchronized) on every 3rd PPS edge.
+      Supported min & max values are 1 & 8 respectively and by default, value of 1 is used
+      to trigger TSC sync on every PPS edge.
+    items:
+      minItems: 1
+      maxItems: 1
+      items:
+        - $ref: "/schemas/types.yaml#/definitions/uint32"
+          minimum: 1
+          maximum: 8
+
+  nvpps-gpios:
+    $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+    description: |
+      GPIO specification for PPS input signal.
+      This property is given as a tuple of 3 values:
+        - Phandle to the GPIO controller
+        - GPIO pin number
+        - GPIO active level
+    items:
+      minItems: 3
+      maxItems: 3
+      items:
+        - $ref: "/schemas/types.yaml#/definitions/uint32"
+        - $ref: "/schemas/types.yaml#/definitions/uint32"
+          minimum: 0x6
+          maximum: 0x6
+        - $ref: "/schemas/types.yaml#/definitions/uint32"
+          minimum: 0x0
+          maximum: 0x0
+
+  timestamps:
+    $ref: /schemas/types.yaml#/definitions/phandle
+    description: |
+      Timestamp specification for the GPIO provided to HTE (Hardware Timestamp Engine).
+      This is an optional unverified feature on Thor platforms. It is recomended to not to use this.
+      This property is given as a tuple of 2 values:
+        - Phandle to the AON HTE controller
+        - GPIO pin number
+    items:
+      minItems: 2
+      maxItems: 2
+      items:
+        - $ref: "/schemas/types.yaml#/definitions/uint32"
+        - $ref: "/schemas/types.yaml#/definitions/uint32"
+          minimum: 0x6
+          maximum: 0x6
+
+  timestamp-names:
+    $ref: /schemas/types.yaml#/definitions/string
+    description: |
+      Name for GPIO timestamp.
+    items:
+      minItems: 1
+      maxItems: 1
+      items:
+        - $ref: "/schemas/types.yaml#/definitions/string"
+          enum: ["nvpps_gpio"]
+
+  ts-capture-interval:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    description: |
+      Interval between timestamp captures in milliseconds. This property
+      determines how often the driver collects timestamp data. If this
+      property is not specified, the driver will collect timestamps every
+      1000ms(1s) by default.
+    items:
+      minItems: 1
+      maxItems: 1
+      items:
+        - $ref: "/schemas/types.yaml#/definitions/uint32"
+          minimum: 100
+          maximum: 1000
+
+required:
+  - compatible
+  - primary-emac
+  - nvpps-event-mode-init
+
+examples:
+  - |
+    // Timer mode on Thor with additional properties
+    mgbe1: ethernet@a808b10000 {
+    };
+
+    mgbe3: ethernet@a808e10000 {
+    };
+
+    nvpps {
+        status = "okay";
+        compatible = "nvidia,tegra264-nvpps";
+        primary-emac = <&mgbe3>;
+        sec-emac = <&mgbe1>;
+        reg = <0x0 0xc230000 0x0 0x1000>;
+        ptp_tsc_lock_threshold = <20000>;  // 20us
+        ptp_tsc_sync_trig_interval = <3>;  // trigger tsc sync on every 3 PPS edges
+        ts-capture-interval = <1000>;
+        nvpps-event-mode-init = <2>; // 1 for GPIO mode, 2 for TIMER mode
+    };
+
+  - |
+    // GPIO mode on Thor with additional properties
+    mgbe1: ethernet@a808b10000 {
+    };
+
+    mgbe3: ethernet@a808e10000 {
+    };
+
+    nvpps {
+        status = "okay";
+        compatible = "nvidia,tegra264-nvpps";
+        primary-emac = <&mgbe3>;
+        sec-emac = <&mgbe1>;
+        reg = <0x0 0xc230000 0x0 0x1000>;
+        ptp_tsc_lock_threshold = <20000>;  // 20us
+        ptp_tsc_sync_trig_interval = <3>;  // trigger tsc sync on every 3 PPS edges
+        nvpps-gpios = <&gpio_aon TEGRA264_AON_GPIO(AA, 6) GPIO_ACTIVE_HIGH>;  // GPIO PPS input pin PAA.6
+        ts-capture-interval = <1000>;
+        nvpps-event-mode-init = <1>; // 1 for GPIO mode, 2 for TIMER mode
+    };
+
+  - |
+    // Timer mode with PTP TSC sync disabled
+    mgbe3: ethernet@a808e10000 {
+    };
+
+    nvpps {
+        status = "okay";
+        compatible = "nvidia,tegra264-nvpps";
+        primary-emac = <&mgbe3>;
+        ptp_tsc_sync_dis;
+        ts-capture-interval = <1000>;
+        nvpps-event-mode-init = <2>; // 1 for GPIO mode, 2 for TIMER mode
+    };

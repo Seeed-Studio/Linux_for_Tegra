@@ -1,0 +1,290 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/rtcpu@81893d0000/nvidia,tegra264-rce.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Nvidia Tegra T264 RCE Driver
+
+maintainers:
+  - Evgeny Kornev
+
+description: |
+     The following nodes use this compatibility
+        - /rtcpu@81893d0000
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra264-rce
+
+  required:
+    - compatible
+
+properties:
+
+    nvidia,cpu-name:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - rce
+
+
+    reg:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Registers are given by a tuple of two values:
+                - register address:
+                - register block size.
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x81
+                  maximum: 0x81
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x893d0000
+                  maximum: 0x893d0000
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x10000
+                  maximum: 0x10000
+
+    reg-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - rce-pm
+
+
+    clocks:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Clocks are given by a tuple of 2 values:
+                - Phandle to the device
+                - Clock ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x23
+                  maximum: 0x24
+
+    clock-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - rce-nic
+                - rce-cpu
+
+
+    nvidia,clock-rates:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x6ddd000
+                  maximum: 0x6ddd000
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x1bc69880
+                  maximum: 0x1bc69880
+
+    resets:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Resets are given by a tuple of 2 values:
+                - Phandle to the device
+                - Reset ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x4
+                  maximum: 0x4
+
+    reset-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - rce-all
+
+
+    interrupts:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Interrupts are give by a tuple of 3 values:
+                - interrupt specifier (GIC_SPI = 0, GIC_PPI = 1)
+                  definitions in dt-bindings/interrupt-controller/arm-gic.h
+                - interrupt number
+                - trigger type (rising edge, falling edge, both, etc)
+                  definitions in dt-bindings/interrupt-controller/irq.h
+        items:
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x19e
+                  maximum: 0x19e
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x4
+                  maximum: 0x4
+
+    interrupt-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - wdt-remote
+
+
+    nvidia,camera-devices:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 5
+            maxItems: 5
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+
+    nvidia,camera-device-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - isp
+                - vi0
+                - vi1
+                - nvcsi
+                - isp1
+
+
+    iommus:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            iommus are given by a tuple of 2 values:
+                - Phandle to the device
+                - Device ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x2b01
+                  maximum: 0x2b01
+
+    dma-coherent:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+    nvidia,test-bw:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x249f00
+        maximum: 0x249f00
+
+    nvidia,trace:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x4
+                  maximum: 0x4
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x70100000
+                  maximum: 0x70100000
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x100000
+                  maximum: 0x100000
+
+    nvidia,ivc-channels:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x2
+                  maximum: 0x2
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x90000000
+                  maximum: 0x90000000
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x10000
+                  maximum: 0x10000
+
+    nvidia,autosuspend-delay-ms:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x1388
+        maximum: 0x1388
+
+    nvidia,cmd-timeout:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x7d0
+        maximum: 0x7d0
+
+required:
+    - compatible
+    - reg
+    - clocks
+    - clock-names
+    - resets
+    - reset-names
+    - interrupts
+    - interrupt-names
+    - iommus
+
+examples:
+    - |
+        rtcpu@81893d0000 {
+            compatible = "nvidia,tegra264-rce";
+            nvidia,cpu-name = "rce";
+            reg = <0x81 0x893d0000 0x0 0x10000>;
+            reg-names = "rce-pm";
+            clocks = <&bpmp TEGRA264_CLK_RCE_NIC>,
+                     <&bpmp TEGRA264_CLK_RCE_CPU>;
+            clock-names = "rce-nic, rce-cpu";
+            nvidia,clock-rates = <115200000 466000000>,
+                                 <115200000 466000000>;
+            resets = <&bpmp TEGRA264_RESET_RCE_ALL>;
+            reset-names = "rce-all";
+            interrupts = <GIC_SPI 414 IRQ_TYPE_LEVEL_HIGH>;
+            interrupt-names = "wdt-remote";
+            nvidia,camera-devices = <&isp &vi0 &vi1 &nvcsi &isp1>;
+            nvidia,camera-device-names = "isp, vi0, vi1, nvcsi, isp1";
+            iommus = <&smmu4_mmu TEGRA_SID_RCE_VM1>;
+            memory-region = <&rce_resv>;
+            dma-coherent;
+            nvidia,test-bw = <2400000>;
+            nvidia,trace = <&tegra_rtcpu_trace 4 0x70100000 0x100000>;
+            nvidia,ivc-channels = <&camera_ivc_channels 2 0x90000000 0x10000>;
+            nvidia,autosuspend-delay-ms = <5000>;
+            status = "disabled";
+        };

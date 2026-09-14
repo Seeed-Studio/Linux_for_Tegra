@@ -1,0 +1,65 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/mfd/nvidia-vrs-pseq.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: NVIDIA VRS sequencer driver
+
+maintainers:
+  - Shubhi Garg <shgarg@nvidia.com>
+  - Laxman Dewangan <ldewangan@nvidia.com>
+
+description: |
+  NVIDIA VRS sequencer device for controlling the voltage rails.
+
+properties:
+  compatible:
+    const: "nvidia,vrs-pseq"
+
+  reg:
+    description:
+      I2C device address.
+    maxItems: 1
+
+  interrupts:
+    maxItems: 1
+
+  interrupt-controller: true
+
+  "#interrupt-cells":
+    const: 3
+    description:
+      The first cell is the IRQ number, the second cell is the trigger type.
+
+required:
+  - compatible
+  - reg
+  - interrupts
+  - interrupt-controller
+  - "#interrupt-cells"
+
+additionalProperties: false
+
+examples:
+  - |
+    #include <dt-bindings/interrupt-controller/arm-gic.h>
+    #include <dt-bindings/interrupt-controller/irq.h>
+    #define TEGRA234_IRQ_PMIC_EXT_INTR             209
+
+    bpmp {
+        i2c {
+            #address-cells = <1>;
+            #size-cells = <0>;
+
+            vrs@3c {
+                compatible = "nvidia,vrs-pseq";
+                reg = <0x3c>;
+                interrupt-parent = <&intc>;
+                /* IRQ is active-low but pmc inverts the signal */
+                interrupts = <GIC_SPI TEGRA234_IRQ_PMIC_EXT_INTR IRQ_TYPE_LEVEL_HIGH>;
+                interrupt-controller;
+                #interrupt-cells = <3>;
+            };
+        };
+    };

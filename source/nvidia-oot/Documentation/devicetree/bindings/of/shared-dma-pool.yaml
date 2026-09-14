@@ -1,0 +1,88 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/linux,cma/shared-dma-pool.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title:  DMA-mapping operations based on reserved memory region
+
+maintainers:
+  - Pritesh Raithatha
+  - Ketan Patil
+
+description: |
+     the compatability = shared-dma-pool is mentioned in the following drivers
+        - <TOP>/kernel/kernel-oot/drivers/of/of_reserved_mem.c
+
+     The following nodes use this compatibility
+        - /reserved-memory/linux,cma
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - shared-dma-pool
+
+  required:
+    - compatible
+
+properties:
+
+    reusable:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+    size:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x4000000
+                  maximum: 0x4000000
+
+    alignment:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x10000
+                  maximum: 0x10000
+
+    linux,cma-default:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+required:
+    - compatible
+
+examples:
+    - |
+        linux,cma {
+            compatible = "shared-dma-pool";
+            status = "disabled";
+            reusable;
+            size = <0x0 0x4000000>;
+            alignment = <0x0 0x10000>;
+            linux,cma-default;
+        };

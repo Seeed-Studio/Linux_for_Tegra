@@ -1,0 +1,117 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/pmu_tcu_smmu0@810a000000/arm,smmu-v3-pmcg.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: PMU driver for ARM SMMUv3 Performance Monitors Extension
+
+maintainers:
+  - Sachin Nikam
+
+description: |
+     the compatability = arm,smmu-v3-pmcg is mentioned in the following drivers
+        - <TOP>/kernel/kernel-oot/drivers/perf/arm_smmuv3_pmu.c
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - arm,smmu-v3-pmcg
+
+  required:
+    - compatible
+
+properties:
+
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - arm,smmu-v3-pmcg
+
+    reg:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Registers are given by a tuple of two values:
+                - register address:
+                - register block size.
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x81
+                  maximum: 0x88
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x5002000
+                  maximum: 0xb1b3000
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x1000
+                  maximum: 0x1000
+
+    interrupts:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Interrupts are give by a tuple of 3 values:
+                - interrupt specifier (GIC_SPI = 0, GIC_PPI = 1)
+                  definitions in dt-bindings/interrupt-controller/arm-gic.h
+                - interrupt number
+                - trigger type (rising edge, falling edge, both, etc)
+                  definitions in dt-bindings/interrupt-controller/irq.h
+        items:
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x6
+                  maximum: 0x341
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x1
+                  maximum: 0x1
+
+    ceid0-override:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x7
+                  maximum: 0x7
+
+required:
+    - compatible
+    - reg
+    - interrupts
+
+examples:
+    - |
+        pmu_tcu_smmu0@810a000000 {
+            compatible = "arm,smmu-v3-pmcg";
+            status = "disabled";
+            reg = <0x81 0x0a002000 0x0 0x1000>,
+                  <0x81 0x0a022000 0x0 0x1000>;
+            interrupts = <GIC_SPI 26 IRQ_TYPE_EDGE_RISING>;
+        };
