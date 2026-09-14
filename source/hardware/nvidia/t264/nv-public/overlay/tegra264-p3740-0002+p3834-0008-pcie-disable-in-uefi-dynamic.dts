@@ -1,0 +1,24 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+/dts-v1/;
+/plugin/;
+
+/ {
+        overlay-name = "Tegra264 p3740-0002+p3834-0008 PCIe disable in UEFI Dynamic Overlay";
+
+        fragment-t264-p3740-0002-p3834-0008-pcie-disable-in-uefi@0 {
+                target-path = "/bus@0";
+
+                board_config {
+                        sw-modules = "uefi";
+                };
+
+                __overlay__ {
+
+                        pcie@a808400000 {
+                                status = "disabled";
+                        };
+
+                };
+        };
+};

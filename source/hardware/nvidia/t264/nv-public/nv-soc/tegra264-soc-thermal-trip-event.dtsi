@@ -1,0 +1,41 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+/ {
+	cpu_throttle_alert: cpu-throttle-alert {
+		compatible = "thermal-trip-event";
+		cdev-type = "cpu-throttle-alert";
+		#cooling-cells = <2>;
+	};
+
+	gpu_throttle_alert: gpu-throttle-alert {
+		compatible = "thermal-trip-event";
+		cdev-type = "gpu-throttle-alert";
+		#cooling-cells = <2>;
+	};
+
+	soc012_throttle_alert: soc012-throttle-alert {
+		compatible = "thermal-trip-event";
+		cdev-type = "soc012-throttle-alert";
+		#cooling-cells = <2>;
+	};
+
+	soc345_throttle_alert: soc345-throttle-alert {
+		compatible = "thermal-trip-event";
+		cdev-type = "soc345-throttle-alert";
+		#cooling-cells = <2>;
+	};
+
+	hot_surface_alert: hot-surface-alert {
+		compatible = "thermal-trip-event";
+		cdev-type = "hot-surface-alert";
+		#cooling-cells = <2>;
+		status = "disabled";
+	};
+
+	thermal_shutdown_alert: thermal-shutdown-alert {
+		compatible = "thermal-trip-event";
+		cdev-type = "thermal-shutdown-alert";
+		#cooling-cells = <2>;
+	};
+};

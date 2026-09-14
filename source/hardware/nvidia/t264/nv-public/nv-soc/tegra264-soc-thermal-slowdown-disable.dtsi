@@ -1,0 +1,92 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+/ {
+	bus@0 {
+		pcie@d0b0000000 {
+			pci@0,0 {
+				gpu@0,0 {
+					nvidia,cooling-device =
+						<0 0>,
+						<0 0>,
+						<0 0>,
+						<0 0>;
+				};
+			};
+		};
+	};
+
+	cpu-throttle-alert {
+		status = "disabled";
+	};
+
+	gpu-throttle-alert {
+		status = "disabled";
+	};
+
+	soc012-throttle-alert {
+		status = "disabled";
+	};
+
+	soc345-throttle-alert {
+		status = "disabled";
+	};
+
+	thermal-zones {
+		cpu-thermal {
+			cooling-maps {
+				map-cpufreq {
+					cooling-device = <&cpu_0 0 0>,
+							 <&cpu_2 0 0>,
+							 <&cpu_4 0 0>,
+							 <&cpu_6 0 0>,
+							 <&cpu_8 0 0>,
+							 <&cpu_10 0 0>,
+							 <&cpu_12 0 0>;
+				};
+			};
+		};
+
+		gpu-thermal {
+			cooling-maps {
+				map-cpufreq {
+					cooling-device = <&cpu_0 0 0>,
+							 <&cpu_2 0 0>,
+							 <&cpu_4 0 0>,
+							 <&cpu_6 0 0>,
+							 <&cpu_8 0 0>,
+							 <&cpu_10 0 0>,
+							 <&cpu_12 0 0>;
+				};
+			};
+		};
+
+		soc012-thermal {
+			cooling-maps {
+				map-cpufreq {
+					cooling-device = <&cpu_0 0 0>,
+							 <&cpu_2 0 0>,
+							 <&cpu_4 0 0>,
+							 <&cpu_6 0 0>,
+							 <&cpu_8 0 0>,
+							 <&cpu_10 0 0>,
+							 <&cpu_12 0 0>;
+				};
+			};
+		};
+
+		soc345-thermal {
+			cooling-maps {
+				map-cpufreq {
+					cooling-device = <&cpu_0 0 0>,
+							 <&cpu_2 0 0>,
+							 <&cpu_4 0 0>,
+							 <&cpu_6 0 0>,
+							 <&cpu_8 0 0>,
+							 <&cpu_10 0 0>,
+							 <&cpu_12 0 0>;
+				};
+			};
+		};
+	};
+};

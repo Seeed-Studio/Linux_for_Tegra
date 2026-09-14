@@ -1,0 +1,100 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+/dts-v1/;
+/plugin/;
+
+/ {
+	overlay-name = "Tegra264 p4071-0000+p3834-xxxx Dynamic Overlay";
+
+	/* INA238 */
+	fragment@0 {
+		target-path = "/bus@0/i2c@c600000/ina238@44";
+		board_config {
+			ids = "4071-0000-EB1","4071-0000-TS1";
+		};
+		__overlay__ {
+			status = "disabled";
+		};
+	};
+
+	/* enable MGBE for 25Gbps */
+	/* MGBE 0 */
+	fragment@1 {
+		target-path = "/bus@0/ethernet@a808a10000";
+		delete_prop = "nvidia,phy-iface-mode";
+		board_config {
+			odm-data = "uphy1-config-8";
+		};
+		__overlay__ {
+			status = "okay";
+			nvidia,mac-addr-idx = <1>;
+			nvidia,uphy-gbe-mode = <2>;
+			nvidia,max-platform-mtu = <9000>;
+
+			fixed-link {
+				full-duplex;
+				speed = <25000>;
+			};
+		};
+	};
+
+	/* MGBE 1 */
+	fragment@2 {
+		target-path = "/bus@0/ethernet@a808b10000";
+		delete_prop = "nvidia,phy-iface-mode";
+		board_config {
+			odm-data = "uphy1-config-8";
+		};
+		__overlay__ {
+			status = "okay";
+			nvidia,mac-addr-idx = <2>;
+			nvidia,uphy-gbe-mode = <2>;
+			nvidia,max-platform-mtu = <9000>;
+
+			fixed-link {
+				full-duplex;
+				speed = <25000>;
+			};
+		};
+	};
+
+	/* MGBE 2 */
+	fragment@3 {
+		target-path = "/bus@0/ethernet@a808d10000";
+		delete_prop = "nvidia,phy-iface-mode";
+		board_config {
+			odm-data = "uphy1-config-8";
+		};
+		__overlay__ {
+			status = "okay";
+			nvidia,mac-addr-idx = <3>;
+			nvidia,uphy-gbe-mode = <2>;
+			nvidia,max-platform-mtu = <9000>;
+
+			fixed-link {
+				full-duplex;
+				speed = <25000>;
+			};
+		};
+	};
+
+	/* MGBE 3 */
+	fragment@4 {
+		target-path = "/bus@0/ethernet@a808e10000";
+		delete_prop = "nvidia,phy-iface-mode";
+		board_config {
+			odm-data = "uphy1-config-8";
+		};
+		__overlay__ {
+			status = "okay";
+			nvidia,mac-addr-idx = <4>;
+			nvidia,uphy-gbe-mode = <2>;
+			nvidia,max-platform-mtu = <9000>;
+
+			fixed-link {
+				full-duplex;
+				speed = <25000>;
+			};
+		};
+	};
+};

@@ -1,0 +1,174 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+#include <dt-bindings/thermal/thermal.h>
+
+/ {
+	bus@0 {
+		/* PCIe C0 ecam generic node for iGPU */
+		pcie@d0b0000000 {
+			status = "okay";
+			pci@0,0 {
+				/* Register devfreq cdevs to desired zones */
+				gpu@0,0 {
+					nvidia,thermal-zones =
+						"cpu-thermal",
+						"gpu-thermal",
+						"soc012-thermal",
+						"soc345-thermal";
+					nvidia,cooling-device =
+						<THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+						<THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+						<THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+						<THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
+			};
+		};
+	};
+
+	thermal-zones {
+		cpu-thermal {
+			trips {
+				cpu_sw_slowdown: cpu-sw-slowdown {
+					temperature = <109000>;
+					hysteresis = <0>;
+					type = "passive";
+				};
+			};
+
+			cooling-maps {
+				map-cpufreq {
+					trip = <&cpu_sw_slowdown>;
+					/* CPU-pairs share the same clock-source */
+					cooling-device = <&cpu_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_4 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_6 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_8 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_10 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_12 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
+
+				map-throttle-alert {
+					trip = <&cpu_sw_slowdown>;
+					cooling-device = <&cpu_throttle_alert 1 1>;
+				};
+			};
+		};
+
+		gpu-thermal {
+			trips {
+				gpu_sw_slowdown: gpu-sw-slowdown {
+					temperature = <109000>;
+					hysteresis = <0>;
+					type = "passive";
+				};
+			};
+
+			cooling-maps {
+				map-cpufreq {
+					trip = <&gpu_sw_slowdown>;
+					/* CPU-pairs share the same clock-source */
+					cooling-device = <&cpu_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_4 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_6 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_8 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_10 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_12 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
+
+				map-throttle-alert {
+					trip = <&gpu_sw_slowdown>;
+					cooling-device = <&gpu_throttle_alert 1 1>;
+				};
+			};
+		};
+
+		soc012-thermal {
+			trips {
+				soc012_sw_slowdown: soc012-sw-slowdown {
+					temperature = <109000>;
+					hysteresis = <0>;
+					type = "passive";
+				};
+			};
+
+			cooling-maps {
+				map-cpufreq {
+					trip = <&soc012_sw_slowdown>;
+					/* CPU-pairs share the same clock-source */
+					cooling-device = <&cpu_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_4 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_6 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_8 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_10 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_12 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
+
+				map-throttle-alert {
+					trip = <&soc012_sw_slowdown>;
+					cooling-device = <&soc012_throttle_alert 1 1>;
+				};
+			};
+		};
+
+		soc345-thermal {
+			trips {
+				soc345_sw_slowdown: soc345-sw-slowdown {
+					temperature = <109000>;
+					hysteresis = <0>;
+					type = "passive";
+				};
+			};
+
+			cooling-maps {
+				map-cpufreq {
+					trip = <&soc345_sw_slowdown>;
+					/* CPU-pairs share the same clock-source */
+					cooling-device = <&cpu_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_4 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_6 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_8 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_10 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_12 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
+
+				map-throttle-alert {
+					trip = <&soc345_sw_slowdown>;
+					cooling-device = <&soc345_throttle_alert 1 1>;
+				};
+			};
+		};
+	};
+};
+
+&cpu_0 {
+	#cooling-cells = <2>;
+};
+
+&cpu_2 {
+	#cooling-cells = <2>;
+};
+
+&cpu_4 {
+	#cooling-cells = <2>;
+};
+
+&cpu_6 {
+	#cooling-cells = <2>;
+};
+
+&cpu_8 {
+	#cooling-cells = <2>;
+};
+
+&cpu_10 {
+	#cooling-cells = <2>;
+};
+
+&cpu_12 {
+	#cooling-cells = <2>;
+};
