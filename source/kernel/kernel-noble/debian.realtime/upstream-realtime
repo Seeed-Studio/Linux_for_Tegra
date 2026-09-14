@@ -1,0 +1,4 @@
+# The following upstream releases have been ported:
+# +n notes changes from the specified PREEMPT_RT version
+[upstream-realtime]
+        linux-6.8.y-rt = 6.8-rt11+2

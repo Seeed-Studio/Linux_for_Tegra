@@ -1,0 +1,45 @@
+# SPDX-License-Identifier: GPL-2.0-only
+#
+# Tegra Platform Specific Drivers
+#
+
+menuconfig TEGRA_PLATFORM_DEVICES
+	bool "Tegra Platform Specific Device Drivers"
+	default y
+	help
+	  Say Y here to get to see options for device drivers of various
+	  Tegra platforms. This option itself does not add any kernel code.
+
+	  If you say N, all options in this submenu will be skipped and
+	  disabled.
+
+if TEGRA_PLATFORM_DEVICES
+
+config TEGRA_EPL
+	tristate "Tegra Error Propagation Layer Driver"
+	depends on MAILBOX
+	help
+	  The tegra-epl driver provides interface for reporting software detected
+	  errors to Functional Safety Island (FSI) via HSP mailbox or MISC EC
+	  registers.
+
+	  Both user and kernel space interfaces are provided for reporting
+	  software detected via HSP mailbox. Access to MISC EC interface is
+	  limited to kernel space and is controlled via DT configuration.
+
+config TEGRA_HSIERRRPTINJ
+	bool "Enable Tegra HSI Error Report Injection client driver"
+	depends on MAILBOX && TEGRA_EPL && DEBUG_FS
+	default n
+	help
+	  The tegra-hsierrrptinj driver provides a
+	  mechanism for HSI error report transmission
+	  from T23x to the MCU communications interface.
+
+endif # TEGRA_PLATFORM_DEVICES
+
+config TEGRA_PROD_LEGACY
+	def_bool y
+	help
+	  This config helps client driver to identify whether prod
+	  framework is implemented as legacy method or not.

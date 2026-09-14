@@ -1,0 +1,123 @@
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-2-Clause
+# SPDX-FileCopyrightText: Copyright (c) 2025, 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+# more details.
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/platform/tegra/tegra-epl.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Device tree binding for NVIDIA Tegra EPL
+
+maintainers:
+  - Rahul Bedarkar <rabedarkar@nvidia.com>
+
+description: |
+     The tegra-epl driver provides interface for reporting software detected errors
+     to Functional Safety Island (FSI) via HSP mailbox or MISC EC registers.
+     The compatibility = nvidia,tegra234-epl-client and nvidia,tegra264-epl-client are mentioned in the following drivers
+        - drivers/platform/tegra/tegra-epl.c
+     The following nodes use this compatibility
+        - /safetyservices_epl_client@110000
+select:
+  properties:
+    compatible:
+      enum:
+        - nvidia,tegra234-epl-client
+        - nvidia,tegra264-epl-client
+  required:
+    - compatible
+properties:
+    reg:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Address and size pairs of MISC EC error and assert registers followed by
+            address and size of mission error status register.
+            It is given by a tuple of four values:
+                - physical address high bits
+                - physical address low bits
+                - size high bits
+                - size low bits
+    mboxes:
+        $ref: "/schemas/types.yaml#/definitions/uint32-array"
+        maxItems: 1
+        description: |
+            Specifies mailbox channel for communication with EPL service.
+            Each entry must contain 3 values: phandle, mailbox type, and channel.
+    mbox-names:
+        $ref: "/schemas/types.yaml#/definitions/string"
+        maxItems: 1
+        description: Specifies the name for the mailbox channel defined in the mboxes property. It should be "epl-tx".
+    handshake-retry-count:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        description: Number of retries for handshake operations.
+        minimum: 0x0
+        maximum: UINT32_MAX
+    client-misc-sw-generic-err0:
+        $ref: "/schemas/types.yaml#/definitions/string"
+        description: Name of the driver that can report the error via misc EC software generic error0.
+    client-misc-sw-generic-err1:
+        $ref: "/schemas/types.yaml#/definitions/string"
+        description: Name of the driver that can report the error via misc EC software generic error1.
+    client-misc-sw-generic-err2:
+        $ref: "/schemas/types.yaml#/definitions/string"
+        description: Name of the driver that can report the error via misc EC software generic error2.
+    client-misc-sw-generic-err3:
+        $ref: "/schemas/types.yaml#/definitions/string"
+        description: Name of the driver that can report the error via misc EC software generic error3.
+    client-misc-sw-generic-err4:
+        $ref: "/schemas/types.yaml#/definitions/string"
+        description: Name of the driver that can report the error via misc EC software generic error4.
+    enable-deinit-notify:
+        type: boolean
+        description: Flag to enable sending notifications during driver shutdown.
+    nvidia,tx-timeout-ms:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        description: Optional: Mailbox transmit timeout in milliseconds.
+
+requirede
+    - compatible
+    - mboxes
+    - mbox-names
+    - reg
+
+additionalProperties: false
+
+examples:
+  - |
+    #include <dt-bindings/mailbox/tegra186-hsp.h>
+
+    soc {
+        safetyservices_epl_client@110000 {
+            compatible = "nvidia,tegra234-epl-client";
+            mboxes = <&top_hsp3 TEGRA_HSP_MBOX_TYPE_SM_128BIT TEGRA_HSP_SM_TX(0)>;
+            mbox-names = "epl-tx";
+            handshake-retry-count = < 200 >;
+            reg = <0x0 0x00110000 0x0 0x4>,
+                  <0x0 0x00110004 0x0 0x4>,
+                  <0x0 0x00120000 0x0 0x4>,
+                  <0x0 0x00120004 0x0 0x4>,
+                  <0x0 0x00130000 0x0 0x4>,
+                  <0x0 0x00130004 0x0 0x4>,
+                  <0x0 0x00140000 0x0 0x4>,
+                  <0x0 0x00140004 0x0 0x4>,
+                  <0x0 0x00150000 0x0 0x4>,
+                  <0x0 0x00150004 0x0 0x4>,
+                  <0x0 0x00170038 0x0 0x4>;
+            client-misc-sw-generic-err0 = "fsicom_client";
+            client-misc-sw-generic-err1 = "gk20b";
+            client-misc-sw-generic-err3 = "gk20d";
+            client-misc-sw-generic-err4 = "gk20e";
+            enable-deinit-notify;
+            status = "disabled";
+        };
+
+     };
+...
