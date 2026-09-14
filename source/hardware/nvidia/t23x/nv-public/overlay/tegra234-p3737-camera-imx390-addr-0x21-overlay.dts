@@ -1,0 +1,135 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2018-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/clock/tegra234-clock.h>
+#include <dt-bindings/gpio/tegra234-gpio.h>
+#include <dt-bindings/tegra234-p3737-0000+p3701-0000.h>
+
+#define CAM0_RST_L	TEGRA234_MAIN_GPIO(H, 3)
+
+/* camera control gpio definitions */
+/ {
+	overlay-name = "Jetson Camera IMX390 sensor 0x21";
+	jetson-header-name = "Jetson AGX CSI Connector";
+	compatible = JETSON_COMPATIBLE;
+
+	fragment@0 {
+		target-path = "/";
+
+		__overlay__ {
+			tegra-capture-vi {
+				num-channels = <1>;
+				ports {
+					status = "okay";
+					port@0 {
+						status = "okay";
+						liimx390_vi_in0: endpoint {
+							status = "okay";
+							port-index = <0>;
+							bus-width = <4>;
+							remote-endpoint = <&liimx390_csi_out0>;
+						};
+					};
+				};
+			};
+			tegra-camera-platform {
+				modules {
+					status = "okay";
+					module0 {
+						badge = "imx390_rear";
+						position = "rear";
+						orientation = "1";
+						status = "okay";
+						drivernode0 {
+							status = "okay";
+							/* Declare PCL support driver (classically known as guid) */
+							pcl_id = "v4l2_sensor";
+							/* Declare the device-tree hierarchy to driver instance */
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@3180000/tca9546@70/i2c@0/imx390_a@21";
+						};
+					};
+				};
+			};
+			bus@0{
+				host1x@13e00000 {
+					nvcsi@15a00000 {
+						num-channels = <1>;
+						channel@0 {
+							status = "okay";
+							ports {
+								status = "okay";
+								port@0 {
+									status = "okay";
+									liimx390_csi_in0: endpoint@0 {
+										status = "okay";
+										port-index = <0>;
+										bus-width = <4>;
+										remote-endpoint = <&liimx390_imx390_out0>;
+									};
+								};
+								port@1 {
+									status = "okay";
+									liimx390_csi_out0: endpoint@1 {
+										status = "okay";
+										remote-endpoint = <&liimx390_vi_in0>;
+									};
+								};
+							};
+						};
+					};
+				};
+
+				i2c@3180000 {
+					tca9546@70 {
+						status = "okay";
+						compatible = "nxp,pca9546";
+						reg = <0x70>;
+						#address-cells = <1>;
+						#size-cells = <0>;
+						skip_mux_detect = "yes";
+						i2c@0 {
+							reg = <0>;
+							i2c-mux,deselect-on-exit;
+							#address-cells = <1>;
+							#size-cells = <0>;
+							status = "okay";
+							dser: max929x_a@64 {
+								compatible = "Maxim,max929x";
+								reg = <0x64>;
+								pwdn-gpios = <&gpio CAM0_RST_L GPIO_ACTIVE_HIGH>;
+								status = "okay";
+							};
+							imx390_a@21 {
+								/* Define any required hw resources needed by driver */
+								/* ie. clocks, io pins, power sources */
+								clocks = <&bpmp TEGRA234_CLK_EXTPERIPH1>,
+										<&bpmp TEGRA234_CLK_EXTPERIPH1>;
+								clock-names = "extperiph1", "pllp_grtba";
+								mclk = "extperiph1";
+								channel = "a";
+								status = "okay";
+								reg = <0x21>;
+								nvidia,gmsl-dser-device = <&dser>;
+								ports {
+									status = "okay";
+									port@0 {
+										status = "okay";
+										liimx390_imx390_out0: endpoint {
+											status = "okay";
+											port-index = <0>;
+											bus-width = <4>;
+											remote-endpoint = <&liimx390_csi_in0>;
+										};
+									};
+								};
+							};
+						};
+					};
+				};
+			};
+		};
+	};
+};

@@ -1,0 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2026 Seeed Technology Inc.
+
+/dts-v1/;
+
+#include "tegra234-p3737-0000+p3701-0005-nv.dts"

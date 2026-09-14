@@ -1,0 +1,56 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+//Device-tree overlay for tegra234-p3740-0002-p3701-0008 20 pin header.
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/pinctrl/pinctrl-tegra.h>
+#include <dt-bindings/tegra234-p3740-0002-p3701-0008.h>
+
+/ {
+	overlay-name = "Jetson 20pin Header";
+	compatible = JETSON_COMPATIBLE;
+
+	fragment@0 {
+		target = <&pinmux>;
+		__overlay__ {
+			pinctrl-names = "default";
+			pinctrl-0 = <&jetson_io_pinmux>;
+			jetson_io_pinmux: exp-header-pinmux {
+				hdr20-pin8 {
+					nvidia,pins = "gen1_i2c_scl_pi3";
+				};
+				hdr20-pin10 {
+					nvidia,pins = "gen1_i2c_sda_pi4";
+				};
+			};
+		};
+	};
+	fragment@1 {
+		target = <&pinmux_aon>;
+		__overlay__ {
+			pinctrl-names = "default";
+			pinctrl-0 = <&jetson_io_pinmux_aon>;
+			jetson_io_pinmux_aon: exp-header-pinmux {
+				hdr20-pin4 {
+					nvidia,pins = "can1_stb_pbb0";
+					nvidia,function = "dmic3";
+					nvidia,pin-label = "dmic3_clk";
+					nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+					nvidia,tristate = <TEGRA_PIN_DISABLE>;
+					nvidia,enable-input = <TEGRA_PIN_DISABLE>;
+				};
+				hdr20-pin6 {
+					nvidia,pins = "can1_en_pbb1";
+					nvidia,function = "dmic3";
+					nvidia,pin-label = "dmic3_dat";
+					nvidia,pull = <TEGRA_PIN_PULL_DOWN>;
+					nvidia,tristate = <TEGRA_PIN_ENABLE>;
+					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+				};
+			};
+		};
+	};
+};

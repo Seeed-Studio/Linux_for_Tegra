@@ -1,0 +1,98 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+#define TEGRA234_THERMAL_SHUTDOWN_TEMP 104500
+
+/ {
+	thermal-zones {
+		cpu-thermal {
+			trips {
+				cpu_sw_shutdown: cpu-sw-shutdown {
+					temperature = <TEGRA234_THERMAL_SHUTDOWN_TEMP>;
+					hysteresis = <0>;
+					type = "critical";
+				};
+			};
+		};
+
+		gpu-thermal {
+			trips {
+				gpu_sw_shutdown: gpu-sw-shutdown {
+					temperature = <TEGRA234_THERMAL_SHUTDOWN_TEMP>;
+					hysteresis = <0>;
+					type = "critical";
+				};
+			};
+		};
+
+		cv0-thermal {
+			trips {
+				cv0_sw_shutdown: cv0-sw-shutdown {
+					temperature = <TEGRA234_THERMAL_SHUTDOWN_TEMP>;
+					hysteresis = <0>;
+					type = "critical";
+				};
+			};
+		};
+
+		cv1-thermal {
+			trips {
+				cv1_sw_shutdown: cv1-sw-shutdown {
+					temperature = <TEGRA234_THERMAL_SHUTDOWN_TEMP>;
+					hysteresis = <0>;
+					type = "critical";
+				};
+			};
+		};
+
+		cv2-thermal {
+			trips {
+				cv2_sw_shutdown: cv2-sw-shutdown {
+					temperature = <TEGRA234_THERMAL_SHUTDOWN_TEMP>;
+					hysteresis = <0>;
+					type = "critical";
+				};
+			};
+		};
+
+		soc0-thermal {
+			trips {
+				soc0_sw_shutdown: soc0-sw-shutdown {
+					temperature = <TEGRA234_THERMAL_SHUTDOWN_TEMP>;
+					hysteresis = <0>;
+					type = "critical";
+				};
+			};
+		};
+
+		soc1-thermal {
+			trips {
+				soc1_sw_shutdown: soc1-sw-shutdown {
+					temperature = <TEGRA234_THERMAL_SHUTDOWN_TEMP>;
+					hysteresis = <0>;
+					type = "critical";
+				};
+			};
+		};
+
+		soc2-thermal {
+			trips {
+				soc2_sw_shutdown: soc2-sw-shutdown {
+					temperature = <TEGRA234_THERMAL_SHUTDOWN_TEMP>;
+					hysteresis = <0>;
+					type = "critical";
+				};
+			};
+		};
+
+		tj-thermal {
+			trips {
+				tj_sw_shutdown: tj-sw-shutdown {
+					temperature = <TEGRA234_THERMAL_SHUTDOWN_TEMP>;
+					hysteresis = <0>;
+					type = "critical";
+				};
+			};
+		};
+	};
+};

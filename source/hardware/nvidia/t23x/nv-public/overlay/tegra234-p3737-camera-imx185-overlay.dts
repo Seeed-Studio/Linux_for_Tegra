@@ -1,0 +1,215 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+/*
+ * Jetson Device-tree overlay for Camera IMX185 on t23x platforms
+ *
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/tegra234-p3737-0000+p3701-0000.h>
+
+/ {
+	overlay-name = "Jetson Camera IMX185";
+	jetson-header-name = "Jetson AGX CSI Connector";
+	compatible = JETSON_COMPATIBLE;
+
+	fragment@1 {
+		target-path = "/bus@0/i2c@3180000/tca9546@70/i2c@0/imx185_a@1a";
+		board_config {
+			ids = "LPRD-002001", "LPRD-002", "LPRD-001";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+		};
+	};
+	fragment@2 {
+		target-path = "/bus@0/i2c@3180000/tca9546@70/i2c@0/imx185_a@1a/ports/port@0/endpoint";
+		board_config {
+			ids = "LPRD-002001", "LPRD-002", "LPRD-001";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+			remote-endpoint = <&liimx185_csi_in0>;
+		};
+	};
+	fragment@3 {
+		target-path = "/tegra-camera-platform/modules/module0";
+		board_config {
+			ids = "LPRD-002001", "LPRD-002", "LPRD-001";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+			badge = "imx185_bottom_liimx185";
+			position = "bottom";
+			orientation = "0";
+		};
+	};
+	fragment@4 {
+		target-path = "/tegra-camera-platform/modules/module0/drivernode0";
+		board_config {
+			ids = "LPRD-002001", "LPRD-002", "LPRD-001";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+			pcl_id = "v4l2_sensor";
+			sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@3180000/tca9546@70/i2c@0/imx185_a@1a";
+		};
+	};
+	fragment@5 {
+		target-path = "/tegra-camera-platform/modules/module0/drivernode1";
+		board_config {
+			ids = "LPRD-002001", "LPRD-002", "LPRD-001";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+			pcl_id = "v4l2_lens";
+		};
+	};
+	/* Enable VI ports */
+	fragment@6 {
+		target-path = "/tegra-capture-vi";
+		board_config {
+			ids = "LPRD-002001", "LPRD-002", "LPRD-001";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			num-channels=<1>;
+		};
+	};
+	fragment@7 {
+		target-path = "/tegra-capture-vi/ports/port@0";
+		board_config {
+			ids = "LPRD-002001", "LPRD-002", "LPRD-001";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+		};
+	};
+	fragment@8 {
+		target-path = "/tegra-capture-vi/ports/port@0/endpoint";
+		board_config {
+			ids = "LPRD-002001", "LPRD-002", "LPRD-001";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+			port-index = <0>;
+			bus-width = <4>;
+			remote-endpoint = <&liimx185_csi_out0>;
+		};
+	};
+	/* Enable CSI ports */
+	fragment@9 {
+		target-path = "/bus@0/host1x@13e00000/nvcsi@15a00000";
+		board_config {
+			ids = "LPRD-002001", "LPRD-002", "LPRD-001";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			num-channels=<1>;
+		};
+	};
+	fragment@10 {
+		target-path = "/bus@0/host1x@13e00000/nvcsi@15a00000/channel@0";
+		board_config {
+			ids = "LPRD-002001", "LPRD-002", "LPRD-001";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+		};
+	};
+	fragment@11 {
+		target-path = "/bus@0/host1x@13e00000/nvcsi@15a00000/channel@0/ports/port@0";
+		board_config {
+			ids = "LPRD-002001", "LPRD-002", "LPRD-001";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+		};
+	};
+	fragment@12 {
+		target-path = "/bus@0/host1x@13e00000/nvcsi@15a00000/channel@0/ports/port@0/endpoint@0";
+		board_config {
+			ids = "LPRD-002001", "LPRD-002", "LPRD-001";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+			port-index = <0>;
+			bus-width = <4>;
+			remote-endpoint = <&liimx185_imx185_out0>;
+		};
+	};
+	fragment@13 {
+		target-path = "/bus@0/host1x@13e00000/nvcsi@15a00000/channel@0/ports/port@1";
+		board_config {
+			ids = "LPRD-002001", "LPRD-002", "LPRD-001";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+		};
+	};
+	fragment@14 {
+		target-path = "/bus@0/host1x@13e00000/nvcsi@15a00000/channel@0/ports/port@1/endpoint@1";
+		board_config {
+			ids = "LPRD-002001", "LPRD-002", "LPRD-001";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+			remote-endpoint = <&liimx185_vi_in0>;
+		};
+	};
+	/* tegra-camera-platform settings */
+	fragment@15 {
+		target-path = "/tegra-camera-platform";
+		board_config {
+			ids = "LPRD-002001", "LPRD-002", "LPRD-001";
+			sw-modules = "kernel";
+		};
+	};
+	/* pca9646 i2c mux */
+	fragment@30 {
+		target-path = "/bus@0/i2c@3180000/tca9546@70";
+		board_config {
+			ids = "LPRD-002001", "LPRD-002", "LPRD-001";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+		};
+	};
+	/* GPIO expander */
+	fragment@16 {
+		target-path = "/bus@0/i2c@3180000/tca9546@70/i2c@0/pca9570_a@24";
+		board_config {
+			ids = "LPRD-002001", "LPRD-002", "LPRD-001";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+		};
+	};
+	fragment@17 {
+		target-path = "/bus@0/i2c@3180000/tca9546@70/i2c@0/imx185_a@1a/ports/port@0/endpoint";
+		board_config {
+			ids = "LPRD-002001", "LPRD-002", "LPRD-001";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+			remote-endpoint = <&liimx185_csi_in0>;
+		};
+	};
+};

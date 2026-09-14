@@ -1,0 +1,30 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+/ {
+	bus@0 {
+
+		aconnect@2900000 {
+			ahub@2900800 {
+				i2s@2901100 {
+					ports {
+						port@1 {
+							hdr40_snd_i2s_dap_ep: endpoint {
+							};
+						};
+					};
+				};
+			};
+		};
+
+	};
+
+	tegra_sound: sound {
+		clocks = <&bpmp TEGRA234_CLK_PLLA>,
+			 <&bpmp TEGRA234_CLK_PLLA_OUT0>,
+			 <&bpmp TEGRA234_CLK_AUD_MCLK>;
+		clock-names = "pll_a", "plla_out0", "extern1";
+		assigned-clocks = <&bpmp TEGRA234_CLK_AUD_MCLK>;
+		assigned-clock-parents = <&bpmp TEGRA234_CLK_PLLA_OUT0>;
+	};
+};

@@ -1,0 +1,52 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+/dts-v1/;
+/plugin/;
+
+/ {
+	overlay-name = "Tegra234 Carveouts Overlay";
+
+	fragment@0 {
+		target-path = "/";
+		__overlay__ {
+
+			reserved-memory {
+				#address-cells = <2>;
+				#size-cells = <2>;
+				ranges;
+
+				vpr: vpr-carveout {
+					compatible = "nvidia,vpr-carveout";
+					no-map;
+					status = "okay";
+				};
+
+				fsi_reserved: fsi-carveout {
+					compatible = "nvidia,fsi-carveout";
+					size = <0 0x2000000>;
+					alignment = <0 0x1000>;
+					no-map;
+					alloc-ranges = <0x0 0x0 0x1 0x0>;
+					status = "okay";
+				};
+
+				ramoops_reserved: ramoops_carveout {
+					compatible = "ramoops";
+					size = <0x0 0x200000>;
+					record-size = <0x00010000>;
+					console-size = <0x00080000>;
+					alignment = <0x0 0x10000>;
+					alloc-ranges = <0x0 0x0 0x1 0x0>;
+					no-map;
+				};
+			};
+
+			tegra-carveouts {
+				compatible = "nvidia,carveouts";
+				memory-region = <&vpr &fsi_reserved>;
+				status = "okay";
+			};
+		};
+	};
+};

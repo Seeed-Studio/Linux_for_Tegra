@@ -1,0 +1,151 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+//
+// This file contains the DT nodes of T234 which are not in base/tegra234.dtsi
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/tegra234-android-bootargs.h>
+
+/ {
+	fragment-t234-android@0 {
+		target-path = "/";
+		 __overlay__ {
+			firmware {
+				android {
+					compatible = "android,firmware";
+					first_stage_delay = "1";
+				};
+				optee {
+					compatible = "linaro,optee-tz";
+					method = "smc";
+					status = "okay";
+				};
+				uefi {
+					use-partition-name-suffixes;
+				};
+			};
+
+			chosen {
+				use_dts_cmdline;
+				bootargs   = ANDROID_BOOTARGS;
+				bootconfig = ANDROID_BOOTCONFIG;
+				/* Test key hash, will got overriden on signing server */
+				avb_key0_sha1 = <0x2597c218 0xaae470a1 0x30f61162 0xfeaae70a 0xfd97f011>;
+				/* RSA2K = 520, RSA4K = 1032, RSA8K = 2056 */
+				avb_key0_size = <1032>;
+			};
+
+			bus@0 {
+				ethernet@6800000 {
+					status = "okay";
+				};
+
+				ethernet@6900000 {
+					status = "okay";
+				};
+
+				ethernet@6a00000 {
+					status = "okay";
+				};
+
+				ethernet@6b00000 {
+					status = "okay";
+				};
+
+				/* SPI1, 40pin header, Pin 19(MOSIsdd, Pin 21(MISO), Pin 23(CLK), Pin 24(CS) */
+				spi@3210000 {
+					status = "okay";
+					spi@0 {
+						compatible = "tegra-spidev";
+						reg = <0x0>;
+						spi-max-frequency = <50000000>;
+						controller-data {
+							nvidia,enable-hw-based-cs;
+							nvidia,rx-clk-tap-delay = <0x10>;
+							nvidia,tx-clk-tap-delay = <0x0>;
+						};
+					};
+					spi@1 {
+						compatible = "tegra-spidev";
+						reg = <0x1>;
+						spi-max-frequency = <50000000>;
+						controller-data {
+							nvidia,enable-hw-based-cs;
+							nvidia,rx-clk-tap-delay = <0x10>;
+							nvidia,tx-clk-tap-delay = <0x0>;
+						};
+					};
+
+				};
+
+				/* SPI3, 40pin header, Pin 37(MOSI), Pin 22(MISO), Pin 13(CLK), Pin 18(CS) */
+				spi@3230000 {
+					status = "okay";
+					spi@0 {
+						compatible = "tegra-spidev";
+						reg = <0x0>;
+						spi-max-frequency = <50000000>;
+						controller-data {
+							nvidia,enable-hw-based-cs;
+							nvidia,rx-clk-tap-delay = <0x10>;
+							nvidia,tx-clk-tap-delay = <0x0>;
+						};
+					};
+					spi@1 {
+						compatible = "tegra-spidev";
+						reg = <0x1>;
+						spi-max-frequency = <50000000>;
+						controller-data {
+							nvidia,enable-hw-based-cs;
+							nvidia,rx-clk-tap-delay = <0x10>;
+							nvidia,tx-clk-tap-delay = <0x0>;
+						};
+					};
+				};
+
+				serial@3100000 {
+					dma-coherent;
+					dmas = <&gpcdma 8>, <&gpcdma 8>;
+					dma-names = "rx", "tx";
+				};
+
+				serial@3110000 {
+					dma-coherent;
+					dmas = <&gpcdma 8>, <&gpcdma 8>;
+					dma-names = "rx", "tx";
+				};
+
+				serial@3140000 {
+					dma-coherent;
+					dmas = <&gpcdma 8>, <&gpcdma 8>;
+					dma-names = "rx", "tx";
+				};
+				host1x@13e00000 {
+					crypto@15810000 {
+						status = "disabled";
+					};
+
+					crypto@15820000 {
+						status = "disabled";
+					};
+
+					crypto@15840000 {
+						status = "disabled";
+					};
+				};
+			};
+
+			display@13800000 {
+				hdcp_enabled;
+				status = "okay";
+			};
+		};
+	};
+
+	fragment-t234-android@1 {
+		target-path = "/bus@0/mmc@3400000";
+		delete_prop = "sd-uhs-ddr50";
+	};
+};
