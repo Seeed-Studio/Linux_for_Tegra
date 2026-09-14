@@ -1,0 +1,151 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+#include "tegra234-p3701-0000.dtsi"
+
+#define TEGRA234_INDUSTRIAL_THERMAL_SLOWDOWN_TEMP 112000
+#define TEGRA234_INDUSTRIAL_THERMAL_SHUTDOWN_TEMP 117500
+
+/ {
+	opp-table-cluster0 {
+		opp-1971200000 {
+			opp-hz = /bits/ 64 <1971200000>;
+			opp-peak-kBps = <3200000>;
+		};
+	};
+
+	opp-table-cluster1 {
+		opp-1971200000 {
+			opp-hz = /bits/ 64 <1971200000>;
+			opp-peak-kBps = <3200000>;
+		};
+	};
+
+	opp-table-cluster2 {
+		opp-1971200000 {
+			opp-hz = /bits/ 64 <1971200000>;
+			opp-peak-kBps = <3200000>;
+		};
+	};
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		linux,cma { /* Needed for nvgpu comptags */
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0x0 0x20000000>; /* 512MB */
+			alignment = <0x0 0x10000>;
+			linux,cma-default;
+			status = "okay";
+		};
+	};
+
+	thermal-zones {
+		cpu-thermal {
+			trips {
+				cpu-sw-slowdown {
+					temperature = <TEGRA234_INDUSTRIAL_THERMAL_SLOWDOWN_TEMP>;
+				};
+
+				cpu-sw-shutdown {
+					temperature = <TEGRA234_INDUSTRIAL_THERMAL_SHUTDOWN_TEMP>;
+				};
+			};
+		};
+
+		cv0-thermal {
+			trips {
+				cv0-sw-slowdown {
+					temperature = <TEGRA234_INDUSTRIAL_THERMAL_SLOWDOWN_TEMP>;
+				};
+
+				cv0-sw-shutdown {
+					temperature = <TEGRA234_INDUSTRIAL_THERMAL_SHUTDOWN_TEMP>;
+				};
+			};
+		};
+
+		cv1-thermal {
+			trips {
+				cv1-sw-slowdown {
+					temperature = <TEGRA234_INDUSTRIAL_THERMAL_SLOWDOWN_TEMP>;
+				};
+
+				cv1-sw-shutdown {
+					temperature = <TEGRA234_INDUSTRIAL_THERMAL_SHUTDOWN_TEMP>;
+				};
+			};
+		};
+
+		cv2-thermal {
+			trips {
+				cv2-sw-slowdown {
+					temperature = <TEGRA234_INDUSTRIAL_THERMAL_SLOWDOWN_TEMP>;
+				};
+
+				cv2-sw-shutdown {
+					temperature = <TEGRA234_INDUSTRIAL_THERMAL_SHUTDOWN_TEMP>;
+				};
+			};
+		};
+
+		gpu-thermal {
+			trips {
+				gpu-sw-slowdown {
+					temperature = <TEGRA234_INDUSTRIAL_THERMAL_SLOWDOWN_TEMP>;
+				};
+
+				gpu-sw-shutdown {
+					temperature = <TEGRA234_INDUSTRIAL_THERMAL_SHUTDOWN_TEMP>;
+				};
+			};
+		};
+
+		soc0-thermal {
+			trips {
+				soc0-sw-slowdown {
+					temperature = <TEGRA234_INDUSTRIAL_THERMAL_SLOWDOWN_TEMP>;
+				};
+
+				soc0-sw-shutdown {
+					temperature = <TEGRA234_INDUSTRIAL_THERMAL_SHUTDOWN_TEMP>;
+				};
+			};
+		};
+
+		soc1-thermal {
+			trips {
+				soc1-sw-slowdown {
+					temperature = <TEGRA234_INDUSTRIAL_THERMAL_SLOWDOWN_TEMP>;
+				};
+
+				soc1-sw-shutdown {
+					temperature = <TEGRA234_INDUSTRIAL_THERMAL_SHUTDOWN_TEMP>;
+				};
+			};
+		};
+
+		soc2-thermal {
+			trips {
+				soc2-sw-slowdown {
+					temperature = <TEGRA234_INDUSTRIAL_THERMAL_SLOWDOWN_TEMP>;
+				};
+
+				soc2-sw-shutdown {
+					temperature = <TEGRA234_INDUSTRIAL_THERMAL_SHUTDOWN_TEMP>;
+				};
+			};
+		};
+
+		tj-thermal {
+			trips {
+				tj-sw-shutdown {
+					temperature = <TEGRA234_INDUSTRIAL_THERMAL_SHUTDOWN_TEMP>;
+				};
+			};
+		};
+	};
+};

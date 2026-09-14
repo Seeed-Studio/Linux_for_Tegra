@@ -1,0 +1,344 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+/*
+ * Jetson Device-tree overlay for Camera Dual-IMX274 on t23x + p3971 platforms
+ *
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include "dt-bindings/gpio/tegra234-gpio.h"
+#include "dt-bindings/clock/tegra234-clock.h"
+#include "tegra234-p3971-0000-camera-imx274-dual.dtsi"
+
+
+/ {
+	overlay-name = "Jetson Camera Dual-IMX274";
+	jetson-header-name = "Jetson AGX CSI Connector";
+	compatible = "nvidia,p3971-0000+p3701-0008";
+
+	fragment@0 {
+		target-path = "/bus@0/i2c@3180000/tca9546@70/i2c@0/imx274_a@1a";
+		board_config {
+			ids = "LPRD-dual-imx274-002";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+		};
+	};
+	fragment@1 {
+		target-path = "/bus@0/i2c@3180000/tca9546@70/i2c@0/imx274_a@1a/ports/port@0/endpoint";
+		board_config {
+			ids = "LPRD-dual-imx274-002";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+			remote-endpoint = <&liimx274_csi_in0>;
+		};
+	};
+	fragment@2 {
+		target-path = "/tegra-camera-platform/modules/module0";
+		board_config {
+			ids = "LPRD-dual-imx274-002";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+			badge = "imx274_bottom_A6V26";
+			position = "bottom";
+			orientation = "0";
+		};
+	};
+	fragment@3 {
+		target-path = "/tegra-camera-platform/modules/module0/drivernode0";
+		board_config {
+			ids = "LPRD-dual-imx274-002";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+			pcl_id = "v4l2_sensor";
+			sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@3180000/tca9546@70/i2c@0/imx274_a@1a";
+		};
+	};
+	fragment@4 {
+		target-path = "/tegra-camera-platform/modules/module0/drivernode1";
+		board_config {
+			ids = "LPRD-dual-imx274-002";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+			pcl_id = "v4l2_lens";
+			sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/lens_imx274@A6V26/";
+		};
+	};
+	fragment@5 {
+		target-path = "/bus@0/i2c@3180000/tca9546@70/i2c@1/imx274_c@1a";
+		board_config {
+			ids = "LPRD-dual-imx274-002";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+		};
+	};
+	fragment@6 {
+		target-path = "/bus@0/i2c@3180000/tca9546@70/i2c@1/imx274_c@1a/ports/port@0/endpoint";
+		board_config {
+			ids = "LPRD-dual-imx274-002";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+			remote-endpoint = <&liimx274_csi_in1>;
+		};
+	};
+	fragment@7 {
+		target-path = "/tegra-camera-platform/modules/module1";
+		board_config {
+			ids = "LPRD-dual-imx274-002";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+			badge = "imx274_top_A6V26";
+			position = "top";
+			orientation = "0";
+		};
+	};
+	fragment@8 {
+		target-path = "/tegra-camera-platform/modules/module1/drivernode0";
+		board_config {
+			ids = "LPRD-dual-imx274-002";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+			pcl_id = "v4l2_sensor";
+			sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@3180000/tca9546@70/i2c@1/imx274_c@1a";
+		};
+	};
+	fragment@9 {
+		target-path = "/tegra-camera-platform/modules/module1/drivernode1";
+		board_config {
+			ids = "LPRD-dual-imx274-002";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+			pcl_id = "v4l2_lens";
+			sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/lens_imx274@A6V26/";
+		};
+	};
+	/* Enable VI ports - capture_vi_base, */
+	fragment@10 {
+		target-path = "/tegra-capture-vi";
+		board_config {
+			ids = "LPRD-dual-imx274-002";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+			num-channels=<2>;
+		};
+	};
+	fragment@11 {
+		target-path = "/tegra-capture-vi/ports/port@0";
+		board_config {
+			ids = "LPRD-dual-imx274-002";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+		};
+	};
+	fragment@12 {
+		target-path = "/tegra-capture-vi/ports/port@1";
+		board_config {
+			ids = "LPRD-dual-imx274-002";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+		};
+	};
+	fragment@13 {
+		target-path = "/tegra-capture-vi/ports/port@0/endpoint";
+		board_config {
+			ids = "LPRD-dual-imx274-002";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+			port-index = <0>;
+			bus-width = <4>;
+			remote-endpoint = <&liimx274_csi_out0>;
+
+		};
+	};
+	fragment@14 {
+		target-path = "/tegra-capture-vi/ports/port@1/endpoint";
+		board_config {
+			ids = "LPRD-dual-imx274-002";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+			port-index = <2>;
+			bus-width = <4>;
+			remote-endpoint = <&liimx274_csi_out1>;
+		};
+	};
+	/* Enable CSI ports */
+	fragment@15 {
+		target-path = "/bus@0/host1x@13e00000/nvcsi@15a00000";
+		board_config {
+			ids = "LPRD-dual-imx274-002";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			num-channels=<2>;
+		};
+	};
+	fragment@16 {
+		target-path = "/bus@0/host1x@13e00000/nvcsi@15a00000/channel@0";
+		board_config {
+			ids = "LPRD-dual-imx274-002";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+		};
+	};
+	fragment@17 {
+		target-path = "/bus@0/host1x@13e00000/nvcsi@15a00000/channel@0/ports/port@0";
+		board_config {
+			ids = "LPRD-dual-imx274-002";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+		};
+	};
+	fragment@18 {
+		target-path = "/bus@0/host1x@13e00000/nvcsi@15a00000/channel@0/ports/port@0/endpoint@0";
+		board_config {
+			ids = "LPRD-dual-imx274-002";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+			port-index = <0>;
+			bus-width = <4>;
+			remote-endpoint = <&liimx274_imx274_out0>;
+		};
+	};
+	fragment@19 {
+		target-path = "/bus@0/host1x@13e00000/nvcsi@15a00000/channel@0/ports/port@1";
+		board_config {
+			ids = "LPRD-dual-imx274-002";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+		};
+	};
+	fragment@20 {
+		target-path = "/bus@0/host1x@13e00000/nvcsi@15a00000/channel@0/ports/port@1/endpoint@1";
+		board_config {
+			ids = "LPRD-dual-imx274-002";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+			remote-endpoint = <&liimx274_vi_in0>;
+		};
+	};
+	fragment@21 {
+		target-path = "/bus@0/host1x@13e00000/nvcsi@15a00000/channel@1";
+		board_config {
+			ids = "LPRD-dual-imx274-002";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+		};
+	};
+	fragment@22 {
+		target-path = "/bus@0/host1x@13e00000/nvcsi@15a00000/channel@1/ports/port@0";
+		board_config {
+			ids = "LPRD-dual-imx274-002";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+		};
+	};
+	fragment@23 {
+		target-path = "/bus@0/host1x@13e00000/nvcsi@15a00000/channel@1/ports/port@0/endpoint@2";
+		board_config {
+			ids = "LPRD-dual-imx274-002";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+			port-index = <2>;
+			bus-width = <4>;
+			remote-endpoint = <&liimx274_imx274_out1>;
+		};
+	};
+	fragment@24 {
+		target-path = "/bus@0/host1x@13e00000/nvcsi@15a00000/channel@1/ports/port@1";
+		board_config {
+			ids = "LPRD-dual-imx274-002";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+		};
+	};
+	fragment@25 {
+		target-path = "/bus@0/host1x@13e00000/nvcsi@15a00000/channel@1/ports/port@1/endpoint@3";
+		board_config {
+			ids = "LPRD-dual-imx274-002";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+			remote-endpoint = <&liimx274_vi_in1>;
+		};
+	};
+	/* tegra-camera-platform settings */
+	fragment@26 {
+		target-path = "/tegra-camera-platform";
+		board_config {
+			ids = "LPRD-dual-imx274-002";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			num_csi_lanes = <8>;
+			max_lane_speed = <1500000>;
+			min_bits_per_pixel = <10>;
+			vi_peak_byte_per_pixel = <2>;
+			vi_bw_margin_pct = <25>;
+			isp_peak_byte_per_pixel = <5>;
+			isp_bw_margin_pct = <25>;
+		};
+	};
+	/* pca9646 i2c mux */
+	fragment@27 {
+		target-path = "/bus@0/i2c@3180000/tca9546@70";
+		board_config {
+			ids = "LPRD-dual-imx274-002";
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			status = "okay";
+		};
+	};
+
+};

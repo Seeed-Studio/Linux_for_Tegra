@@ -1,0 +1,69 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+//Device-tree overlay for tegra234-p3740-0002-p3701-0008 M.2 Key B Slot.
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/pinctrl/pinctrl-tegra.h>
+#include <dt-bindings/tegra234-p3740-0002-p3701-0008.h>
+
+/ {
+	overlay-name = "Jetson M.2 Key B Slot";
+	compatible = JETSON_COMPATIBLE;
+
+	fragment@0 {
+		target = <&pinmux>;
+		__overlay__ {
+			pinctrl-names = "default";
+			pinctrl-0 = <&jetson_io_pinmux>;
+			jetson_io_pinmux: exp-header-pinmux {
+				m2kb-pin20 {
+					nvidia,pins = "soc_gpio41_ph7";
+					nvidia,function = "i2s2";
+					nvidia,pin-label = "i2s2_sclk";
+					nvidia,tristate = <TEGRA_PIN_DISABLE>;
+					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+				};
+				m2kb-pin22 {
+					nvidia,pins = "soc_gpio42_pi0";
+					nvidia,function = "i2s2";
+					nvidia,pin-label = "i2s2_dout";
+					nvidia,tristate = <TEGRA_PIN_DISABLE>;
+					nvidia,enable-input = <TEGRA_PIN_DISABLE>;
+				};
+				m2kb-pin24 {
+					nvidia,pins = "soc_gpio43_pi1";
+					nvidia,function = "i2s2";
+					nvidia,pin-label = "i2s2_din";
+					nvidia,tristate = <TEGRA_PIN_ENABLE>;
+					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+				};
+				m2kb-pin28 {
+					nvidia,pins = "soc_gpio44_pi2";
+					nvidia,function = "i2s2";
+					nvidia,pin-label = "i2s2_fs";
+					nvidia,tristate = <TEGRA_PIN_DISABLE>;
+					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+				};
+			};
+		};
+	};
+
+	fragment@1 {
+		target = <&pinmux_aon>;
+		__overlay__ {
+			pinctrl-names = "default";
+			pinctrl-0 = <&jetson_io_pinmux_aon>;
+			jetson_io_pinmux_aon: exp-header-pinmux {
+				m2kb-pin40 {
+					nvidia,pins = "gen2_i2c_sda_pdd0";
+				};
+				m2kb-pin42 {
+					nvidia,pins = "gen2_i2c_scl_pcc7";
+				};
+			};
+		};
+	};
+};

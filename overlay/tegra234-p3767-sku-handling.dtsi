@@ -1,0 +1,176 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+/ {
+	p3767-sku-handling-fragment@0 {
+		target-path = "/bus@0/host1x@13e00000";
+		board_config {
+			fuse-info = "fuse-disable-nvenc";
+		};
+		__overlay__ {
+			nvenc@154c0000 {
+				status = "disabled";
+			};
+		};
+	};
+
+	p3767-sku-handling-fragment@1 {
+		target-path = "/bus@0/host1x@13e00000";
+		board_config {
+			fuse-info = "fuse-disable-pva";
+		};
+		__overlay__ {
+			pva0@16000000 {
+				status = "disabled";
+			};
+		};
+	};
+
+	p3767-sku-handling-fragment@2 {
+		target-path = "/bus@0/host1x@13e00000";
+		board_config {
+			fuse-info = "fuse-disable-dla0";
+		};
+		__overlay__ {
+			nvdla0@15880000 {
+				status = "disabled";
+			};
+		};
+	};
+
+	p3767-sku-handling-fragment@3 {
+		target-path = "/bus@0/host1x@13e00000";
+		board_config {
+			fuse-info = "fuse-disable-dla1";
+		};
+		__overlay__ {
+			nvdla1@158c0000 {
+				status = "disabled";
+			};
+		};
+	};
+
+	p3767-sku-handling-fragment@4 {
+		target-path = "/bus@0";
+		board_config {
+			ids = "3767-0000-*","3767-0001-*","3767-0003-*","3767-0004-*";
+		};
+		__overlay__ {
+			mmc@3400000 {
+				status = "disabled";
+			};
+		};
+	};
+
+	/* For Orin Nano SKUs, reduce PCIe speed to Gen3 */
+	p3767-sku-handling-fragment@5 {
+		target-path = "/bus@0";
+		board_config {
+			ids = "3767-0003-*", "3767-0004-*", "3767-0005-*";
+		};
+		__overlay__ {
+			/* C1 */
+			pcie@14100000 {
+				max-link-speed = <0x3>;
+			};
+
+			/* C4 */
+			pcie@14160000 {
+				max-link-speed = <0x3>;
+			};
+
+			/* C4 End Point */
+			pcie-ep@14160000 {
+				max-link-speed = <0x3>;
+			};
+
+			/* C7 */
+			pcie@141e0000 {
+				max-link-speed = <0x3>;
+			};
+
+			/* C8 */
+			pcie@140a0000 {
+				max-link-speed = <0x3>;
+			};
+
+			/* C9 */
+			pcie@140c0000 {
+				max-link-speed = <0x3>;
+			};
+		};
+	};
+
+	/*
+	 * If ODMDATA contains gbe-uphy-config-9, then:
+	 * 1. C7x1
+	 * 2. C9x1
+	 */
+	p3767-sku-handling-fragment@6 {
+		target-path = "/bus@0";
+		board_config {
+			odm-data = "gbe-uphy-config-9";
+		};
+		__overlay__ {
+			/* C7 */
+			pcie@141e0000 {
+				phys = <&p2u_gbe_0>;
+				phy-names = "p2u-0";
+				num-lanes = <1>;
+			};
+
+			/* C9 */
+			pcie@140c0000 {
+				status = "okay";
+				vddio-pex-ctl-supply = <&vdd_1v8_ao>;
+				phys = <&p2u_gbe_1>;
+				phy-names = "p2u-0";
+				num-lanes = <1>;
+			};
+		};
+	};
+
+	/*
+	 * If ODMDATA contains hsio-uphy-config-40, then:
+	 * 1. Disable PCIE C4
+	 * 2. Enable PCIE C4 EP
+	 * 3. Reduce PCIE C1 to Gen2
+	 */
+	p3767-sku-handling-fragment@7 {
+		target-path = "/bus@0";
+		board_config {
+			odm-data = "hsio-uphy-config-40";
+		};
+		__overlay__ {
+			pcie@14160000 {
+				status = "disabled";
+			};
+			pcie-ep@14160000 {
+				status = "okay";
+			};
+			pcie@14100000 {
+				max-link-speed = <2>;
+			};
+		};
+	};
+
+	/*
+	 * If ODMDATA contains hsio-uphy-config-41, then:
+	 * 1. Disable PCIE C4
+	 * 2. Enable PCIE C4 EP
+	 */
+	p3767-sku-handling-fragment@8 {
+		target-path = "/bus@0";
+		board_config {
+			odm-data = "hsio-uphy-config-41";
+		};
+		__overlay__ {
+			pcie@14160000 {
+				status = "disabled";
+			};
+			pcie-ep@14160000 {
+				status = "okay";
+			};
+		};
+	};
+};

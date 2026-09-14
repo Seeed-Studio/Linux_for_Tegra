@@ -1,0 +1,76 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Copyright (C) 2023 Analog Devices Inc.
+ */
+
+#if defined(DES_CH_INDEX)
+#define DES_CH_SECOND_INDEX CONCAT(1, DES_CH_INDEX)
+#endif
+
+#if defined(SER_INDEX)
+#define SER_LABEL CONCAT(ser_, SER_INDEX)
+#endif
+
+#if !defined(SER_LABEL)
+#error
+#endif
+
+#define SER_MFP0_PWDN_LABEL CONCAT(SER_LABEL, _mfp0_pwdn)
+#define SER_MFP7_FSYNC_LABEL CONCAT(SER_LABEL, _mfp7_fsync)
+
+&SER_LABEL {
+	pipe@0 {
+		maxim,dbl8;
+		maxim,soft-bpp = <16>;
+	};
+
+	pins {
+		SER_MFP0_PWDN_LABEL: SER_MFP0_PWDN_LABEL {
+			pins = "mfp0";
+			function = "gpio";
+			output-high;
+			output-enable;
+		};
+
+		SER_MFP7_FSYNC_LABEL: SER_MFP7_FSYNC_LABEL {
+			pins = "mfp7";
+			function = "gpio";
+			output-high;
+			input-disable;
+		};
+
+		// SER_MFP4_RCLK_LABEL: SER_MFP4_RCLK_LABEL {
+		// 	pins = "mfp4";
+		// 	function = "rclkout";
+		// 	slew-rate = <0>;
+		// 	maxim,rclkout-clock = <0>;
+		// };
+	};
+};
+#if defined(GMSL_CAMERA_0) || defined(GMSL_CAMERA_1) || defined(GMSL_CAMERA_2) || defined(GMSL_CAMERA_3)
+
+&des0 {
+	phy@GMSL_DES_PHY {
+		maxim,alt-mem-map8;
+	};
+};
+#endif 
+
+#if defined(GMSL_CAMERA_4) || defined(GMSL_CAMERA_5) || defined(GMSL_CAMERA_6) || defined(GMSL_CAMERA_7)
+
+&des1 {
+	phy@GMSL_DES_PHY {
+		maxim,alt-mem-map8;
+	};
+};
+#endif 
+
+
+
+
+#undef SER_MFP0_PWDN_LABEL
+#undef SER_MFP7_FSYNC_LABEL
+
+#undef SER_INDEX
+#undef SER_LABEL
+#undef DES_CH_INDEX
