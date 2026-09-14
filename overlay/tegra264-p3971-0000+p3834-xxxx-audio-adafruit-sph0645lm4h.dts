@@ -1,0 +1,51 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+/*
+ * Device-tree overlay for Adafruit I2S MEMS Microphone Breakout (SPH0645LM4H)
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/pinctrl/pinctrl-tegra.h>
+#include <dt-bindings/gpio/tegra264-gpio.h>
+
+/ {
+	overlay-name = "Adafruit SPH0645LM4H";
+	jetson-header-name = "Jetson 40pin Header";
+	compatible = "nvidia,p3971-0050+p3834-0005", "nvidia,p3971-0080+p3834-0008", "nvidia,p3971-0089+p3834-0008";
+
+	fragment@0 {
+		target = <&padctl_main>;
+		__overlay__ {
+			pinctrl-names = "default";
+			pinctrl-0 = <&jetson_io_pinmux>;
+			jetson_io_pinmux: exp-header-pinmux {
+				hdr40-pin12 {
+					nvidia,pins = "dap2_clk_pv6";
+					nvidia,function = "i2s2_sclk";
+					nvidia,pin-label = "i2s2_sclk";
+					nvidia,pull = <TEGRA_PIN_PULL_DOWN>;
+					nvidia,tristate = <TEGRA_PIN_DISABLE>;
+					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+				};
+				hdr40-pin35 {
+					nvidia,pins = "dap2_fs_pw1";
+					nvidia,function = "i2s2_lrck";
+					nvidia,pin-label = "i2s2_fs";
+					nvidia,pull = <TEGRA_PIN_PULL_DOWN>;
+					nvidia,tristate = <TEGRA_PIN_DISABLE>;
+					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+				};
+				hdr40-pin38 {
+					nvidia,pins = "dap2_din_pw0";
+					nvidia,function = "i2s2_sdata_in";
+					nvidia,pin-label = "i2s2_din";
+					nvidia,pull = <TEGRA_PIN_PULL_DOWN>;
+					nvidia,tristate = <TEGRA_PIN_ENABLE>;
+					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+				};
+			};
+		};
+	};
+};

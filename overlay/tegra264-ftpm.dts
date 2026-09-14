@@ -1,0 +1,26 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// Jetson Device-tree overlay for fTPM driver.
+
+/dts-v1/;
+/plugin/;
+
+/ {
+	overlay-name = "fTPM driver overlay";
+	compatible = "nvidia,tegra264";
+
+	fragment@0 {
+		target-path = "/";
+		board_config {
+			sw-modules = "kernel";
+		};
+		__overlay__ {
+			firmware {
+				ftpm {
+					compatible = "microsoft,ftpm";
+					status = "disabled";
+				};
+			};
+		};
+	};
+};
