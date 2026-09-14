@@ -1,0 +1,103 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/nvcsi@8188000000/nvidia,tegra194-nvcsi.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Tegra Camera Serial Interface Module
+
+maintainers:
+  - Chinniah Poosapadi
+
+description: |
+     the compatability = nvidia,tegra194-nvcsi is mentioned in the following drivers
+        - <TOP>/kernel/nvidia-oot/drivers/video/tegra/host/nvcsi/nvcsi-t194.c
+
+     The following nodes use this compatibility
+        - /bus@0/host1x@8181200000/nvcsi@8188000000
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra194-nvcsi
+
+  required:
+    - compatible
+
+properties:
+
+    clocks:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Clocks are given by a tuple of 2 values:
+                - Phandle to the device
+                - Clock ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x14
+                  maximum: 0x14
+
+    clock-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - nvcsi
+
+
+    resets:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Resets are given by a tuple of 2 values:
+                - Phandle to the device
+                - Reset ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x15
+                  maximum: 0x15
+
+    reset-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - nvcsi
+
+
+required:
+    - compatible
+    - clocks
+    - clock-names
+    - resets
+    - reset-names
+
+examples:
+    - |
+        nvcsi@8188000000 {
+            compatible = "nvidia,tegra194-nvcsi";
+            clocks = <&bpmp TEGRA264_CLK_NVCSI>;
+            clock-names = "nvcsi";
+            resets = <&bpmp TEGRA264_RESET_NVCSI>;
+            reset-names = "nvcsi";
+            status = "disabled";
+        };

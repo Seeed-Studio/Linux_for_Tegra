@@ -1,0 +1,133 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/mods_tegra_dma/nvidia,mods_tegra_dma.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: MOD's DMA Driver
+
+maintainers:
+  - Kiran Kasamsetty
+
+description: |
+     the compatability = nvidia,mods_tegra_dma is mentioned in the following drivers
+        - <TOP>/kernel/nvidia-oot/drivers/misc/mods/mods_dma.c
+
+     The following nodes use this compatibility
+        - /mods_tegra_dma
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,mods_tegra_dma
+
+  required:
+    - compatible
+
+properties:
+
+    dmas:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x14
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x1
+                  maximum: 0x1f
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x801
+                  maximum: 0x81f
+
+    dma-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - i2c0_tx
+                - i2c1_tx
+                - i2c2_tx
+                - i2c3_tx
+                - i2c7_tx
+                - i2c9_tx
+                - i2c11_tx
+                - i2c12_tx
+                - i2c14_tx
+                - i2c15_tx
+                - i2c16_tx
+                - spi1_rx
+                - spi1_tx
+                - spi2_rx
+                - spi2_tx
+                - spi3_rx
+                - spi3_tx
+                - spi4_rx
+                - spi4_tx
+                - spi5_rx
+                - spi5_tx
+                - uart4_rx
+                - uart4_tx
+                - uart5_rx
+                - uart5_tx
+                - uart9_rx
+                - uart9_tx
+                - uart10_rx
+                - uart10_tx
+
+
+required:
+    - compatible
+
+examples:
+    - |
+        mods_tegra_dma {
+            compatible = "nvidia,mods_tegra_dma";
+            dmas = <&gpcdma 0 31 TEGRA264_GPCDMA_SID_I2C0>,
+                   < &gpcdma 7 7 TEGRA264_GPCDMA_SID_I2C1>,
+                   < &gpcdma 3 3 TEGRA264_GPCDMA_SID_I2C2>,
+                   < &gpcdma 4 4 TEGRA264_GPCDMA_SID_I2C3>,
+                   < &gpcdma 6 6 TEGRA264_GPCDMA_SID_I2C7>,
+                   < &gpcdma 2 2 TEGRA264_GPCDMA_SID_I2C9>,
+                   < &gpcdma 1 1 TEGRA264_GPCDMA_SID_I2C11>,
+                   < &gpcdma 5 5 TEGRA264_GPCDMA_SID_I2C12>,
+                   < &gpcdma 18 28 TEGRA264_GPCDMA_SID_I2C14>,
+                   < &gpcdma 19 29 TEGRA264_GPCDMA_SID_I2C15>,
+                   < &gpcdma 20 30 TEGRA264_GPCDMA_SID_I2C16>,
+                   < &gpcdma 9 9 TEGRA264_GPCDMA_SID_SPI1>,
+                   < &gpcdma 9 19 TEGRA264_GPCDMA_SID_SPI1>,
+                   < &gpcdma 8 8 TEGRA264_GPCDMA_SID_SPI2>,
+                   < &gpcdma 8 18 TEGRA264_GPCDMA_SID_SPI2>,
+                   < &gpcdma 14 14 TEGRA264_GPCDMA_SID_SPI3>,
+                   < &gpcdma 14 24 TEGRA264_GPCDMA_SID_SPI3>,
+                   < &gpcdma 15 15 TEGRA264_GPCDMA_SID_SPI4>,
+                   < &gpcdma 15 25 TEGRA264_GPCDMA_SID_SPI4>,
+                   < &gpcdma 16 16 TEGRA264_GPCDMA_SID_SPI5>,
+                   < &gpcdma 16 26 TEGRA264_GPCDMA_SID_SPI5>,
+                   < &gpcdma 13 23 TEGRA264_GPCDMA_SID_UART4>,
+                   < &gpcdma 13 13 TEGRA264_GPCDMA_SID_UART4>,
+                   < &gpcdma 11 11 TEGRA264_GPCDMA_SID_UART5>,
+                   < &gpcdma 11 21 TEGRA264_GPCDMA_SID_UART5>,
+                   < &gpcdma 10 10 TEGRA264_GPCDMA_SID_UART9>,
+                   < &gpcdma 10 20 TEGRA264_GPCDMA_SID_UART9>,
+                   < &gpcdma 12 12 TEGRA264_GPCDMA_SID_UART10>,
+                   < &gpcdma 12 22 TEGRA264_GPCDMA_SID_UART10>;
+            dma-names = "i2c0_tx, i2c1_tx, i2c2_tx, i2c3_tx, i2c7_tx, i2c9_tx, i2c11_tx, i2c12_tx, i2c14_tx, i2c15_tx, i2c16_tx, spi1_rx, spi1_tx, spi2_rx, spi2_tx, spi3_rx, spi3_tx, spi4_rx, spi4_tx, spi5_rx, spi5_tx, uart4_rx, uart4_tx, uart5_rx, uart5_tx, uart9_rx, uart9_tx, uart10_rx, uart10_tx";
+            status = "disabled";
+        };

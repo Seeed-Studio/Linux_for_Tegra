@@ -1,0 +1,149 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/cpu@0/arm,armv8.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: ARM64 RAS Driver / FHI handler
+
+maintainers:
+  - Rich Wiley
+
+description: |
+     the compatability = arm,armv8 is mentioned in the following drivers
+        - <TOP>/kernel/nvidia-oot/drivers/ras/arm64-ras.c
+
+     The following nodes use this compatibility
+        - /cpus/cpu@0
+        - /cpus/cpu@1
+        - /cpus/cpu@2
+        - /cpus/cpu@3
+        - /cpus/cpu@4
+        - /cpus/cpu@5
+        - /cpus/cpu@6
+        - /cpus/cpu@7
+        - /cpus/cpu@8
+        - /cpus/cpu@9
+        - /cpus/cpu@10
+        - /cpus/cpu@11
+        - /cpus/cpu@12
+        - /cpus/cpu@13
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - arm,armv8
+
+  required:
+    - compatible
+
+properties:
+
+    device_type:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - cpu
+
+
+    reg:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Registers are given by a tuple of two values:
+                - register address:
+                - register block size.
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0xd0000
+
+    enable-method:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - psci
+
+
+    numa-node-id:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0x0
+
+    cpu-idle-states:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+
+    i-cache-size:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x10000
+        maximum: 0x10000
+
+    i-cache-line-size:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x40
+        maximum: 0x40
+
+    i-cache-sets:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x100
+        maximum: 0x100
+
+    d-cache-size:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x10000
+        maximum: 0x10000
+
+    d-cache-line-size:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x40
+        maximum: 0x40
+
+    d-cache-sets:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x100
+        maximum: 0x100
+
+    next-level-cache:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+
+required:
+    - compatible
+    - reg
+
+examples:
+    - |
+        cpu@0 {
+            compatible = "arm,armv8";
+            status = "disabled";
+            device_type = "cpu";
+            reg = <0x0 0x0>;
+            enable-method = "psci";
+            numa-node-id = <0>;
+            cpu-idle-states = <&cc7>;
+            i-cache-size = <65536>;
+            i-cache-line-size = <64>;
+            i-cache-sets = <256>;
+            d-cache-size = <65536>;
+            d-cache-line-size = <64>;
+            d-cache-sets = <256>;
+            next-level-cache = <&l2c_0>;
+        };

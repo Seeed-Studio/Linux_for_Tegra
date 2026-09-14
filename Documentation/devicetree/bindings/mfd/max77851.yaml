@@ -1,0 +1,258 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/mfd/max77851.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+maintainers:
+  - Joan Na<Joan.na@maximintegrated.com>
+  - Shubhi Garg <shgarg@nvidia.com>
+
+description: |
+  MAX77851 Power management IC from Maxim Semiconductor.
+
+properties:
+  compatible:
+    const: "maxim,max77851-pmic"
+
+  reg:
+    maxItems: 1
+    description:
+      I2C device address.
+
+  interrupts:
+    maxItems: 1
+    description:
+      The interrupt on the parent the controller is connected to.
+
+  interrupt-controller:
+    description:
+      Marks the device node as an interrupt controller.
+
+  "#interrupt-cells":
+    const: 2
+    description:
+      is <2> and their usage is compliant to the 2 cells
+      variant of <../interrupt-controller/interrupts.txt>
+      IRQ numbers for different interrupt source of MAX77851
+      are defined at dt-bindings/mfd/max77620.h.
+
+
+required:
+  - compatible
+  - reg
+
+additionalProperties:
+  - interrupts
+  - interrupt-controller
+  - #interrupt-cells
+
+  Optional subnodes and their properties:
+
+  Flexible power sequence configurations:
+  The Flexible Power Sequencer (FPS) allows each regulator to power up under
+  hardware or software control.
+
+  - maxim,power-down-slot-period-us: Inter Master Power-Down Slot Period
+  - maxim,power-up-slot-period-us: Inter Master Power-Up Slot Period
+  - maxim,sleep-entry-slot-period-us: Inter Master Sleep Entry Slot Period
+  - maxim,sleep-exit-slot-period-us: Inter Master Sleep Exit Slot Period
+
+  - maxim,power-down-time-period-us: Master 0/1/2/3 Power-Down Slot Period
+  - maxim,power-up-time-period-us: Master 0/1/2/3  Power-Up Slot Period
+  - maxim,sleep-entry-time-period-us: Master 0/1/2/3 Sleep Entry Slot Period
+  - maxim,sleep-exit-time-period-us: Master 0/1/2/3 Sleep Exit Slot Period
+
+            Valid values for slot period are:
+                FPS_PERIOD_32KHZ_30US
+                FPS_PERIOD_32KHZ_61US
+                FPS_PERIOD_32KHZ_122US
+                FPS_PERIOD_32KHZ_244US
+                FPS_PERIOD_32KHZ_488US
+                FPS_PERIOD_32KHZ_762US
+                FPS_PERIOD_32KHZ_1007US
+                FPS_PERIOD_32KHZ_1251US
+                FPS_PERIOD_32KHZ_1495US
+                FPS_PERIOD_32KHZ_1739US
+                FPS_PERIOD_32KHZ_2014US
+                FPS_PERIOD_32KHZ_2990US
+                FPS_PERIOD_32KHZ_3997US
+                FPS_PERIOD_32KHZ_5004US
+                FPS_PERIOD_32KHZ_6011US
+                FPS_PERIOD_32KHZ_7995US
+
+                FPS_PERIOD_4KHZ_025US
+                FPS_PERIOD_4KHZ_050US
+                FPS_PERIOD_4KHZ_1US
+                FPS_PERIOD_4KHZ_2US
+                FPS_PERIOD_4KHZ_4US
+                FPS_PERIOD_4KHZ_8US
+                FPS_PERIOD_4KHZ_16US
+                FPS_PERIOD_4KHZ_25US
+                FPS_PERIOD_4KHZ_50US
+                FPS_PERIOD_4KHZ_100US
+                FPS_PERIOD_4KHZ_250US
+                FPS_PERIOD_4KHZ_500US
+                FPS_PERIOD_4KHZ_1000US
+                FPS_PERIOD_4KHZ_2000US
+                FPS_PERIOD_4KHZ_3000US
+
+  - maxim,fps-enable: FPS Enable
+
+            Valid values for FPS enable are:
+                MAX77851_FPS_DISABLE
+                MAX77851_FPS_ENABLE
+
+  - maxim,abort-enable: FPS Abort Enable
+
+            Valid values for FPS enable are:
+                MAX77851_FPS_ABORT_DISABLE
+                MAX77851_FPS_ABORT_ENABLE
+
+  - maxim,sleep-enable: FPS Sleep Enable
+
+            Valid values for FPS sleep enable are:
+                MAX77851_FPS_SLEEP_DISABLE
+                MAX77851_FPS_SLEEP_ENABLE
+                MAX77851_FPS_SLEEP_LPM
+                MAX77851_FPS_SLEEP_ULPM
+
+  - maxim,abort-mode: FPS Abort Mode
+
+            Valid values for FPS sleep abort mode are:
+                MAX77851_FPS_ABORT_NEXT_SLOT
+                MAX77851_FPS_ABORT_NEXT_MASTER_SLOT
+
+
+  - maxim,pd-max-slot: Master 0/1/2/3 Power-Down Max Used Slots
+  - maxim,pu-max-slot: Master 0/1/2/3 Power-Up Max Used Slots
+
+  - maxim,slpy-max-slot: Master 0/1/2/3 Sleep Entry Max Used Slots
+  - maxim,slpx-max-slot: Master 0/1/2/3 Sleep Exit Max Used Slots
+            Valid values for FPS Max Used Slots are:
+                MAX77851_FPS_SLOT_0
+                MAX77851_FPS_SLOT_1
+                MAX77851_FPS_SLOT_2
+                MAX77851_FPS_SLOT_3
+                MAX77851_FPS_SLOT_4
+                MAX77851_FPS_SLOT_5
+                MAX77851_FPS_SLOT_6
+                MAX77851_FPS_SLOT_7
+                MAX77851_FPS_SLOT_8
+                MAX77851_FPS_SLOT_9
+                MAX77851_FPS_SLOT_A
+                MAX77851_FPS_SLOT_B
+                MAX77851_FPS_SLOT_C
+                MAX77851_FPS_SLOT_D
+                MAX77851_FPS_SLOT_E
+                MAX77851_FPS_SLOT_F
+
+  - maxim,sleep-on-suspend: Enter SLEEP state when system is suspended.
+            Bool property. Add this property if required to
+            enter SLEEP state during system suspend.
+
+
+examples:
+  - |
+    #include <dt-bindings/mfd/max77620.h>
+
+    max77851: max77851@3c {
+        compatible = "maxim,max77851-pmic";
+        reg = <0x3c>;
+
+        interrupt-parent = <&gpio>;
+        interrupt-names = "max77851_irq";
+        interrupts = <17 IRQ_TYPE_LEVEL_LOW>;
+        #thermal-sensor-cells = <0>;
+
+        system-power-controller;
+
+        #interrupt-cells = <2>;
+        interrupt-controller;
+
+        #gpio-cells = <2>;
+        gpio-controller;
+
+        fps {
+            maxim,power-down-slot-period-us = <FPS_PERIOD_4KHZ_050US>;
+            maxim,power-up-slot-period-us = <FPS_PERIOD_32KHZ_122US>;
+            maxim,sleep-entry-slot-period-us = <FPS_PERIOD_4KHZ_050US>;
+            maxim,sleep-exit-slot-period-us = <FPS_PERIOD_32KHZ_122US>;
+            fps0 {
+                maxim,pd-fps-master-slot = <MAX77851_FPS_MX_MASTER_SLOT_0>;
+                maxim,pu-fps-master-slot = <MAX77851_FPS_MX_MASTER_SLOT_0>;
+
+                maxim,power-down-time-period-us = <FPS_PERIOD_4KHZ_100US>;
+                maxim,power-up-time-period-us = <FPS_PERIOD_32KHZ_244US>;
+
+                maxim,fps-enable = <MAX77851_FPS_ENABLE>;
+                maxim,abort-enable = <MAX77851_FPS_ABORT_ENABLE>;
+
+                maxim,sleep-enable = <MAX77851_FPS_SLEEP_DISABLE>;
+                maxim,abort-mode = <MAX77851_FPS_ABORT_NEXT_MASTER_SLOT>;
+
+                maxim,pd-max-slot = <MAX77851_FPS_12_SLOTS>;
+                maxim,pu-max-slot = <MAX77851_FPS_10_SLOTS>;
+            };
+            fps1 {
+                maxim,pd-fps-master-slot = <MAX77851_FPS_MX_MASTER_SLOT_0>;
+                maxim,pu-fps-master-slot = <MAX77851_FPS_MX_MASTER_SLOT_0>;
+                maxim,slpy-fps-master-slot = <MAX77851_FPS_MX_MASTER_SLOT_0>;
+                maxim,slpx-fps-master-slot = <MAX77851_FPS_MX_MASTER_SLOT_0>;
+
+                maxim,power-down-time-period-us = <FPS_PERIOD_4KHZ_100US>;
+                maxim,power-up-time-period-us = <FPS_PERIOD_32KHZ_244US>;
+                maxim,sleep-entry-time-period-us = <FPS_PERIOD_4KHZ_100US>;
+                maxim,sleep-exit-time-period-us = <FPS_PERIOD_32KHZ_244US>;
+
+                maxim,fps-enable = <MAX77851_FPS_ENABLE>;
+                maxim,abort-enable = <MAX77851_FPS_ABORT_ENABLE>;
+
+                maxim,sleep-enable = <MAX77851_FPS_SLEEP_ENABLE>;
+                maxim,abort-mode = <MAX77851_FPS_ABORT_NEXT_MASTER_SLOT>;
+
+                maxim,pd-max-slot = <MAX77851_FPS_12_SLOTS>;
+                maxim,pu-max-slot = <MAX77851_FPS_10_SLOTS>;
+
+                maxim,slpy-max-slot = <MAX77851_FPS_08_SLOTS>;
+                maxim,slpx-max-slot = <MAX77851_FPS_08_SLOTS>;
+
+                #maxim,fps-event-source = <MAX77851_FPS_EVENT_SRC_EN0>;
+            };
+            fps2 {
+                maxim,pd-fps-master-slot = <MAX77851_FPS_MX_MASTER_SLOT_0>;
+                maxim,pu-fps-master-slot = <MAX77851_FPS_MX_MASTER_SLOT_0>;
+
+                maxim,power-down-time-period-us = <FPS_PERIOD_4KHZ_100US>;
+                maxim,power-up-time-period-us = <FPS_PERIOD_32KHZ_244US>;
+
+                maxim,fps-enable = <MAX77851_FPS_ENABLE>;
+                maxim,abort-enable = <MAX77851_FPS_ABORT_ENABLE>;
+
+                maxim,sleep-enable = <MAX77851_FPS_SLEEP_LPM>;
+                maxim,abort-mode = <MAX77851_FPS_ABORT_NEXT_MASTER_SLOT>;
+
+                maxim,pd-max-slot = <MAX77851_FPS_12_SLOTS>;
+                maxim,pu-max-slot = <MAX77851_FPS_10_SLOTS>;
+            };
+            fps3 {
+                maxim,pd-fps-master-slot = <MAX77851_FPS_MX_MASTER_SLOT_0>;
+                maxim,pu-fps-master-slot = <MAX77851_FPS_MX_MASTER_SLOT_0>;
+
+                maxim,power-down-time-period-us = <FPS_PERIOD_4KHZ_100US>;
+                maxim,power-up-time-period-us = <FPS_PERIOD_32KHZ_244US>;
+
+                maxim,fps-enable = <MAX77851_FPS_ENABLE>;
+                maxim,abort-enable = <MAX77851_FPS_ABORT_ENABLE>;
+
+                maxim,sleep-enable = <MAX77851_FPS_SLEEP_ENABLE>;
+                maxim,abort-mode = <MAX77851_FPS_ABORT_NEXT_MASTER_SLOT>;
+
+                maxim,pd-max-slot = <MAX77851_FPS_12_SLOTS>;
+                maxim,pu-max-slot = <MAX77851_FPS_10_SLOTS>;
+
+                #maxim,fps-event-source = <MAX77851_FPS_EVENT_SRC_EN0>;
+            };
+        };
+    };

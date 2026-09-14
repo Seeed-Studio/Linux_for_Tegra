@@ -1,0 +1,132 @@
+# SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/video/nvdisp_serdes.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Device tree binding for NVIDIA Tegra NvDisp SerDes Components
+
+maintainers:
+  - Prafull Suryawanshi <prafulls@nvidia.com>
+
+description: |
+   The nvdisp_serdes driver is common display serializer driver for different display serializers
+   which can be connected to NVIDIA Tegra Automotive Platforms on standard display output connectors like DP or HDMI.
+   This driver initialize the display serializer hardware (and downstream deserializer), handles the gpio error interrupt
+   and deinitialize the hardware.
+
+properties:
+  compatible:
+    - nvidia,nvdisp_serdes
+
+  reg:
+    maxItems: 1
+    description: |
+       I2C address of the SerDes device on I2C controller.
+
+  interrupts:
+    maxItems: 1
+    description: |
+       GPIO pin number for ERRB interrupt from serializer
+
+  interrupt-parent:
+    maxItems: 1
+    description: |
+       Interrupt parent controller for GPIO pin interrupt
+
+  nvdisp-serdes-errb:
+    maxItems: 1
+    description: |
+       Interrupt number and parent gpio controller
+
+  display-serdes-config:
+    maxItems: 1
+    description: |
+       SerDes configuration for underlying SerDes topology.
+
+  description:
+    maxItems: 1
+    description: |
+       One line brief description explaining the current serdes config.
+
+  init-seq:
+    maxItems: 1
+    description: |
+       Initialization sequence which consist of set of OPCODEs.
+       Each OPCODE could be some action executed by SerDes driver like i2c transfer (read/write), delay, etc.
+       This sequence executed by SerDes driver during init and resume.
+
+
+  deinit-seq:
+    maxItems: 1
+    description: |
+       De-initialization sequence which consist of set of OPCODEs.
+       Each OPCODE could be some action executed by SerDes driver like i2c transfer (read/write), delay, etc.
+       This sequence executed by SerDes driver during suspend and deinit.
+
+  errb-seq:
+    maxItems: 1
+    description: |
+       ERRB error handling sequence which consist of set of OPCODEs.
+       Each OPCODE could be some action executed by SerDes driver like i2c transfer (read/write), delay, report EPL error etc.
+       This sequence executed by SerDes driver during irq handler which should be set by nvdisp-serdes-errb property.
+
+  reg-bits:
+    maxItems: 1
+    description: |
+       SerDes I2C device register address size.
+
+  val-bits:
+    maxItems: 1
+    description: |
+       SerDes I2C device register value size.
+
+required:
+  - compatible
+  - reg
+  - display-serdes-config
+
+Optional properties:
+  - reg-bits
+  - val-bits
+  - nvdisp-serdes-errb
+
+examples:
+  - |
+    i2c@31e0000 { /* i2c8 */
+        status = "okay";
+        nvdisp_serdes: nvdisp_serdes@40 {
+            compatible = "nvidia,nvdisp_serdes";
+            reg = <0x40>;
+            status = "okay";
+            interrupt-parent = <&tegra_main_gpio>;
+            interrupts = <TEGRA234_MAIN_GPIO(G, 7) IRQ_TYPE_LEVEL_HIGH>;
+            nvdisp-serdes-errb = <&tegra_main_gpio TEGRA234_MAIN_GPIO(G, 7) 0>;
+            reg-bits = <0x10>;
+            val-bits = <0x08>;
+            display-serdes-config {
+                description = "MAX96767 connected with GMSL2 config";
+                /* opcode sequence to initialize SerDes */
+                init-seq =
+                    [50], [00 00 0F A0], [FF],
+                    [10], [40 00], [29 00], [01], [00], [FF],
+                    [10], [40 00], [33 00], [01], [00], [FF],
+                    [30], [40 00], [21 00], [FF],
+                    [90], [40 00], [2A 00], [0A], [00], [10 27 00 00], [01 00], [01 00], [FF],
+                    [F0], [40 00], [05 00], [FF];
+
+                  deinit-seq =
+                      /* disable video link output at each pipe */
+                      [10], [40 00], [00 01], [60], [00], [FF];
+
+                  errb-seq =
+                      /*** start: detect and clear error for remote error */
+                      /* read remote error for link A and print if error is detected */
+                      [80], [40 00], [1B 00], [10], [00], [10], [00], [FF],
+                      /* read remote error for link B and print if error is detected */
+                      [80], [40 00], [1B 00], [20], [00], [20], [00], [FF];
+                      /*** end: detect and clear error for remote error */
+            };
+        };
+    };

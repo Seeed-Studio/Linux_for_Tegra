@@ -1,0 +1,143 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/fsicom_client/tegra-fsicom-client.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: FSI-CCPLEX-COM driver
+
+maintainers:
+  - Rahul Bedarkar
+
+description: |
+     The compatibility = nvidia,tegra234-fsicom-client is mentioned in the following drivers
+        - <TOP>/kernel/nvidia-oot/drivers/platform/tegra/tegra-fsicom.c
+
+     The following nodes use this compatibility
+        - /fsicom_client
+        - /fsicom_client_inst1
+        - /fsicom_client_inst2
+        - /fsicom_client_inst3
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra234-fsicom-client
+
+  required:
+    - compatible
+
+properties:
+
+    mboxes:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Mailbox channels for communication between FSI and CCPLEX.
+            Each entry must contain 3 values: phandle, mailbox type, and channel.
+
+    mbox-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        description: Names for the mailbox channels defined in the mboxes property.
+
+    memory-region:
+        $ref: "/schemas/types.yaml#/definitions/phandle"
+        description: Reference to a reserved memory region for FSI-CCPLEX communication.
+
+    dma-coherent:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+        description: Flag to indicate DMA memory should be coherent.
+
+    enable-deinit-notify:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+        description: Flag to enable sending notifications to FSI during driver shutdown.
+
+    smmu_inst:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        description: SMMU instance number.
+        minimum: 0x0
+        maximum: 0x3
+
+    max_fsi_core:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        description: Maximum number of FSI cores.
+        minimum: 0x1
+        maximum: 0x4
+
+    fsi_core_notify:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        description: FSI core notification configuration.
+        minimum: 0x0
+        maximum: 0x2
+
+    fsi_core_polling:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        description: FSI core polling configuration.
+        minimum: 0x1
+        maximum: 0x4
+
+    iommus:
+        $ref: "/schemas/types.yaml#/definitions/uint32-array"
+        description: |
+            iommus is given by a tuple of 2 values:
+                - pHandle[Pointer in DT to the SMMU node the client is connected to]
+                - stream id
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/phandle"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                minimum: 0xf10
+                maximum: 0xf13
+
+required:
+    - compatible
+    - mboxes
+    - mbox-names
+    - memory-region
+    - dma-coherent
+    - enable-deinit-notify
+    - smmu_inst
+    - max_fsi_core
+    - fsi_core_notify
+    - fsi_core_polling
+
+examples:
+    - |
+      #include <dt-bindings/mailbox/tegra186-hsp.h>
+      #define TEGRA_HSP_MBOX_TYPE_SM_128BIT (1 << 8)
+
+      soc {
+          fsicom_client {
+              compatible = "nvidia,tegra234-fsicom-client";
+              mboxes = <&top_hsp2 (TEGRA_HSP_MBOX_TYPE_SM|TEGRA_HSP_MBOX_TYPE_SM_128BIT) TEGRA_HSP_SM_TX(2)>,
+                      <&top_hsp2 (TEGRA_HSP_MBOX_TYPE_SM|TEGRA_HSP_MBOX_TYPE_SM_128BIT) TEGRA_HSP_SM_RX(1)>,
+                      <&top_hsp2 (TEGRA_HSP_MBOX_TYPE_SM|TEGRA_HSP_MBOX_TYPE_SM_128BIT) TEGRA_HSP_SM_TX(5)>,
+                      <&top_hsp2 (TEGRA_HSP_MBOX_TYPE_SM|TEGRA_HSP_MBOX_TYPE_SM_128BIT) TEGRA_HSP_SM_RX(4)>;
+              mbox-names = "fsi-tx-cpu0", "fsi-rx-cpu0", "fsi-tx-cpu1", "fsi-rx-cpu1";
+              memory-region = <&fsicom_resv>;
+              dma-coherent;
+              enable-deinit-notify;
+              smmu_inst = <0>;
+              max_fsi_core = <1>;
+              fsi_core_notify = <0>;
+              fsi_core_polling = <>;
+              status = "disabled";
+          };
+
+       };
+...

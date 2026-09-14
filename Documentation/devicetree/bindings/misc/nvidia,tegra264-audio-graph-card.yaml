@@ -1,0 +1,102 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/sound/nvidia,tegra264-audio-graph-card.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Nvidia T264 Audio Graph Card Driver
+
+maintainers:
+  - Mohan Kumar
+
+description: |
+     The following nodes use this compatibility
+        - /sound
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra264-audio-graph-card
+
+  required:
+    - compatible
+
+properties:
+
+    nvidia,ahub-c2c-links:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+    clocks:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Clocks are given by a tuple of 2 values:
+                - Phandle to the device
+                - Clock ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x9e
+                  maximum: 0x9f
+
+    clock-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - pll_a
+                - plla_out0
+
+
+    assigned-clocks:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x9e
+                  maximum: 0x115
+
+    assigned-clock-parents:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0x9f
+
+required:
+    - compatible
+    - clocks
+    - clock-names
+
+examples:
+    - |
+        sound {
+            nvidia,ahub-c2c-links;
+            compatible = "nvidia,tegra264-audio-graph-card";
+            clocks = <&bpmp TEGRA264_CLK_PLLA1>,
+                     <&bpmp TEGRA264_CLK_PLLA1_OUT1>;
+            clock-names = "pll_a, plla_out0";
+            assigned-clocks = <&bpmp TEGRA264_CLK_PLLA1>,
+                              <&bpmp TEGRA264_CLK_PLLA1_OUT1>,
+                              <&bpmp TEGRA264_CLK_AUD_MCLK>;
+            assigned-clock-parents = <0>,
+                                     <&bpmp TEGRA264_CLK_PLLA1>,
+                                     <&bpmp TEGRA264_CLK_PLLA1_OUT1>;
+            status = "disabled";
+        };

@@ -1,0 +1,73 @@
+# Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/tegra-carveouts/nvidia,carveouts.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Nvidia Tegra Memory Management Driver
+
+maintainers:
+  - Ketan Patil
+
+description: |
+  This schema defines the properties for the NVIDIA Tegra carveouts nodes.
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,carveouts
+
+  required:
+    - compatible
+
+properties:
+
+    dont-convert-iovmm-to-carveout:
+        description: |
+            If enabled, the nvmap will not convert iovmm to carveout. This property is necessary
+            when generic carveout is enabled and iovmm memory should not be converted to carveout.
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+    disable-debug-support:
+        description: |
+            If enabled, the nvmap will not support debug APIs.
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+    memory-region:
+        description: |
+            A list of phandles to carveout nodes.
+        $ref: "/schemas/types.yaml#/definitions/phandle-array"
+
+    status:
+        description: |
+            The status of the carveouts node.
+        enum:
+            - okay
+            - disabled
+
+required:
+    - compatible
+
+examples:
+    - |
+        tegra-carveouts {
+            compatible = "nvidia,carveouts";
+            dont-convert-iovmm-to-carveout;
+            memory-region = <&generic_reserved &fsi_reserved>;
+            disable-debug-support;
+            status = "okay";
+        };

@@ -1,0 +1,1690 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/mods-clocks/nvidia,mods-clocks.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Nvidia Mods Clocks Driver
+
+maintainers:
+  - Chris Dragan
+
+description: |
+     The following nodes use this compatibility
+        - /mods-simple-bus/mods-clocks
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,mods-clocks
+
+  required:
+    - compatible
+
+properties:
+
+    clocks:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Clocks are given by a tuple of 2 values:
+                - Phandle to the device
+                - Clock ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x1
+                  maximum: 0x1d3
+
+    clock-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - osc
+                - clk_s
+                - jtag_reg
+                - spll
+                - spll_out0
+                - spll_out1
+                - spll_out2
+                - spll_out3
+                - spll_out4
+                - spll_out5
+                - spll_out6
+                - spll_out7
+                - aon_i2c
+                - host1x
+                - isp
+                - isp1
+                - isp_root
+                - nafll_pva0_core
+                - nafll_pva0_vps
+                - nvcsi
+                - nvcsilp
+                - pllp_out0
+                - pva0_cpu_axi
+                - pva0_vps
+                - pwm10
+                - pwm2
+                - pwm3
+                - pwm4
+                - pwm5
+                - pwm9
+                - qspi0
+                - qspi0_2x_pm
+                - rce1_cpu
+                - rce1_nic
+                - rce_cpu
+                - rce_nic
+                - se
+                - seu1
+                - seu2
+                - seu3
+                - se_root
+                - spi1
+                - spi2
+                - spi3
+                - spi4
+                - spi5
+                - top_i2c
+                - tsec
+                - tsec_pka
+                - uart0
+                - uart10
+                - uart11
+                - uart4
+                - uart5
+                - uart8
+                - uart9
+                - vi
+                - vi1
+                - vic
+                - vi_root
+                - disppll
+                - sppll0
+                - sppll0_clkout1a
+                - sppll0_clkout2a
+                - sppll1
+                - vpll0
+                - vpll1
+                - vpll2
+                - vpll3
+                - vpll4
+                - vpll5
+                - vpll6
+                - vpll7
+                - rg0_div
+                - rg1_div
+                - rg2_div
+                - rg3_div
+                - rg4_div
+                - rg5_div
+                - rg6_div
+                - rg7_div
+                - rg0
+                - rg1
+                - rg2
+                - rg3
+                - rg4
+                - rg5
+                - rg6
+                - rg7
+                - disp
+                - dsc
+                - dsc_root
+                - hub
+                - vpllx_sor0_muxed
+                - vpllx_sor1_muxed
+                - vpllx_sor2_muxed
+                - vpllx_sor3_muxed
+                - linka_sym
+                - linkb_sym
+                - linkc_sym
+                - linkd_sym
+                - pre_sor0
+                - pre_sor1
+                - pre_sor2
+                - pre_sor3
+                - sor0_pll_ref
+                - sor1_pll_ref
+                - sor2_pll_ref
+                - sor3_pll_ref
+                - sor0_pad
+                - sor1_pad
+                - sor2_pad
+                - sor3_pad
+                - sor0_ref
+                - sor1_ref
+                - sor2_ref
+                - sor3_ref
+                - sor0_div
+                - sor1_div
+                - sor2_div
+                - sor3_div
+                - sor0
+                - sor1
+                - sor2
+                - sor3
+                - sf0_sor
+                - sf1_sor
+                - sf2_sor
+                - sf3_sor
+                - sf4_sor
+                - sf5_sor
+                - sf6_sor
+                - sf7_sor
+                - sf0
+                - sf1
+                - sf2
+                - sf3
+                - sf4
+                - sf5
+                - sf6
+                - sf7
+                - maud
+                - aza_2xbit
+                - dce_cpu
+                - dce_nic
+                - pllc4
+                - pllc4_out0
+                - pllc4_out1
+                - pllc4_muxed
+                - sdmmc1
+                - sdmmc_legacy_tm
+                - pllc0
+                - nafll_bpmp
+                - pllp_out_pdiv
+                - disp_root
+                - adsp
+                - plla
+                - plla1
+                - plla1_out1
+                - pllaon
+                - pllaon_ape
+                - plla_out0
+                - ahub
+                - ape
+                - i2s1_sclk_in
+                - i2s2_sclk_in
+                - i2s3_sclk_in
+                - i2s4_sclk_in
+                - i2s5_sclk_in
+                - i2s6_sclk_in
+                - i2s7_sclk_in
+                - i2s8_sclk_in
+                - i2s9_sclk_in
+                - i2s1_audio_sync
+                - i2s2_audio_sync
+                - i2s3_audio_sync
+                - i2s4_audio_sync
+                - i2s5_audio_sync
+                - i2s6_audio_sync
+                - i2s7_audio_sync
+                - i2s8_audio_sync
+                - dmic1_audio_sync
+                - dspk1_audio_sync
+                - i2s1
+                - i2s2
+                - i2s3
+                - i2s4
+                - i2s5
+                - i2s6
+                - i2s7
+                - i2s8
+                - i2s9
+                - dmic1
+                - dmic5
+                - dspk1
+                - aon_cpu
+                - aon_nic
+                - bpmp
+                - axi_cbb
+                - fuse
+                - tsense
+                - csite
+                - hcsite
+                - dbgapb
+                - la
+                - pllrefgp
+                - plle0
+                - uphy0_pll0_xdig
+                - eqos_app
+                - eqos_mac
+                - eqos_macsec
+                - eqos_tx_pcs
+                - mgbes_ptp_ref
+                - mgbe0_uphy1_pll_xdig
+                - mgbe0_tx_pcs
+                - mgbe0_mac
+                - mgbe0_macsec
+                - mgbe0_app
+                - mgbe1_uphy1_pll_xdig
+                - mgbe1_tx_pcs
+                - mgbe1_mac
+                - mgbe1_macsec
+                - mgbe1_app
+                - mgbe2_uphy1_pll_xdig
+                - mgbe2_tx_pcs
+                - mgbe2_mac
+                - mgbe2_macsec
+                - mgbe2_app
+                - mgbe3_uphy1_pll_xdig
+                - mgbe3_tx_pcs
+                - mgbe3_mac
+                - mgbe3_macsec
+                - mgbe3_app
+                - pllrefufs
+                - pllrefufs_clkout624
+                - pllrefufs_refclkout
+                - pllrefufs_ufsdev_refclkout
+                - ufshc_cg_sys
+                - mphy_l0_rx_ls_bit_div
+                - mphy_l0_rx_ls_bit
+                - mphy_l0_rx_ls_symb_div
+                - mphy_l0_rx_hs_symb_div
+                - mphy_l0_rx_symb
+                - mphy_l0_uphy_tx_fifo
+                - mphy_l0_tx_ls_3xbit_div
+                - mphy_l0_tx_ls_symb_div
+                - uphy0_pll4_xdig
+                - mphy_l0_tx_hs_symb_div
+                - mphy_l0_tx_symb
+                - mphy_l0_tx_ls_3xbit
+                - mphy_l0_rx_ana
+                - mphy_l1_rx_ana
+                - mphy_tx_1mhz_ref
+                - mphy_core_pll_fixed
+                - mphy_iobist
+                - ufshc_cg_sys_div
+                - xusb1_core
+                - xusb1_falcon
+                - xusb1_fs
+                - xusb1_ss
+                - uphy0_usb_p0_rx_core
+                - uphy0_usb_p1_rx_core
+                - uphy0_usb_p2_rx_core
+                - uphy0_usb_p3_rx_core
+                - xusb1_clk480m_nvwrap_core
+                - xusb1_core_host
+                - xusb1_core_dev
+                - xusb1_core_superspeed
+                - xusb1_falcon_host
+                - xusb1_falcon_superspeed
+                - xusb1_fs_host
+                - xusb1_fs_dev
+                - xusb1_hs_hsicp
+                - xusb1_ss_dev
+                - xusb1_ss_superspeed
+                - aon_touch
+                - aud_mclk
+                - extperiph1
+                - extperiph2
+                - extperiph3
+                - extperiph4
+                - jtag_reg_ungated
+                - ist_bus
+                - ist_bus_rist_mcc
+                - maths_sec_rist
+                - nafll_ist
+                - rist_root
+                - ist_controller_rist
+                - mss_encrypt
+                - emc
+                - sppll0_clkout100
+                - sppll0_clkout270
+                - sppll1_clkout100
+                - sppll1_clkout270
+                - dp_linka_ref
+                - dp_linkb_ref
+                - dp_linkc_ref
+                - dp_linkd_ref
+                - pllnvcsi
+                - pllbpmpcam
+                - utmi_pll1
+                - utmi_pll1_clkout48
+                - utmi_pll1_clkout60
+                - utmi_pll1_clkout480
+                - nafll_isp
+                - nafll_rce
+                - nafll_rce1
+                - nafll_se
+                - nafll_vi
+                - nafll_vic
+                - nafll_dce
+                - nafll_tsec
+                - nafll_cpair0
+                - nafll_cpair1
+                - nafll_cpair2
+                - nafll_cpair3
+                - nafll_cpair4
+                - nafll_cpair5
+                - nafll_cpair6
+                - nafll_gpu_sys
+                - nafll_gpu_nvd
+                - nafll_gpu_uproc
+                - nafll_gpu_gpc0
+                - nafll_gpu_gpc1
+                - nafll_gpu_gpc2
+                - sor_linka_input
+                - sor_linkb_input
+                - sor_linkc_input
+                - sor_linkd_input
+                - sor_linka_afifo
+                - sor_linkb_afifo
+                - sor_linkc_afifo
+                - sor_linkd_afifo
+                - i2s1_pad_m
+                - i2s2_pad_m
+                - i2s3_pad_m
+                - i2s4_pad_m
+                - i2s5_pad_m
+                - i2s6_pad_m
+                - i2s7_pad_m
+                - i2s8_pad_m
+                - i2s9_pad_m
+                - bpmp_nic
+                - clk1m
+                - rdet
+                - adc_soc_ref
+                - uphy0_pll0_txref
+                - eqos_tx
+                - eqos_tx_m
+                - eqos_rx_pcs_in
+                - eqos_rx_pcs_m
+                - eqos_rx_in
+                - eqos_rx
+                - eqos_rx_m
+                - mgbe0_uphy1_pll_txref
+                - mgbe0_tx
+                - mgbe0_tx_m
+                - mgbe0_rx_pcs_in
+                - mgbe0_rx_pcs_m
+                - mgbe0_rx_in
+                - mgbe0_rx_m
+                - mgbe1_uphy1_pll_txref
+                - mgbe1_tx
+                - mgbe1_tx_m
+                - mgbe1_rx_pcs_in
+                - mgbe1_rx_pcs_m
+                - mgbe1_rx_in
+                - mgbe1_rx_m
+                - mgbe2_uphy1_pll_txref
+                - mgbe2_tx
+                - mgbe2_tx_m
+                - mgbe2_rx_pcs_in
+                - mgbe2_rx_pcs_m
+                - mgbe2_rx_in
+                - mgbe2_rx_m
+                - mgbe3_uphy1_pll_txref
+                - mgbe3_tx
+                - mgbe3_tx_m
+                - mgbe3_rx_pcs_in
+                - mgbe3_rx_pcs_m
+                - mgbe3_rx_in
+                - mgbe3_rx_m
+                - uphy0_usb_p0_tx_core
+                - uphy0_usb_p1_tx_core
+                - uphy0_usb_p2_tx_core
+                - uphy0_usb_p3_tx_core
+                - uphy0_usb_p0_tx
+                - uphy0_usb_p1_tx
+                - uphy0_usb_p2_tx
+                - uphy0_usb_p3_tx
+                - uphy0_usb_p0_rx_in
+                - uphy0_usb_p1_rx_in
+                - uphy0_usb_p2_rx_in
+                - uphy0_usb_p3_rx_in
+                - uphy0_usb_p0_rx_m
+                - uphy0_usb_p1_rx_m
+                - uphy0_usb_p2_rx_m
+                - uphy0_usb_p3_rx_m
+                - uphy0_lane0_tx_m
+                - pcie_c1_xclk_nobg_m
+                - pcie_c2_xclk_nobg_m
+                - pcie_c3_xclk_nobg_m
+                - pcie_c4_xclk_nobg_m
+                - pcie_c5_xclk_nobg_m
+                - pcie_c1_l0_rx_m
+                - pcie_c1_l1_rx_m
+                - pcie_c1_l2_rx_m
+                - pcie_c1_l3_rx_m
+                - pcie_c2_l0_rx_m
+                - pcie_c2_l1_rx_m
+                - pcie_c2_l2_rx_m
+                - pcie_c2_l3_rx_m
+                - pcie_c3_l0_rx_m
+                - pcie_c3_l1_rx_m
+                - pcie_c4_l0_rx_m
+                - pcie_c4_l1_rx_m
+                - pcie_c4_l2_rx_m
+                - pcie_c4_l3_rx_m
+                - pcie_c4_l4_rx_m
+                - pcie_c4_l5_rx_m
+                - pcie_c4_l6_rx_m
+                - pcie_c4_l7_rx_m
+                - pcie_c5_l0_rx_m
+                - pcie_c5_l1_rx_m
+                - pcie_c5_l2_rx_m
+                - pcie_c5_l3_rx_m
+                - mphy_l0_rx_pwm_bit_m
+                - mphy_l1_rx_pwm_bit_m
+                - dbb_uphy0
+                - uphy0_uxl_core
+                - isc_cpu_root
+                - isc_nic
+                - ctc_txclk0_m
+                - ctc_txclk1_m
+                - ctc_rxclk0_m
+                - ctc_rxclk1_m
+                - pllrefgp_out
+                - pllrefgp_out1
+                - gpu_sys
+                - gpu_nvd
+                - gpu_uproc
+                - gpu_gpc0
+                - gpu_gpc1
+                - gpu_gpc2
+                - pllx
+                - ape_soundwire_msrc0
+                - ape_soundwire_data_en_shaper
+                - ao_soundwire_msrc0
+                - ao_soundwire_data_en_shaper
+                - dpaux0_clk
+
+
+    resets:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Resets are given by a tuple of 2 values:
+                - Phandle to the device
+                - Reset ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x1
+                  maximum: 0x53
+
+    reset-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - ape_tke
+                - cec
+                - adsp_all
+                - rce_all
+                - ufshc
+                - ufshc_axi_m
+                - ufshc_lp_seq
+                - dpaux
+                - eqos
+                - hwpm
+                - i2c1
+                - i2c2
+                - i2c3
+                - i2c4
+                - i2c6
+                - i2c7
+                - i2c8
+                - i2c9
+                - isp
+                - la
+                - nvcsi
+                - eqos_mac
+                - pwm10
+                - pwm2
+                - pwm3
+                - pwm4
+                - pwm5
+                - pwm9
+                - qspi0
+                - hda
+                - hdacodec
+                - i2c0
+                - i2c10
+                - sdmmc1
+                - mipi_cal
+                - spi1
+                - spi2
+                - spi3
+                - spi4
+                - spi5
+                - spi7
+                - spi8
+                - spi9
+                - tach0
+                - tsec
+                - vi
+                - vi1
+                - pva0_all
+                - vic
+                - mphy_clk_ctl
+                - mphy_l0_rx
+                - mphy_l0_tx
+                - mphy_l1_rx
+                - mphy_l1_tx
+                - isp1
+                - i2c11
+                - i2c12
+                - i2c14
+                - i2c15
+                - i2c16
+                - eqos_macsec
+                - mgbe0_pcs
+                - mgbe0_mac
+                - mgbe0_macsec
+                - mgbe1_pcs
+                - mgbe1_mac
+                - mgbe1_macsec
+                - mgbe2_pcs
+                - mgbe2_mac
+                - mgbe2_macsec
+                - mgbe3_pcs
+                - mgbe3_mac
+                - mgbe3_macsec
+                - adsp_core0
+                - adsp_core1
+                - ape
+                - xusb1_padctl
+                - aon_cpu_all
+                - uart4
+                - uart5
+                - uart9
+                - uart10
+
+
+required:
+    - compatible
+    - clocks
+    - clock-names
+    - resets
+    - reset-names
+
+examples:
+    - |
+        mods-clocks {
+            compatible = "nvidia,mods-clocks";
+            status = "disabled";
+            clocks = <&bpmp TEGRA264_CLK_OSC                       >,
+                     <&bpmp TEGRA264_CLK_CLK_S                      >,
+                     <&bpmp TEGRA264_CLK_JTAG_REG                   >,
+                     <&bpmp TEGRA264_CLK_SPLL                       >,
+                     <&bpmp TEGRA264_CLK_SPLL_OUT0                  >,
+                     <&bpmp TEGRA264_CLK_SPLL_OUT1                  >,
+                     <&bpmp TEGRA264_CLK_SPLL_OUT2                  >,
+                     <&bpmp TEGRA264_CLK_SPLL_OUT3                  >,
+                     <&bpmp TEGRA264_CLK_SPLL_OUT4                  >,
+                     <&bpmp TEGRA264_CLK_SPLL_OUT5                  >,
+                     <&bpmp TEGRA264_CLK_SPLL_OUT6                  >,
+                     <&bpmp TEGRA264_CLK_SPLL_OUT7                  >,
+                     <&bpmp TEGRA264_CLK_AON_I2C                    >,
+                     <&bpmp TEGRA264_CLK_HOST1X                     >,
+                     <&bpmp TEGRA264_CLK_ISP                        >,
+                     <&bpmp TEGRA264_CLK_ISP1                       >,
+                     <&bpmp TEGRA264_CLK_ISP_ROOT                   >,
+                     <&bpmp TEGRA264_CLK_NAFLL_PVA0_CORE            >,
+                     <&bpmp TEGRA264_CLK_NAFLL_PVA0_VPS             >,
+                     <&bpmp TEGRA264_CLK_NVCSI                      >,
+                     <&bpmp TEGRA264_CLK_NVCSILP                    >,
+                     <&bpmp TEGRA264_CLK_PLLP_OUT0                  >,
+                     <&bpmp TEGRA264_CLK_PVA0_CPU_AXI               >,
+                     <&bpmp TEGRA264_CLK_PVA0_VPS                   >,
+                     <&bpmp TEGRA264_CLK_PWM10                      >,
+                     <&bpmp TEGRA264_CLK_PWM2                       >,
+                     <&bpmp TEGRA264_CLK_PWM3                       >,
+                     <&bpmp TEGRA264_CLK_PWM4                       >,
+                     <&bpmp TEGRA264_CLK_PWM5                       >,
+                     <&bpmp TEGRA264_CLK_PWM9                       >,
+                     <&bpmp TEGRA264_CLK_QSPI0                      >,
+                     <&bpmp TEGRA264_CLK_QSPI0_2X_PM                >,
+                     <&bpmp TEGRA264_CLK_RCE1_CPU                   >,
+                     <&bpmp TEGRA264_CLK_RCE1_NIC                   >,
+                     <&bpmp TEGRA264_CLK_RCE_CPU                    >,
+                     <&bpmp TEGRA264_CLK_RCE_NIC                    >,
+                     <&bpmp TEGRA264_CLK_SE                         >,
+                     <&bpmp TEGRA264_CLK_SEU1                       >,
+                     <&bpmp TEGRA264_CLK_SEU2                       >,
+                     <&bpmp TEGRA264_CLK_SEU3                       >,
+                     <&bpmp TEGRA264_CLK_SE_ROOT                    >,
+                     <&bpmp TEGRA264_CLK_SPI1                       >,
+                     <&bpmp TEGRA264_CLK_SPI2                       >,
+                     <&bpmp TEGRA264_CLK_SPI3                       >,
+                     <&bpmp TEGRA264_CLK_SPI4                       >,
+                     <&bpmp TEGRA264_CLK_SPI5                       >,
+                     <&bpmp TEGRA264_CLK_TOP_I2C                    >,
+                     <&bpmp TEGRA264_CLK_TSEC                       >,
+                     <&bpmp TEGRA264_CLK_TSEC_PKA                   >,
+                     <&bpmp TEGRA264_CLK_UART0                      >,
+                     <&bpmp TEGRA264_CLK_UART10                     >,
+                     <&bpmp TEGRA264_CLK_UART11                     >,
+                     <&bpmp TEGRA264_CLK_UART4                      >,
+                     <&bpmp TEGRA264_CLK_UART5                      >,
+                     <&bpmp TEGRA264_CLK_UART8                      >,
+                     <&bpmp TEGRA264_CLK_UART9                      >,
+                     <&bpmp TEGRA264_CLK_VI                         >,
+                     <&bpmp TEGRA264_CLK_VI1                        >,
+                     <&bpmp TEGRA264_CLK_VIC                        >,
+                     <&bpmp TEGRA264_CLK_VI_ROOT                    >,
+                     <&bpmp TEGRA264_CLK_DISPPLL                    >,
+                     <&bpmp TEGRA264_CLK_SPPLL0                     >,
+                     <&bpmp TEGRA264_CLK_SPPLL0_CLKOUT1A            >,
+                     <&bpmp TEGRA264_CLK_SPPLL0_CLKOUT2A            >,
+                     <&bpmp TEGRA264_CLK_SPPLL1                     >,
+                     <&bpmp TEGRA264_CLK_VPLL0                      >,
+                     <&bpmp TEGRA264_CLK_VPLL1                      >,
+                     <&bpmp TEGRA264_CLK_VPLL2                      >,
+                     <&bpmp TEGRA264_CLK_VPLL3                      >,
+                     <&bpmp TEGRA264_CLK_VPLL4                      >,
+                     <&bpmp TEGRA264_CLK_VPLL5                      >,
+                     <&bpmp TEGRA264_CLK_VPLL6                      >,
+                     <&bpmp TEGRA264_CLK_VPLL7                      >,
+                     <&bpmp TEGRA264_CLK_RG0_DIV                    >,
+                     <&bpmp TEGRA264_CLK_RG1_DIV                    >,
+                     <&bpmp TEGRA264_CLK_RG2_DIV                    >,
+                     <&bpmp TEGRA264_CLK_RG3_DIV                    >,
+                     <&bpmp TEGRA264_CLK_RG4_DIV                    >,
+                     <&bpmp TEGRA264_CLK_RG5_DIV                    >,
+                     <&bpmp TEGRA264_CLK_RG6_DIV                    >,
+                     <&bpmp TEGRA264_CLK_RG7_DIV                    >,
+                     <&bpmp TEGRA264_CLK_RG0                        >,
+                     <&bpmp TEGRA264_CLK_RG1                        >,
+                     <&bpmp TEGRA264_CLK_RG2                        >,
+                     <&bpmp TEGRA264_CLK_RG3                        >,
+                     <&bpmp TEGRA264_CLK_RG4                        >,
+                     <&bpmp TEGRA264_CLK_RG5                        >,
+                     <&bpmp TEGRA264_CLK_RG6                        >,
+                     <&bpmp TEGRA264_CLK_RG7                        >,
+                     <&bpmp TEGRA264_CLK_DISP                       >,
+                     <&bpmp TEGRA264_CLK_DSC                        >,
+                     <&bpmp TEGRA264_CLK_DSC_ROOT                   >,
+                     <&bpmp TEGRA264_CLK_HUB                        >,
+                     <&bpmp TEGRA264_CLK_VPLLX_SOR0_MUXED           >,
+                     <&bpmp TEGRA264_CLK_VPLLX_SOR1_MUXED           >,
+                     <&bpmp TEGRA264_CLK_VPLLX_SOR2_MUXED           >,
+                     <&bpmp TEGRA264_CLK_VPLLX_SOR3_MUXED           >,
+                     <&bpmp TEGRA264_CLK_LINKA_SYM                  >,
+                     <&bpmp TEGRA264_CLK_LINKB_SYM                  >,
+                     <&bpmp TEGRA264_CLK_LINKC_SYM                  >,
+                     <&bpmp TEGRA264_CLK_LINKD_SYM                  >,
+                     <&bpmp TEGRA264_CLK_PRE_SOR0                   >,
+                     <&bpmp TEGRA264_CLK_PRE_SOR1                   >,
+                     <&bpmp TEGRA264_CLK_PRE_SOR2                   >,
+                     <&bpmp TEGRA264_CLK_PRE_SOR3                   >,
+                     <&bpmp TEGRA264_CLK_SOR0_PLL_REF               >,
+                     <&bpmp TEGRA264_CLK_SOR1_PLL_REF               >,
+                     <&bpmp TEGRA264_CLK_SOR2_PLL_REF               >,
+                     <&bpmp TEGRA264_CLK_SOR3_PLL_REF               >,
+                     <&bpmp TEGRA264_CLK_SOR0_PAD                   >,
+                     <&bpmp TEGRA264_CLK_SOR1_PAD                   >,
+                     <&bpmp TEGRA264_CLK_SOR2_PAD                   >,
+                     <&bpmp TEGRA264_CLK_SOR3_PAD                   >,
+                     <&bpmp TEGRA264_CLK_SOR0_REF                   >,
+                     <&bpmp TEGRA264_CLK_SOR1_REF                   >,
+                     <&bpmp TEGRA264_CLK_SOR2_REF                   >,
+                     <&bpmp TEGRA264_CLK_SOR3_REF                   >,
+                     <&bpmp TEGRA264_CLK_SOR0_DIV                   >,
+                     <&bpmp TEGRA264_CLK_SOR1_DIV                   >,
+                     <&bpmp TEGRA264_CLK_SOR2_DIV                   >,
+                     <&bpmp TEGRA264_CLK_SOR3_DIV                   >,
+                     <&bpmp TEGRA264_CLK_SOR0                       >,
+                     <&bpmp TEGRA264_CLK_SOR1                       >,
+                     <&bpmp TEGRA264_CLK_SOR2                       >,
+                     <&bpmp TEGRA264_CLK_SOR3                       >,
+                     <&bpmp TEGRA264_CLK_SF0_SOR                    >,
+                     <&bpmp TEGRA264_CLK_SF1_SOR                    >,
+                     <&bpmp TEGRA264_CLK_SF2_SOR                    >,
+                     <&bpmp TEGRA264_CLK_SF3_SOR                    >,
+                     <&bpmp TEGRA264_CLK_SF4_SOR                    >,
+                     <&bpmp TEGRA264_CLK_SF5_SOR                    >,
+                     <&bpmp TEGRA264_CLK_SF6_SOR                    >,
+                     <&bpmp TEGRA264_CLK_SF7_SOR                    >,
+                     <&bpmp TEGRA264_CLK_SF0                        >,
+                     <&bpmp TEGRA264_CLK_SF1                        >,
+                     <&bpmp TEGRA264_CLK_SF2                        >,
+                     <&bpmp TEGRA264_CLK_SF3                        >,
+                     <&bpmp TEGRA264_CLK_SF4                        >,
+                     <&bpmp TEGRA264_CLK_SF5                        >,
+                     <&bpmp TEGRA264_CLK_SF6                        >,
+                     <&bpmp TEGRA264_CLK_SF7                        >,
+                     <&bpmp TEGRA264_CLK_MAUD                       >,
+                     <&bpmp TEGRA264_CLK_AZA_2XBIT                  >,
+                     <&bpmp TEGRA264_CLK_DCE_CPU                    >,
+                     <&bpmp TEGRA264_CLK_DCE_NIC                    >,
+                     <&bpmp TEGRA264_CLK_PLLC4                      >,
+                     <&bpmp TEGRA264_CLK_PLLC4_OUT0                 >,
+                     <&bpmp TEGRA264_CLK_PLLC4_OUT1                 >,
+                     <&bpmp TEGRA264_CLK_PLLC4_MUXED                >,
+                     <&bpmp TEGRA264_CLK_SDMMC1                     >,
+                     <&bpmp TEGRA264_CLK_SDMMC_LEGACY_TM            >,
+                     <&bpmp TEGRA264_CLK_PLLC0                      >,
+                     <&bpmp TEGRA264_CLK_NAFLL_BPMP                 >,
+                     <&bpmp TEGRA264_CLK_PLLP_OUT_PDIV              >,
+                     <&bpmp TEGRA264_CLK_DISP_ROOT                  >,
+                     <&bpmp TEGRA264_CLK_ADSP                       >,
+                     <&bpmp TEGRA264_CLK_PLLA                       >,
+                     <&bpmp TEGRA264_CLK_PLLA1                      >,
+                     <&bpmp TEGRA264_CLK_PLLA1_OUT1                 >,
+                     <&bpmp TEGRA264_CLK_PLLAON                     >,
+                     <&bpmp TEGRA264_CLK_PLLAON_APE                 >,
+                     <&bpmp TEGRA264_CLK_PLLA_OUT0                  >,
+                     <&bpmp TEGRA264_CLK_AHUB                       >,
+                     <&bpmp TEGRA264_CLK_APE                        >,
+                     <&bpmp TEGRA264_CLK_I2S1_SCLK_IN               >,
+                     <&bpmp TEGRA264_CLK_I2S2_SCLK_IN               >,
+                     <&bpmp TEGRA264_CLK_I2S3_SCLK_IN               >,
+                     <&bpmp TEGRA264_CLK_I2S4_SCLK_IN               >,
+                     <&bpmp TEGRA264_CLK_I2S5_SCLK_IN               >,
+                     <&bpmp TEGRA264_CLK_I2S6_SCLK_IN               >,
+                     <&bpmp TEGRA264_CLK_I2S7_SCLK_IN               >,
+                     <&bpmp TEGRA264_CLK_I2S8_SCLK_IN               >,
+                     <&bpmp TEGRA264_CLK_I2S9_SCLK_IN               >,
+                     <&bpmp TEGRA264_CLK_I2S1_AUDIO_SYNC            >,
+                     <&bpmp TEGRA264_CLK_I2S2_AUDIO_SYNC            >,
+                     <&bpmp TEGRA264_CLK_I2S3_AUDIO_SYNC            >,
+                     <&bpmp TEGRA264_CLK_I2S4_AUDIO_SYNC            >,
+                     <&bpmp TEGRA264_CLK_I2S5_AUDIO_SYNC            >,
+                     <&bpmp TEGRA264_CLK_I2S6_AUDIO_SYNC            >,
+                     <&bpmp TEGRA264_CLK_I2S7_AUDIO_SYNC            >,
+                     <&bpmp TEGRA264_CLK_I2S8_AUDIO_SYNC            >,
+                     <&bpmp TEGRA264_CLK_DMIC1_AUDIO_SYNC           >,
+                     <&bpmp TEGRA264_CLK_DSPK1_AUDIO_SYNC           >,
+                     <&bpmp TEGRA264_CLK_I2S1                       >,
+                     <&bpmp TEGRA264_CLK_I2S2                       >,
+                     <&bpmp TEGRA264_CLK_I2S3                       >,
+                     <&bpmp TEGRA264_CLK_I2S4                       >,
+                     <&bpmp TEGRA264_CLK_I2S5                       >,
+                     <&bpmp TEGRA264_CLK_I2S6                       >,
+                     <&bpmp TEGRA264_CLK_I2S7                       >,
+                     <&bpmp TEGRA264_CLK_I2S8                       >,
+                     <&bpmp TEGRA264_CLK_I2S9                       >,
+                     <&bpmp TEGRA264_CLK_DMIC1                      >,
+                     <&bpmp TEGRA264_CLK_DMIC5                      >,
+                     <&bpmp TEGRA264_CLK_DSPK1                      >,
+                     <&bpmp TEGRA264_CLK_AON_CPU                    >,
+                     <&bpmp TEGRA264_CLK_AON_NIC                    >,
+                     <&bpmp TEGRA264_CLK_BPMP                       >,
+                     <&bpmp TEGRA264_CLK_AXI_CBB                    >,
+                     <&bpmp TEGRA264_CLK_FUSE                       >,
+                     <&bpmp TEGRA264_CLK_TSENSE                     >,
+                     <&bpmp TEGRA264_CLK_CSITE                      >,
+                     <&bpmp TEGRA264_CLK_HCSITE                     >,
+                     <&bpmp TEGRA264_CLK_DBGAPB                     >,
+                     <&bpmp TEGRA264_CLK_LA                         >,
+                     <&bpmp TEGRA264_CLK_PLLREFGP                   >,
+                     <&bpmp TEGRA264_CLK_PLLE0                      >,
+                     <&bpmp TEGRA264_CLK_UPHY0_PLL0_XDIG            >,
+                     <&bpmp TEGRA264_CLK_EQOS_APP                   >,
+                     <&bpmp TEGRA264_CLK_EQOS_MAC                   >,
+                     <&bpmp TEGRA264_CLK_EQOS_MACSEC                >,
+                     <&bpmp TEGRA264_CLK_EQOS_TX_PCS                >,
+                     <&bpmp TEGRA264_CLK_MGBES_PTP_REF              >,
+                     <&bpmp TEGRA264_CLK_MGBE0_UPHY1_PLL_XDIG       >,
+                     <&bpmp TEGRA264_CLK_MGBE0_TX_PCS               >,
+                     <&bpmp TEGRA264_CLK_MGBE0_MAC                  >,
+                     <&bpmp TEGRA264_CLK_MGBE0_MACSEC               >,
+                     <&bpmp TEGRA264_CLK_MGBE0_APP                  >,
+                     <&bpmp TEGRA264_CLK_MGBE1_UPHY1_PLL_XDIG       >,
+                     <&bpmp TEGRA264_CLK_MGBE1_TX_PCS               >,
+                     <&bpmp TEGRA264_CLK_MGBE1_MAC                  >,
+                     <&bpmp TEGRA264_CLK_MGBE1_MACSEC               >,
+                     <&bpmp TEGRA264_CLK_MGBE1_APP                  >,
+                     <&bpmp TEGRA264_CLK_MGBE2_UPHY1_PLL_XDIG       >,
+                     <&bpmp TEGRA264_CLK_MGBE2_TX_PCS               >,
+                     <&bpmp TEGRA264_CLK_MGBE2_MAC                  >,
+                     <&bpmp TEGRA264_CLK_MGBE2_MACSEC               >,
+                     <&bpmp TEGRA264_CLK_MGBE2_APP                  >,
+                     <&bpmp TEGRA264_CLK_MGBE3_UPHY1_PLL_XDIG       >,
+                     <&bpmp TEGRA264_CLK_MGBE3_TX_PCS               >,
+                     <&bpmp TEGRA264_CLK_MGBE3_MAC                  >,
+                     <&bpmp TEGRA264_CLK_MGBE3_MACSEC               >,
+                     <&bpmp TEGRA264_CLK_MGBE3_APP                  >,
+                     <&bpmp TEGRA264_CLK_PLLREFUFS                  >,
+                     <&bpmp TEGRA264_CLK_PLLREFUFS_CLKOUT624        >,
+                     <&bpmp TEGRA264_CLK_PLLREFUFS_REFCLKOUT        >,
+                     <&bpmp TEGRA264_CLK_PLLREFUFS_UFSDEV_REFCLKOUT >,
+                     <&bpmp TEGRA264_CLK_UFSHC_CG_SYS               >,
+                     <&bpmp TEGRA264_CLK_MPHY_L0_RX_LS_BIT_DIV      >,
+                     <&bpmp TEGRA264_CLK_MPHY_L0_RX_LS_BIT          >,
+                     <&bpmp TEGRA264_CLK_MPHY_L0_RX_LS_SYMB_DIV     >,
+                     <&bpmp TEGRA264_CLK_MPHY_L0_RX_HS_SYMB_DIV     >,
+                     <&bpmp TEGRA264_CLK_MPHY_L0_RX_SYMB            >,
+                     <&bpmp TEGRA264_CLK_MPHY_L0_UPHY_TX_FIFO       >,
+                     <&bpmp TEGRA264_CLK_MPHY_L0_TX_LS_3XBIT_DIV    >,
+                     <&bpmp TEGRA264_CLK_MPHY_L0_TX_LS_SYMB_DIV     >,
+                     <&bpmp TEGRA264_CLK_UPHY0_PLL4_XDIG            >,
+                     <&bpmp TEGRA264_CLK_MPHY_L0_TX_HS_SYMB_DIV     >,
+                     <&bpmp TEGRA264_CLK_MPHY_L0_TX_SYMB            >,
+                     <&bpmp TEGRA264_CLK_MPHY_L0_TX_LS_3XBIT        >,
+                     <&bpmp TEGRA264_CLK_MPHY_L0_RX_ANA             >,
+                     <&bpmp TEGRA264_CLK_MPHY_L1_RX_ANA             >,
+                     <&bpmp TEGRA264_CLK_MPHY_TX_1MHZ_REF           >,
+                     <&bpmp TEGRA264_CLK_MPHY_CORE_PLL_FIXED        >,
+                     <&bpmp TEGRA264_CLK_MPHY_IOBIST                >,
+                     <&bpmp TEGRA264_CLK_UFSHC_CG_SYS_DIV           >,
+                     <&bpmp TEGRA264_CLK_XUSB1_CORE                 >,
+                     <&bpmp TEGRA264_CLK_XUSB1_FALCON               >,
+                     <&bpmp TEGRA264_CLK_XUSB1_FS                   >,
+                     <&bpmp TEGRA264_CLK_XUSB1_SS                   >,
+                     <&bpmp TEGRA264_CLK_UPHY0_USB_P0_RX_CORE       >,
+                     <&bpmp TEGRA264_CLK_UPHY0_USB_P1_RX_CORE       >,
+                     <&bpmp TEGRA264_CLK_UPHY0_USB_P2_RX_CORE       >,
+                     <&bpmp TEGRA264_CLK_UPHY0_USB_P3_RX_CORE       >,
+                     <&bpmp TEGRA264_CLK_XUSB1_CLK480M_NVWRAP_CORE  >,
+                     <&bpmp TEGRA264_CLK_XUSB1_CORE_HOST            >,
+                     <&bpmp TEGRA264_CLK_XUSB1_CORE_DEV             >,
+                     <&bpmp TEGRA264_CLK_XUSB1_CORE_SUPERSPEED      >,
+                     <&bpmp TEGRA264_CLK_XUSB1_FALCON_HOST          >,
+                     <&bpmp TEGRA264_CLK_XUSB1_FALCON_SUPERSPEED    >,
+                     <&bpmp TEGRA264_CLK_XUSB1_FS_HOST              >,
+                     <&bpmp TEGRA264_CLK_XUSB1_FS_DEV               >,
+                     <&bpmp TEGRA264_CLK_XUSB1_HS_HSICP             >,
+                     <&bpmp TEGRA264_CLK_XUSB1_SS_DEV               >,
+                     <&bpmp TEGRA264_CLK_XUSB1_SS_SUPERSPEED        >,
+                     <&bpmp TEGRA264_CLK_AON_TOUCH                  >,
+                     <&bpmp TEGRA264_CLK_AUD_MCLK                   >,
+                     <&bpmp TEGRA264_CLK_EXTPERIPH1                 >,
+                     <&bpmp TEGRA264_CLK_EXTPERIPH2                 >,
+                     <&bpmp TEGRA264_CLK_EXTPERIPH3                 >,
+                     <&bpmp TEGRA264_CLK_EXTPERIPH4                 >,
+                     <&bpmp TEGRA264_CLK_JTAG_REG_UNGATED           >,
+                     <&bpmp TEGRA264_CLK_IST_BUS                    >,
+                     <&bpmp TEGRA264_CLK_IST_BUS_RIST_MCC           >,
+                     <&bpmp TEGRA264_CLK_MATHS_SEC_RIST             >,
+                     <&bpmp TEGRA264_CLK_NAFLL_IST                  >,
+                     <&bpmp TEGRA264_CLK_RIST_ROOT                  >,
+                     <&bpmp TEGRA264_CLK_IST_CONTROLLER_RIST        >,
+                     <&bpmp TEGRA264_CLK_MSS_ENCRYPT                >,
+                     <&bpmp TEGRA264_CLK_EMC                        >,
+                     <&bpmp TEGRA264_CLK_SPPLL0_CLKOUT100           >,
+                     <&bpmp TEGRA264_CLK_SPPLL0_CLKOUT270           >,
+                     <&bpmp TEGRA264_CLK_SPPLL1_CLKOUT100           >,
+                     <&bpmp TEGRA264_CLK_SPPLL1_CLKOUT270           >,
+                     <&bpmp TEGRA264_CLK_DP_LINKA_REF               >,
+                     <&bpmp TEGRA264_CLK_DP_LINKB_REF               >,
+                     <&bpmp TEGRA264_CLK_DP_LINKC_REF               >,
+                     <&bpmp TEGRA264_CLK_DP_LINKD_REF               >,
+                     <&bpmp TEGRA264_CLK_PLLNVCSI                   >,
+                     <&bpmp TEGRA264_CLK_PLLBPMPCAM                 >,
+                     <&bpmp TEGRA264_CLK_UTMI_PLL1                  >,
+                     <&bpmp TEGRA264_CLK_UTMI_PLL1_CLKOUT48         >,
+                     <&bpmp TEGRA264_CLK_UTMI_PLL1_CLKOUT60         >,
+                     <&bpmp TEGRA264_CLK_UTMI_PLL1_CLKOUT480        >,
+                     <&bpmp TEGRA264_CLK_NAFLL_ISP                  >,
+                     <&bpmp TEGRA264_CLK_NAFLL_RCE                  >,
+                     <&bpmp TEGRA264_CLK_NAFLL_RCE1                 >,
+                     <&bpmp TEGRA264_CLK_NAFLL_SE                   >,
+                     <&bpmp TEGRA264_CLK_NAFLL_VI                   >,
+                     <&bpmp TEGRA264_CLK_NAFLL_VIC                  >,
+                     <&bpmp TEGRA264_CLK_NAFLL_DCE                  >,
+                     <&bpmp TEGRA264_CLK_NAFLL_TSEC                 >,
+                     <&bpmp TEGRA264_CLK_NAFLL_CPAIR0               >,
+                     <&bpmp TEGRA264_CLK_NAFLL_CPAIR1               >,
+                     <&bpmp TEGRA264_CLK_NAFLL_CPAIR2               >,
+                     <&bpmp TEGRA264_CLK_NAFLL_CPAIR3               >,
+                     <&bpmp TEGRA264_CLK_NAFLL_CPAIR4               >,
+                     <&bpmp TEGRA264_CLK_NAFLL_CPAIR5               >,
+                     <&bpmp TEGRA264_CLK_NAFLL_CPAIR6               >,
+                     <&bpmp TEGRA264_CLK_NAFLL_GPU_SYS              >,
+                     <&bpmp TEGRA264_CLK_NAFLL_GPU_NVD              >,
+                     <&bpmp TEGRA264_CLK_NAFLL_GPU_UPROC            >,
+                     <&bpmp TEGRA264_CLK_NAFLL_GPU_GPC0             >,
+                     <&bpmp TEGRA264_CLK_NAFLL_GPU_GPC1             >,
+                     <&bpmp TEGRA264_CLK_NAFLL_GPU_GPC2             >,
+                     <&bpmp TEGRA264_CLK_SOR_LINKA_INPUT            >,
+                     <&bpmp TEGRA264_CLK_SOR_LINKB_INPUT            >,
+                     <&bpmp TEGRA264_CLK_SOR_LINKC_INPUT            >,
+                     <&bpmp TEGRA264_CLK_SOR_LINKD_INPUT            >,
+                     <&bpmp TEGRA264_CLK_SOR_LINKA_AFIFO            >,
+                     <&bpmp TEGRA264_CLK_SOR_LINKB_AFIFO            >,
+                     <&bpmp TEGRA264_CLK_SOR_LINKC_AFIFO            >,
+                     <&bpmp TEGRA264_CLK_SOR_LINKD_AFIFO            >,
+                     <&bpmp TEGRA264_CLK_I2S1_PAD_M                 >,
+                     <&bpmp TEGRA264_CLK_I2S2_PAD_M                 >,
+                     <&bpmp TEGRA264_CLK_I2S3_PAD_M                 >,
+                     <&bpmp TEGRA264_CLK_I2S4_PAD_M                 >,
+                     <&bpmp TEGRA264_CLK_I2S5_PAD_M                 >,
+                     <&bpmp TEGRA264_CLK_I2S6_PAD_M                 >,
+                     <&bpmp TEGRA264_CLK_I2S7_PAD_M                 >,
+                     <&bpmp TEGRA264_CLK_I2S8_PAD_M                 >,
+                     <&bpmp TEGRA264_CLK_I2S9_PAD_M                 >,
+                     <&bpmp TEGRA264_CLK_BPMP_NIC                   >,
+                     <&bpmp TEGRA264_CLK_CLK1M                      >,
+                     <&bpmp TEGRA264_CLK_RDET                       >,
+                     <&bpmp TEGRA264_CLK_ADC_SOC_REF                >,
+                     <&bpmp TEGRA264_CLK_UPHY0_PLL0_TXREF           >,
+                     <&bpmp TEGRA264_CLK_EQOS_TX                    >,
+                     <&bpmp TEGRA264_CLK_EQOS_TX_M                  >,
+                     <&bpmp TEGRA264_CLK_EQOS_RX_PCS_IN             >,
+                     <&bpmp TEGRA264_CLK_EQOS_RX_PCS_M              >,
+                     <&bpmp TEGRA264_CLK_EQOS_RX_IN                 >,
+                     <&bpmp TEGRA264_CLK_EQOS_RX                    >,
+                     <&bpmp TEGRA264_CLK_EQOS_RX_M                  >,
+                     <&bpmp TEGRA264_CLK_MGBE0_UPHY1_PLL_TXREF      >,
+                     <&bpmp TEGRA264_CLK_MGBE0_TX                   >,
+                     <&bpmp TEGRA264_CLK_MGBE0_TX_M                 >,
+                     <&bpmp TEGRA264_CLK_MGBE0_RX_PCS_IN            >,
+                     <&bpmp TEGRA264_CLK_MGBE0_RX_PCS_M             >,
+                     <&bpmp TEGRA264_CLK_MGBE0_RX_IN                >,
+                     <&bpmp TEGRA264_CLK_MGBE0_RX_M                 >,
+                     <&bpmp TEGRA264_CLK_MGBE1_UPHY1_PLL_TXREF      >,
+                     <&bpmp TEGRA264_CLK_MGBE1_TX                   >,
+                     <&bpmp TEGRA264_CLK_MGBE1_TX_M                 >,
+                     <&bpmp TEGRA264_CLK_MGBE1_RX_PCS_IN            >,
+                     <&bpmp TEGRA264_CLK_MGBE1_RX_PCS_M             >,
+                     <&bpmp TEGRA264_CLK_MGBE1_RX_IN                >,
+                     <&bpmp TEGRA264_CLK_MGBE1_RX_M                 >,
+                     <&bpmp TEGRA264_CLK_MGBE2_UPHY1_PLL_TXREF      >,
+                     <&bpmp TEGRA264_CLK_MGBE2_TX                   >,
+                     <&bpmp TEGRA264_CLK_MGBE2_TX_M                 >,
+                     <&bpmp TEGRA264_CLK_MGBE2_RX_PCS_IN            >,
+                     <&bpmp TEGRA264_CLK_MGBE2_RX_PCS_M             >,
+                     <&bpmp TEGRA264_CLK_MGBE2_RX_IN                >,
+                     <&bpmp TEGRA264_CLK_MGBE2_RX_M                 >,
+                     <&bpmp TEGRA264_CLK_MGBE3_UPHY1_PLL_TXREF      >,
+                     <&bpmp TEGRA264_CLK_MGBE3_TX                   >,
+                     <&bpmp TEGRA264_CLK_MGBE3_TX_M                 >,
+                     <&bpmp TEGRA264_CLK_MGBE3_RX_PCS_IN            >,
+                     <&bpmp TEGRA264_CLK_MGBE3_RX_PCS_M             >,
+                     <&bpmp TEGRA264_CLK_MGBE3_RX_IN                >,
+                     <&bpmp TEGRA264_CLK_MGBE3_RX_M                 >,
+                     <&bpmp TEGRA264_CLK_UPHY0_USB_P0_TX_CORE       >,
+                     <&bpmp TEGRA264_CLK_UPHY0_USB_P1_TX_CORE       >,
+                     <&bpmp TEGRA264_CLK_UPHY0_USB_P2_TX_CORE       >,
+                     <&bpmp TEGRA264_CLK_UPHY0_USB_P3_TX_CORE       >,
+                     <&bpmp TEGRA264_CLK_UPHY0_USB_P0_TX            >,
+                     <&bpmp TEGRA264_CLK_UPHY0_USB_P1_TX            >,
+                     <&bpmp TEGRA264_CLK_UPHY0_USB_P2_TX            >,
+                     <&bpmp TEGRA264_CLK_UPHY0_USB_P3_TX            >,
+                     <&bpmp TEGRA264_CLK_UPHY0_USB_P0_RX_IN         >,
+                     <&bpmp TEGRA264_CLK_UPHY0_USB_P1_RX_IN         >,
+                     <&bpmp TEGRA264_CLK_UPHY0_USB_P2_RX_IN         >,
+                     <&bpmp TEGRA264_CLK_UPHY0_USB_P3_RX_IN         >,
+                     <&bpmp TEGRA264_CLK_UPHY0_USB_P0_RX_M          >,
+                     <&bpmp TEGRA264_CLK_UPHY0_USB_P1_RX_M          >,
+                     <&bpmp TEGRA264_CLK_UPHY0_USB_P2_RX_M          >,
+                     <&bpmp TEGRA264_CLK_UPHY0_USB_P3_RX_M          >,
+                     <&bpmp TEGRA264_CLK_UPHY0_LANE0_TX_M           >,
+                     <&bpmp TEGRA264_CLK_PCIE_C1_XCLK_NOBG_M        >,
+                     <&bpmp TEGRA264_CLK_PCIE_C2_XCLK_NOBG_M        >,
+                     <&bpmp TEGRA264_CLK_PCIE_C3_XCLK_NOBG_M        >,
+                     <&bpmp TEGRA264_CLK_PCIE_C4_XCLK_NOBG_M        >,
+                     <&bpmp TEGRA264_CLK_PCIE_C5_XCLK_NOBG_M        >,
+                     <&bpmp TEGRA264_CLK_PCIE_C1_L0_RX_M            >,
+                     <&bpmp TEGRA264_CLK_PCIE_C1_L1_RX_M            >,
+                     <&bpmp TEGRA264_CLK_PCIE_C1_L2_RX_M            >,
+                     <&bpmp TEGRA264_CLK_PCIE_C1_L3_RX_M            >,
+                     <&bpmp TEGRA264_CLK_PCIE_C2_L0_RX_M            >,
+                     <&bpmp TEGRA264_CLK_PCIE_C2_L1_RX_M            >,
+                     <&bpmp TEGRA264_CLK_PCIE_C2_L2_RX_M            >,
+                     <&bpmp TEGRA264_CLK_PCIE_C2_L3_RX_M            >,
+                     <&bpmp TEGRA264_CLK_PCIE_C3_L0_RX_M            >,
+                     <&bpmp TEGRA264_CLK_PCIE_C3_L1_RX_M            >,
+                     <&bpmp TEGRA264_CLK_PCIE_C4_L0_RX_M            >,
+                     <&bpmp TEGRA264_CLK_PCIE_C4_L1_RX_M            >,
+                     <&bpmp TEGRA264_CLK_PCIE_C4_L2_RX_M            >,
+                     <&bpmp TEGRA264_CLK_PCIE_C4_L3_RX_M            >,
+                     <&bpmp TEGRA264_CLK_PCIE_C4_L4_RX_M            >,
+                     <&bpmp TEGRA264_CLK_PCIE_C4_L5_RX_M            >,
+                     <&bpmp TEGRA264_CLK_PCIE_C4_L6_RX_M            >,
+                     <&bpmp TEGRA264_CLK_PCIE_C4_L7_RX_M            >,
+                     <&bpmp TEGRA264_CLK_PCIE_C5_L0_RX_M            >,
+                     <&bpmp TEGRA264_CLK_PCIE_C5_L1_RX_M            >,
+                     <&bpmp TEGRA264_CLK_PCIE_C5_L2_RX_M            >,
+                     <&bpmp TEGRA264_CLK_PCIE_C5_L3_RX_M            >,
+                     <&bpmp TEGRA264_CLK_MPHY_L0_RX_PWM_BIT_M       >,
+                     <&bpmp TEGRA264_CLK_MPHY_L1_RX_PWM_BIT_M       >,
+                     <&bpmp TEGRA264_CLK_DBB_UPHY0                  >,
+                     <&bpmp TEGRA264_CLK_UPHY0_UXL_CORE             >,
+                     <&bpmp TEGRA264_CLK_ISC_CPU_ROOT               >,
+                     <&bpmp TEGRA264_CLK_ISC_NIC                    >,
+                     <&bpmp TEGRA264_CLK_CTC_TXCLK0_M               >,
+                     <&bpmp TEGRA264_CLK_CTC_TXCLK1_M               >,
+                     <&bpmp TEGRA264_CLK_CTC_RXCLK0_M               >,
+                     <&bpmp TEGRA264_CLK_CTC_RXCLK1_M               >,
+                     <&bpmp TEGRA264_CLK_PLLREFGP_OUT               >,
+                     <&bpmp TEGRA264_CLK_PLLREFGP_OUT1              >,
+                     <&bpmp TEGRA264_CLK_GPU_SYS                    >,
+                     <&bpmp TEGRA264_CLK_GPU_NVD                    >,
+                     <&bpmp TEGRA264_CLK_GPU_UPROC                  >,
+                     <&bpmp TEGRA264_CLK_GPU_GPC0                   >,
+                     <&bpmp TEGRA264_CLK_GPU_GPC1                   >,
+                     <&bpmp TEGRA264_CLK_GPU_GPC2                   >,
+                     <&bpmp TEGRA264_CLK_PLLX                       >,
+                     <&bpmp TEGRA264_CLK_APE_SOUNDWIRE_MSRC0        >,
+                     <&bpmp TEGRA264_CLK_APE_SOUNDWIRE_DATA_EN_SHAPER >,
+                     <&bpmp TEGRA264_CLK_AO_SOUNDWIRE_MSRC0           >,
+                     <&bpmp TEGRA264_CLK_AO_SOUNDWIRE_DATA_EN_SHAPER  >,
+                     <&bpmp TEGRA264_CLK_DPAUX                      >;
+            clock-names = "osc",
+                          "clk_s",
+                          "jtag_reg",
+                          "spll",
+                          "spll_out0",
+                          "spll_out1",
+                          "spll_out2",
+                          "spll_out3",
+                          "spll_out4",
+                          "spll_out5",
+                          "spll_out6",
+                          "spll_out7",
+                          "aon_i2c",
+                          "host1x",
+                          "isp",
+                          "isp1",
+                          "isp_root",
+                          "nafll_pva0_core",
+                          "nafll_pva0_vps",
+                          "nvcsi",
+                          "nvcsilp",
+                          "pllp_out0",
+                          "pva0_cpu_axi",
+                          "pva0_vps",
+                          "pwm10",
+                          "pwm2",
+                          "pwm3",
+                          "pwm4",
+                          "pwm5",
+                          "pwm9",
+                          "qspi0",
+                          "qspi0_2x_pm",
+                          "rce1_cpu",
+                          "rce1_nic",
+                          "rce_cpu",
+                          "rce_nic",
+                          "se",
+                          "seu1",
+                          "seu2",
+                          "seu3",
+                          "se_root",
+                          "spi1",
+                          "spi2",
+                          "spi3",
+                          "spi4",
+                          "spi5",
+                          "top_i2c",
+                          "tsec",
+                          "tsec_pka",
+                          "uart0",
+                          "uart10",
+                          "uart11",
+                          "uart4",
+                          "uart5",
+                          "uart8",
+                          "uart9",
+                          "vi",
+                          "vi1",
+                          "vic",
+                          "vi_root",
+                          "disppll",
+                          "sppll0",
+                          "sppll0_clkout1a",
+                          "sppll0_clkout2a",
+                          "sppll1",
+                          "vpll0",
+                          "vpll1",
+                          "vpll2",
+                          "vpll3",
+                          "vpll4",
+                          "vpll5",
+                          "vpll6",
+                          "vpll7",
+                          "rg0_div",
+                          "rg1_div",
+                          "rg2_div",
+                          "rg3_div",
+                          "rg4_div",
+                          "rg5_div",
+                          "rg6_div",
+                          "rg7_div",
+                          "rg0",
+                          "rg1",
+                          "rg2",
+                          "rg3",
+                          "rg4",
+                          "rg5",
+                          "rg6",
+                          "rg7",
+                          "disp",
+                          "dsc",
+                          "dsc_root",
+                          "hub",
+                          "vpllx_sor0_muxed",
+                          "vpllx_sor1_muxed",
+                          "vpllx_sor2_muxed",
+                          "vpllx_sor3_muxed",
+                          "linka_sym",
+                          "linkb_sym",
+                          "linkc_sym",
+                          "linkd_sym",
+                          "pre_sor0",
+                          "pre_sor1",
+                          "pre_sor2",
+                          "pre_sor3",
+                          "sor0_pll_ref",
+                          "sor1_pll_ref",
+                          "sor2_pll_ref",
+                          "sor3_pll_ref",
+                          "sor0_pad",
+                          "sor1_pad",
+                          "sor2_pad",
+                          "sor3_pad",
+                          "sor0_ref",
+                          "sor1_ref",
+                          "sor2_ref",
+                          "sor3_ref",
+                          "sor0_div",
+                          "sor1_div",
+                          "sor2_div",
+                          "sor3_div",
+                          "sor0",
+                          "sor1",
+                          "sor2",
+                          "sor3",
+                          "sf0_sor",
+                          "sf1_sor",
+                          "sf2_sor",
+                          "sf3_sor",
+                          "sf4_sor",
+                          "sf5_sor",
+                          "sf6_sor",
+                          "sf7_sor",
+                          "sf0",
+                          "sf1",
+                          "sf2",
+                          "sf3",
+                          "sf4",
+                          "sf5",
+                          "sf6",
+                          "sf7",
+                          "maud",
+                          "aza_2xbit",
+                          "dce_cpu",
+                          "dce_nic",
+                          "pllc4",
+                          "pllc4_out0",
+                          "pllc4_out1",
+                          "pllc4_muxed",
+                          "sdmmc1",
+                          "sdmmc_legacy_tm",
+                          "pllc0",
+                          "nafll_bpmp",
+                          "pllp_out_pdiv",
+                          "disp_root",
+                          "adsp",
+                          "plla",
+                          "plla1",
+                          "plla1_out1",
+                          "pllaon",
+                          "pllaon_ape",
+                          "plla_out0",
+                          "ahub",
+                          "ape",
+                          "i2s1_sclk_in",
+                          "i2s2_sclk_in",
+                          "i2s3_sclk_in",
+                          "i2s4_sclk_in",
+                          "i2s5_sclk_in",
+                          "i2s6_sclk_in",
+                          "i2s7_sclk_in",
+                          "i2s8_sclk_in",
+                          "i2s9_sclk_in",
+                          "i2s1_audio_sync",
+                          "i2s2_audio_sync",
+                          "i2s3_audio_sync",
+                          "i2s4_audio_sync",
+                          "i2s5_audio_sync",
+                          "i2s6_audio_sync",
+                          "i2s7_audio_sync",
+                          "i2s8_audio_sync",
+                          "dmic1_audio_sync",
+                          "dspk1_audio_sync",
+                          "i2s1",
+                          "i2s2",
+                          "i2s3",
+                          "i2s4",
+                          "i2s5",
+                          "i2s6",
+                          "i2s7",
+                          "i2s8",
+                          "i2s9",
+                          "dmic1",
+                          "dmic5",
+                          "dspk1",
+                          "aon_cpu",
+                          "aon_nic",
+                          "bpmp",
+                          "axi_cbb",
+                          "fuse",
+                          "tsense",
+                          "csite",
+                          "hcsite",
+                          "dbgapb",
+                          "la",
+                          "pllrefgp",
+                          "plle0",
+                          "uphy0_pll0_xdig",
+                          "eqos_app",
+                          "eqos_mac",
+                          "eqos_macsec",
+                          "eqos_tx_pcs",
+                          "mgbes_ptp_ref",
+                          "mgbe0_uphy1_pll_xdig",
+                          "mgbe0_tx_pcs",
+                          "mgbe0_mac",
+                          "mgbe0_macsec",
+                          "mgbe0_app",
+                          "mgbe1_uphy1_pll_xdig",
+                          "mgbe1_tx_pcs",
+                          "mgbe1_mac",
+                          "mgbe1_macsec",
+                          "mgbe1_app",
+                          "mgbe2_uphy1_pll_xdig",
+                          "mgbe2_tx_pcs",
+                          "mgbe2_mac",
+                          "mgbe2_macsec",
+                          "mgbe2_app",
+                          "mgbe3_uphy1_pll_xdig",
+                          "mgbe3_tx_pcs",
+                          "mgbe3_mac",
+                          "mgbe3_macsec",
+                          "mgbe3_app",
+                          "pllrefufs",
+                          "pllrefufs_clkout624",
+                          "pllrefufs_refclkout",
+                          "pllrefufs_ufsdev_refclkout",
+                          "ufshc_cg_sys",
+                          "mphy_l0_rx_ls_bit_div",
+                          "mphy_l0_rx_ls_bit",
+                          "mphy_l0_rx_ls_symb_div",
+                          "mphy_l0_rx_hs_symb_div",
+                          "mphy_l0_rx_symb",
+                          "mphy_l0_uphy_tx_fifo",
+                          "mphy_l0_tx_ls_3xbit_div",
+                          "mphy_l0_tx_ls_symb_div",
+                          "uphy0_pll4_xdig",
+                          "mphy_l0_tx_hs_symb_div",
+                          "mphy_l0_tx_symb",
+                          "mphy_l0_tx_ls_3xbit",
+                          "mphy_l0_rx_ana",
+                          "mphy_l1_rx_ana",
+                          "mphy_tx_1mhz_ref",
+                          "mphy_core_pll_fixed",
+                          "mphy_iobist",
+                          "ufshc_cg_sys_div",
+                          "xusb1_core",
+                          "xusb1_falcon",
+                          "xusb1_fs",
+                          "xusb1_ss",
+                          "uphy0_usb_p0_rx_core",
+                          "uphy0_usb_p1_rx_core",
+                          "uphy0_usb_p2_rx_core",
+                          "uphy0_usb_p3_rx_core",
+                          "xusb1_clk480m_nvwrap_core",
+                          "xusb1_core_host",
+                          "xusb1_core_dev",
+                          "xusb1_core_superspeed",
+                          "xusb1_falcon_host",
+                          "xusb1_falcon_superspeed",
+                          "xusb1_fs_host",
+                          "xusb1_fs_dev",
+                          "xusb1_hs_hsicp",
+                          "xusb1_ss_dev",
+                          "xusb1_ss_superspeed",
+                          "aon_touch",
+                          "aud_mclk",
+                          "extperiph1",
+                          "extperiph2",
+                          "extperiph3",
+                          "extperiph4",
+                          "jtag_reg_ungated",
+                          "ist_bus",
+                          "ist_bus_rist_mcc",
+                          "maths_sec_rist",
+                          "nafll_ist",
+                          "rist_root",
+                          "ist_controller_rist",
+                          "mss_encrypt",
+                          "emc",
+                          "sppll0_clkout100",
+                          "sppll0_clkout270",
+                          "sppll1_clkout100",
+                          "sppll1_clkout270",
+                          "dp_linka_ref",
+                          "dp_linkb_ref",
+                          "dp_linkc_ref",
+                          "dp_linkd_ref",
+                          "pllnvcsi",
+                          "pllbpmpcam",
+                          "utmi_pll1",
+                          "utmi_pll1_clkout48",
+                          "utmi_pll1_clkout60",
+                          "utmi_pll1_clkout480",
+                          "nafll_isp",
+                          "nafll_rce",
+                          "nafll_rce1",
+                          "nafll_se",
+                          "nafll_vi",
+                          "nafll_vic",
+                          "nafll_dce",
+                          "nafll_tsec",
+                          "nafll_cpair0",
+                          "nafll_cpair1",
+                          "nafll_cpair2",
+                          "nafll_cpair3",
+                          "nafll_cpair4",
+                          "nafll_cpair5",
+                          "nafll_cpair6",
+                          "nafll_gpu_sys",
+                          "nafll_gpu_nvd",
+                          "nafll_gpu_uproc",
+                          "nafll_gpu_gpc0",
+                          "nafll_gpu_gpc1",
+                          "nafll_gpu_gpc2",
+                          "sor_linka_input",
+                          "sor_linkb_input",
+                          "sor_linkc_input",
+                          "sor_linkd_input",
+                          "sor_linka_afifo",
+                          "sor_linkb_afifo",
+                          "sor_linkc_afifo",
+                          "sor_linkd_afifo",
+                          "i2s1_pad_m",
+                          "i2s2_pad_m",
+                          "i2s3_pad_m",
+                          "i2s4_pad_m",
+                          "i2s5_pad_m",
+                          "i2s6_pad_m",
+                          "i2s7_pad_m",
+                          "i2s8_pad_m",
+                          "i2s9_pad_m",
+                          "bpmp_nic",
+                          "clk1m",
+                          "rdet",
+                          "adc_soc_ref",
+                          "uphy0_pll0_txref",
+                          "eqos_tx",
+                          "eqos_tx_m",
+                          "eqos_rx_pcs_in",
+                          "eqos_rx_pcs_m",
+                          "eqos_rx_in",
+                          "eqos_rx",
+                          "eqos_rx_m",
+                          "mgbe0_uphy1_pll_txref",
+                          "mgbe0_tx",
+                          "mgbe0_tx_m",
+                          "mgbe0_rx_pcs_in",
+                          "mgbe0_rx_pcs_m",
+                          "mgbe0_rx_in",
+                          "mgbe0_rx_m",
+                          "mgbe1_uphy1_pll_txref",
+                          "mgbe1_tx",
+                          "mgbe1_tx_m",
+                          "mgbe1_rx_pcs_in",
+                          "mgbe1_rx_pcs_m",
+                          "mgbe1_rx_in",
+                          "mgbe1_rx_m",
+                          "mgbe2_uphy1_pll_txref",
+                          "mgbe2_tx",
+                          "mgbe2_tx_m",
+                          "mgbe2_rx_pcs_in",
+                          "mgbe2_rx_pcs_m",
+                          "mgbe2_rx_in",
+                          "mgbe2_rx_m",
+                          "mgbe3_uphy1_pll_txref",
+                          "mgbe3_tx",
+                          "mgbe3_tx_m",
+                          "mgbe3_rx_pcs_in",
+                          "mgbe3_rx_pcs_m",
+                          "mgbe3_rx_in",
+                          "mgbe3_rx_m",
+                          "uphy0_usb_p0_tx_core",
+                          "uphy0_usb_p1_tx_core",
+                          "uphy0_usb_p2_tx_core",
+                          "uphy0_usb_p3_tx_core",
+                          "uphy0_usb_p0_tx",
+                          "uphy0_usb_p1_tx",
+                          "uphy0_usb_p2_tx",
+                          "uphy0_usb_p3_tx",
+                          "uphy0_usb_p0_rx_in",
+                          "uphy0_usb_p1_rx_in",
+                          "uphy0_usb_p2_rx_in",
+                          "uphy0_usb_p3_rx_in",
+                          "uphy0_usb_p0_rx_m",
+                          "uphy0_usb_p1_rx_m",
+                          "uphy0_usb_p2_rx_m",
+                          "uphy0_usb_p3_rx_m",
+                          "uphy0_lane0_tx_m",
+                          "pcie_c1_xclk_nobg_m",
+                          "pcie_c2_xclk_nobg_m",
+                          "pcie_c3_xclk_nobg_m",
+                          "pcie_c4_xclk_nobg_m",
+                          "pcie_c5_xclk_nobg_m",
+                          "pcie_c1_l0_rx_m",
+                          "pcie_c1_l1_rx_m",
+                          "pcie_c1_l2_rx_m",
+                          "pcie_c1_l3_rx_m",
+                          "pcie_c2_l0_rx_m",
+                          "pcie_c2_l1_rx_m",
+                          "pcie_c2_l2_rx_m",
+                          "pcie_c2_l3_rx_m",
+                          "pcie_c3_l0_rx_m",
+                          "pcie_c3_l1_rx_m",
+                          "pcie_c4_l0_rx_m",
+                          "pcie_c4_l1_rx_m",
+                          "pcie_c4_l2_rx_m",
+                          "pcie_c4_l3_rx_m",
+                          "pcie_c4_l4_rx_m",
+                          "pcie_c4_l5_rx_m",
+                          "pcie_c4_l6_rx_m",
+                          "pcie_c4_l7_rx_m",
+                          "pcie_c5_l0_rx_m",
+                          "pcie_c5_l1_rx_m",
+                          "pcie_c5_l2_rx_m",
+                          "pcie_c5_l3_rx_m",
+                          "mphy_l0_rx_pwm_bit_m",
+                          "mphy_l1_rx_pwm_bit_m",
+                          "dbb_uphy0",
+                          "uphy0_uxl_core",
+                          "isc_cpu_root",
+                          "isc_nic",
+                          "ctc_txclk0_m",
+                          "ctc_txclk1_m",
+                          "ctc_rxclk0_m",
+                          "ctc_rxclk1_m",
+                          "pllrefgp_out",
+                          "pllrefgp_out1",
+                          "gpu_sys",
+                          "gpu_nvd",
+                          "gpu_uproc",
+                          "gpu_gpc0",
+                          "gpu_gpc1",
+                          "gpu_gpc2",
+                          "pllx",
+                          "ape_soundwire_msrc0",
+                          "ape_soundwire_data_en_shaper",
+                          "ao_soundwire_msrc0",
+                          "ao_soundwire_data_en_shaper",
+                          "dpaux0_clk";
+            resets = <&bpmp TEGRA264_RESET_APE_TKE     >,
+                     <&bpmp TEGRA264_RESET_CEC          >,
+                     <&bpmp TEGRA264_RESET_ADSP_ALL     >,
+                     <&bpmp TEGRA264_RESET_RCE_ALL      >,
+                     <&bpmp TEGRA264_RESET_UFSHC        >,
+                     <&bpmp TEGRA264_RESET_UFSHC_AXI_M  >,
+                     <&bpmp TEGRA264_RESET_UFSHC_LP_SEQ >,
+                     <&bpmp TEGRA264_RESET_DPAUX        >,
+                     <&bpmp TEGRA264_RESET_EQOS_PCS     >,
+                     <&bpmp TEGRA264_RESET_HWPM         >,
+                     <&bpmp TEGRA264_RESET_I2C1         >,
+                     <&bpmp TEGRA264_RESET_I2C2         >,
+                     <&bpmp TEGRA264_RESET_I2C3         >,
+                     <&bpmp TEGRA264_RESET_I2C4         >,
+                     <&bpmp TEGRA264_RESET_I2C6         >,
+                     <&bpmp TEGRA264_RESET_I2C7         >,
+                     <&bpmp TEGRA264_RESET_I2C8         >,
+                     <&bpmp TEGRA264_RESET_I2C9         >,
+                     <&bpmp TEGRA264_RESET_ISP          >,
+                     <&bpmp TEGRA264_RESET_LA           >,
+                     <&bpmp TEGRA264_RESET_NVCSI        >,
+                     <&bpmp TEGRA264_RESET_EQOS_MAC     >,
+                     <&bpmp TEGRA264_RESET_PWM10        >,
+                     <&bpmp TEGRA264_RESET_PWM2         >,
+                     <&bpmp TEGRA264_RESET_PWM3         >,
+                     <&bpmp TEGRA264_RESET_PWM4         >,
+                     <&bpmp TEGRA264_RESET_PWM5         >,
+                     <&bpmp TEGRA264_RESET_PWM9         >,
+                     <&bpmp TEGRA264_RESET_QSPI0        >,
+                     <&bpmp TEGRA264_RESET_HDA          >,
+                     <&bpmp TEGRA264_RESET_HDACODEC     >,
+                     <&bpmp TEGRA264_RESET_I2C0         >,
+                     <&bpmp TEGRA264_RESET_I2C10        >,
+                     <&bpmp TEGRA264_RESET_SDMMC1       >,
+                     <&bpmp TEGRA264_RESET_MIPI_CAL     >,
+                     <&bpmp TEGRA264_RESET_SPI1         >,
+                     <&bpmp TEGRA264_RESET_SPI2         >,
+                     <&bpmp TEGRA264_RESET_SPI3         >,
+                     <&bpmp TEGRA264_RESET_SPI4         >,
+                     <&bpmp TEGRA264_RESET_SPI5         >,
+                     <&bpmp TEGRA264_RESET_SPI7         >,
+                     <&bpmp TEGRA264_RESET_SPI8         >,
+                     <&bpmp TEGRA264_RESET_SPI9         >,
+                     <&bpmp TEGRA264_RESET_TACH0        >,
+                     <&bpmp TEGRA264_RESET_TSEC         >,
+                     <&bpmp TEGRA264_RESET_VI           >,
+                     <&bpmp TEGRA264_RESET_VI1          >,
+                     <&bpmp TEGRA264_RESET_PVA0_ALL     >,
+                     <&bpmp TEGRA264_RESET_VIC          >,
+                     <&bpmp TEGRA264_RESET_MPHY_CLK_CTL >,
+                     <&bpmp TEGRA264_RESET_MPHY_L0_RX   >,
+                     <&bpmp TEGRA264_RESET_MPHY_L0_TX   >,
+                     <&bpmp TEGRA264_RESET_MPHY_L1_RX   >,
+                     <&bpmp TEGRA264_RESET_MPHY_L1_TX   >,
+                     <&bpmp TEGRA264_RESET_ISP1         >,
+                     <&bpmp TEGRA264_RESET_I2C11        >,
+                     <&bpmp TEGRA264_RESET_I2C12        >,
+                     <&bpmp TEGRA264_RESET_I2C14        >,
+                     <&bpmp TEGRA264_RESET_I2C15        >,
+                     <&bpmp TEGRA264_RESET_I2C16        >,
+                     <&bpmp TEGRA264_RESET_EQOS_MACSEC  >,
+                     <&bpmp TEGRA264_RESET_MGBE0_PCS    >,
+                     <&bpmp TEGRA264_RESET_MGBE0_MAC    >,
+                     <&bpmp TEGRA264_RESET_MGBE0_MACSEC >,
+                     <&bpmp TEGRA264_RESET_MGBE1_PCS    >,
+                     <&bpmp TEGRA264_RESET_MGBE1_MAC    >,
+                     <&bpmp TEGRA264_RESET_MGBE1_MACSEC >,
+                     <&bpmp TEGRA264_RESET_MGBE2_PCS    >,
+                     <&bpmp TEGRA264_RESET_MGBE2_MAC    >,
+                     <&bpmp TEGRA264_RESET_MGBE2_MACSEC >,
+                     <&bpmp TEGRA264_RESET_MGBE3_PCS    >,
+                     <&bpmp TEGRA264_RESET_MGBE3_MAC    >,
+                     <&bpmp TEGRA264_RESET_MGBE3_MACSEC >,
+                     <&bpmp TEGRA264_RESET_ADSP_CORE0   >,
+                     <&bpmp TEGRA264_RESET_ADSP_CORE1   >,
+                     <&bpmp TEGRA264_RESET_APE          >,
+                     <&bpmp TEGRA264_RESET_XUSB1_PADCTL >,
+                     <&bpmp TEGRA264_RESET_AON_CPU_ALL  >,
+                     <&bpmp TEGRA264_RESET_UART4        >,
+                     <&bpmp TEGRA264_RESET_UART5        >,
+                     <&bpmp TEGRA264_RESET_UART9        >,
+                     <&bpmp TEGRA264_RESET_UART10       >;
+            reset-names = "ape_tke",
+                          "cec",
+                          "adsp_all",
+                          "rce_all",
+                          "ufshc",
+                          "ufshc_axi_m",
+                          "ufshc_lp_seq",
+                          "dpaux",
+                          "eqos",
+                          "hwpm",
+                          "i2c1",
+                          "i2c2",
+                          "i2c3",
+                          "i2c4",
+                          "i2c6",
+                          "i2c7",
+                          "i2c8",
+                          "i2c9",
+                          "isp",
+                          "la",
+                          "nvcsi",
+                          "eqos_mac",
+                          "pwm10",
+                          "pwm2",
+                          "pwm3",
+                          "pwm4",
+                          "pwm5",
+                          "pwm9",
+                          "qspi0",
+                          "hda",
+                          "hdacodec",
+                          "i2c0",
+                          "i2c10",
+                          "sdmmc1",
+                          "mipi_cal",
+                          "spi1",
+                          "spi2",
+                          "spi3",
+                          "spi4",
+                          "spi5",
+                          "spi7",
+                          "spi8",
+                          "spi9",
+                          "tach0",
+                          "tsec",
+                          "vi",
+                          "vi1",
+                          "pva0_all",
+                          "vic",
+                          "mphy_clk_ctl",
+                          "mphy_l0_rx",
+                          "mphy_l0_tx",
+                          "mphy_l1_rx",
+                          "mphy_l1_tx",
+                          "isp1",
+                          "i2c11",
+                          "i2c12",
+                          "i2c14",
+                          "i2c15",
+                          "i2c16",
+                          "eqos_macsec",
+                          "mgbe0_pcs",
+                          "mgbe0_mac",
+                          "mgbe0_macsec",
+                          "mgbe1_pcs",
+                          "mgbe1_mac",
+                          "mgbe1_macsec",
+                          "mgbe2_pcs",
+                          "mgbe2_mac",
+                          "mgbe2_macsec",
+                          "mgbe3_pcs",
+                          "mgbe3_mac",
+                          "mgbe3_macsec",
+                          "adsp_core0",
+                          "adsp_core1",
+                          "ape",
+                          "xusb1_padctl",
+                          "aon_cpu_all",
+                          "uart4",
+                          "uart5",
+                          "uart9",
+                          "uart10";
+        };

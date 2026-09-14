@@ -1,0 +1,81 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/nvpmodel/nvidia,nvpmodel.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: NVIDIA nvpmodel clock cap driver
+
+maintainers:
+  - Yi-Wei Wang
+
+description: |
+     the compatability = nvidia,nvpmodel is mentioned in the following drivers
+        - <TOP>/kernel/nvidia-oot/drivers/nvpmodel/nvpmodel-clk-cap.c
+
+     The following nodes use this compatibility
+        - /nvpmodel
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,nvpmodel
+
+  required:
+    - compatible
+
+properties:
+
+    nvidia,bpmp:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+
+    clocks:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Clocks are given by a tuple of 2 values:
+                - Phandle to the device
+                - Clock ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x122
+                  maximum: 0x122
+
+    clock-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - emc
+
+
+required:
+    - compatible
+    - clocks
+    - clock-names
+
+examples:
+    - |
+        nvpmodel {
+            compatible = "nvidia,nvpmodel";
+            status = "disabled";
+            nvidia,bpmp = <&bpmp>;
+            clocks = <&bpmp TEGRA264_CLK_EMC>;
+            clock-names = "emc";
+        };

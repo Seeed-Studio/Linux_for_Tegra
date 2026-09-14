@@ -1,0 +1,187 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/mods_pcie0/nvidia,mods_smmu.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: MOD's SMMU Driver
+
+maintainers:
+  - Kiran Kasamsetty
+
+description: |
+     the compatability = nvidia,mods_smmu is mentioned in the following drivers
+        - <TOP>/kernel/nvidia-oot/drivers/misc/mods/mods_smmu_drv.c
+
+     The following nodes use this compatibility
+        - /mods_pcie0
+        - /mods_pcie1
+        - /mods_pcie2
+        - /mods_pcie3
+        - /mods_pcie4
+        - /mods_pcie5
+        - /mods_isp0
+        - /mods_isp2
+        - /mods_i2c0
+        - /mods_i2c1
+        - /mods_i2c2
+        - /mods_i2c3
+        - /mods_i2c7
+        - /mods_i2c9
+        - /mods_i2c11
+        - /mods_i2c12
+        - /mods_i2c14
+        - /mods_i2c15
+        - /mods_i2c16
+        - /mods_spi1
+        - /mods_spi2
+        - /mods_spi3
+        - /mods_spi4
+        - /mods_spi5
+        - /mods_uart4
+        - /mods_uart5
+        - /mods_uart9
+        - /mods_uart10
+        - /mods_vi0
+        - /mods_vi1
+        - /mods_sdmmc1
+        - /mods_ufs
+        - /mods_xhci
+        - /mods_xusb
+        - /mods_dma
+        - /mods_se
+        - /mods_seu1
+        - /mods_seu2
+        - /mods_seu3
+        - /mods_qspi0_dma
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,mods_smmu
+
+  required:
+    - compatible
+
+properties:
+
+    iommu-map:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x10000
+                  maximum: 0x50000
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x10000
+                  maximum: 0x10000
+
+    dma-coherent:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+    dev-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - mods_pcie0
+                - mods_pcie1
+                - mods_pcie2
+                - mods_pcie3
+                - mods_pcie4
+                - mods_pcie5
+                - mods_isp0
+                - mods_isp2
+                - mods_i2c0
+                - mods_i2c1
+                - mods_i2c2
+                - mods_i2c3
+                - mods_i2c7
+                - mods_i2c9
+                - mods_i2c11
+                - mods_i2c12
+                - mods_i2c14
+                - mods_i2c15
+                - mods_i2c16
+                - mods_spi1
+                - mods_spi2
+                - mods_spi3
+                - mods_spi4
+                - mods_spi5
+                - mods_uart4
+                - mods_uart5
+                - mods_uart9
+                - mods_uart10
+                - mods_vi0
+                - mods_vi1
+                - mods_sdmmc1
+                - mods_ufs
+                - mods_xhci
+                - mods_xusb
+                - mods_dma
+                - mods_se
+                - mods_seu1
+                - mods_seu2
+                - mods_seu3
+                - mods_qspi0_dma
+
+
+    nvidia,bpmp:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x5
+
+    iommus:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            iommus are given by a tuple of 2 values:
+                - Phandle to the device
+                - Device ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x800
+                  maximum: 0x50000
+
+required:
+    - compatible
+    - iommus
+
+examples:
+    - |
+        mods_pcie0 {
+            compatible = "nvidia,mods_smmu";
+            iommu-map = <0x0 &smmu2_mmu 0x10000 0x10000>;
+            dma-coherent;
+            dev-names = "mods_pcie0";
+            status = "disabled";
+            nvidia,bpmp = <&bpmp 0x0>;
+        };

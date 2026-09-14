@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+package(
+    default_visibility = [
+        "//visibility:public",
+    ],
+)
+filegroup(
+    name = "conftest_headers",
+    srcs = glob(["**"],
+       allow_empty = False,
+    ) + [
+       "//nvidia-build/kleaf:p4root_symlink",
+    ],
+)

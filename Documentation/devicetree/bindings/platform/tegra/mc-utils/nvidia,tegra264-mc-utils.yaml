@@ -1,0 +1,57 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/mc-utils/nvidia,tegra264-mc-utils.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: MC utility provider module
+
+maintainers:
+  - Ashish Mhetre
+
+description: |
+     the compatability = nvidia,tegra264-mc-utils is mentioned in the following drivers
+        - <TOP>/kernel/nvidia-oot/drivers/platform/tegra/mc-utils/mc-utils.c
+
+     The following nodes use this compatibility
+        - /bus@0/mc-utils
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra264-mc-utils
+
+  required:
+    - compatible
+
+properties:
+
+    dram_channels:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x10
+        maximum: 0x10
+
+required:
+    - compatible
+
+examples:
+    - |
+        mc-utils {
+            compatible = "nvidia,tegra264-mc-utils";
+            dram_channels = <16>;
+            status = "disabled";
+        };

@@ -1,0 +1,67 @@
+# Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/vi-carveout/nvidia,vi-carveout.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Nvidia VI Carveout
+
+maintainers:
+  - Ketan Patil
+
+description: |
+  This schema defines the properties for the NVIDIA VI carveout (mempool) memory
+  node. The reference to this DT node should be added memory-region in tegra carveout
+  to create the VI carveout.
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,vi_carveout
+
+  required:
+    - compatible
+
+properties:
+    ivm:
+        description: |
+            A phandle to the tegra-hv node followed by the mempool id.
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/phandle"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+
+    status:
+        description: |
+            The status of the carveouts node.
+        enum:
+            - okay
+            - disabled
+
+required:
+    - compatible
+    - ivm
+
+examples:
+    - |
+        vi-carveout {
+            compatible = "nvidia,vi_carveout";
+            ivm = <&tegra_hv 3>;
+            status = "okay";
+        };

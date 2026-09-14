@@ -1,0 +1,83 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/ivccontrol@3/nvidia,tegra186-camera-ivc-protocol-capture-control.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: NVIDIA Tegra Capture IVC driver
+
+maintainers:
+  - Evgeny Kornev
+
+description: |
+     the compatability = nvidia,tegra186-camera-ivc-protocol-capture-control is mentioned in the following drivers
+        - <TOP>/kernel/nvidia-oot/drivers/platform/tegra/rtcpu/capture-ivc.c
+
+     The following nodes use this compatibility
+        - /camera-ivc-channels/ivccontrol@3
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra186-camera-ivc-protocol-capture-control
+
+  required:
+    - compatible
+
+properties:
+
+    nvidia,service:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - capture-control
+
+
+    nvidia,version:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0x0
+
+    nvidia,group:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x1
+        maximum: 0x1
+
+    nvidia,frame-count:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x40
+        maximum: 0x40
+
+    nvidia,frame-size:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x140
+        maximum: 0x140
+
+required:
+    - compatible
+
+examples:
+    - |
+        ivccontrol@3 {
+            compatible = "nvidia,tegra186-camera-ivc-protocol-capture-control";
+            nvidia,service = "capture-control";
+            nvidia,version = <0>;
+            nvidia,group = <1>;
+            nvidia,frame-count = <64>;
+            nvidia,frame-size = <320>;
+            status = "disabled";
+        };

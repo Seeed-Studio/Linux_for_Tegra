@@ -1,0 +1,123 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/bootmgr/nvidia,dulink-connection.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Nvidia Drive Update Connection Driver
+
+maintainers:
+  - Johnny Fan
+
+description: |
+
+     The following nodes use this compatibility
+        - /chosen/driveupdate/bootmgr
+        - /chosen/driveupdate/bhc
+        - /chosen/driveupdate/decomp
+        - /chosen/driveupdate/du-client
+        - /chosen/driveupdate/content
+        - /chosen/driveupdate/master
+        - /chosen/driveupdate/tii
+        - /chosen/driveupdate/ctx_store
+        - /chosen/driveupdate/auth
+        - /chosen/driveupdate/dushell
+        - /chosen/driveupdate/plugin
+        - /chosen/driveupdate/ddu
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,dulink-connection
+
+  required:
+    - compatible
+
+properties:
+
+    remote-path:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - /bootmgr
+                - /bhc
+                - /decomp
+                - /du-client
+                - /content
+                - /master
+                - /tii
+                - /ctx_store
+                - /auth
+                - /dushell
+                - /plugin
+                - /ddu
+
+
+    type:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - DOWNLINK
+
+
+    tr-type:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - NVSCI
+                - TCP
+
+
+    tr-params:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - nvdu_gos_ipc_a_0
+                - nvdu_gos_ipc_a_1
+                - nvdu_gos_ipc_b_0
+                - nvdu_gos_ipc_b_1
+                - nvdu_gos_ipc_c_0
+                - nvdu_gos_ipc_c_1
+                - nvdu_gos_ipc_d_0
+                - nvdu_gos_ipc_d_1
+                - nvdu_gos_ipc_e_0
+                - nvdu_gos_ipc_e_1
+                - nvdu_gos_ipc_l_0
+                - nvdu_gos_ipc_l_1
+                - nvdu_gos_ipc_j_0
+                - nvdu_gos_ipc_j_1
+                - nvdu_gos_ipc_k_0
+                - nvdu_gos_ipc_k_1
+                - nvdu_gos_ipc_m_0
+                - nvdu_gos_ipc_m_1
+                - nvdu_gos_ipc_f_0
+                - nvdu_gos_ipc_f_1
+                - nvdu_gos_ipc_g_0
+                - nvdu_gos_ipc_g_1
+                - TCP_SERVER
+                - 0.0.0.0
+                - 4455
+                - 0
+
+
+required:
+    - compatible
+
+examples:
+    - |
+        bootmgr {
+        };

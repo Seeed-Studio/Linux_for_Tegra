@@ -1,0 +1,242 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/aon@c040000/nvidia,tegra264-aon.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Tegra Host ADSP Always On Driver
+
+maintainers:
+  - Akhilesh Khumbum
+
+description: |
+     the compatability = nvidia,tegra264-aon is mentioned in the following drivers
+        - <TOP>/kernel/nvidia-oot/drivers/platform/tegra/nvadsp/dev.c
+
+     The following nodes use this compatibility
+        - /bus@0/aocluster@c000000/aon@c040000
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra264-aon
+
+  required:
+    - compatible
+
+properties:
+
+    nvidia,adsp_os_secload:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+    resets:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Resets are given by a tuple of 2 values:
+                - Phandle to the device
+                - Reset ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x4e
+                  maximum: 0x4e
+
+    reset-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - aon_cpu
+
+
+    clocks:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Clocks are given by a tuple of 2 values:
+                - Phandle to the device
+                - Clock ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0xc4
+                  maximum: 0xc4
+
+    clock-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - cpu_clock
+
+
+    reg:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Registers are given by a tuple of two values:
+                - register address:
+                - register block size.
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0xc040000
+                  maximum: 0xc410000
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x20000
+                  maximum: 0xa0000
+
+    nvidia,dram_map:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x20000000
+                  maximum: 0x20000000
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x20000000
+                  maximum: 0x20000000
+
+    nvidia,adsp_mem:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x200000
+
+    interrupts:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Interrupts are give by a tuple of 3 values:
+                - interrupt specifier (GIC_SPI = 0, GIC_PPI = 1)
+                  definitions in dt-bindings/interrupt-controller/arm-gic.h
+                - interrupt number
+                - trigger type (rising edge, falling edge, both, etc)
+                  definitions in dt-bindings/interrupt-controller/irq.h
+        items:
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x229
+                  maximum: 0x2d8
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x4
+                  maximum: 0x4
+
+    iommus:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            iommus are given by a tuple of 2 values:
+                - Phandle to the device
+                - Device ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x100
+                  maximum: 0x100
+
+    nvidia,cluster_mem:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 6
+            maxItems: 6
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0xc040000
+                  maximum: 0xce00000
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x40000
+                  maximum: 0x200000
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x80000
+                  maximum: 0xa0000
+
+required:
+    - compatible
+    - resets
+    - reset-names
+    - clocks
+    - clock-names
+    - reg
+    - interrupts
+    - iommus
+
+examples:
+    - |
+        aon@c040000 {
+            compatible = "nvidia,tegra264-aon";
+            nvidia,adsp_os_secload;
+            resets = <&bpmp TEGRA264_RESET_AON_CPU_ALL>;
+            reset-names = "aon_cpu";
+            clocks = <&bpmp TEGRA264_CLK_AON_CPU>;
+            clock-names = "cpu_clock";
+            reg = <0x0 0xc040000 0x0 0xa0000>,
+                  <0x0 0xc100000 0x0 0x20000>,
+                  <0x0 0xc410000 0x0 0x40000>;
+            nvidia,dram_map = <0x0 0x20000000 0x0 0x20000000>;
+            nvidia,adsp_mem = <0x0 0x0>,
+                              <0x0 0x0>,
+                              <0x0 0x0>,
+                              <0x0 0x200000>;
+            interrupts = <GIC_SPI 0x229 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0x22a IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0x236 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0x2d8 IRQ_TYPE_LEVEL_HIGH>;
+            iommus = <&smmu1_mmu TEGRA_SID_AON>;
+            memory-region = <&aon_resv>;
+            nvidia,cluster_mem = <0x0 0xc040000 0x0 0x40000  0x0 0xa0000>,
+                                 <0x0 0xce00000 0x0 0x200000 0x0 0x80000>;
+            status = "disabled";
+        };

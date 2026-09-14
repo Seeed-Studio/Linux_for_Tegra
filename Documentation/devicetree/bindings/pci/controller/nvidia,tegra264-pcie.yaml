@@ -1,0 +1,232 @@
+# Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/pcie@810c000000/nvidia,tegra264-pcie.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: NVIDIA Tegra264 PCIe host controller driver
+
+maintainers:
+  - Manikanta Maddireddy
+
+description: |
+     the compatability = nvidia,tegra264-pcie is mentioned in the following drivers
+        - <TOP>/kernel/nvidia-oot/drivers/pci/controller/pcie-tegra264.c
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra264-pcie
+
+  required:
+    - compatible
+
+properties:
+
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra264-pcie
+
+    reg:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Registers are given by a tuple of two values:
+                - register address:
+                - register block size.
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x81
+                  maximum: 0xd0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x8400000
+                  maximum: 0xb0000000
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x1000
+                  maximum: 0x10000000
+
+    reg-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - xal
+                - xtl
+                - xtl-pri
+                - ecam
+                - xpl
+                - xdma
+
+
+    '#address-cells':
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x3
+        maximum: 0x3
+
+    '#size-cells':
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x2
+        maximum: 0x2
+
+    device_type:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - pci
+
+
+    linux,pci-domain:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0x5
+
+    '#interrupt-cells':
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x1
+        maximum: 0x1
+
+    interrupt-map-mask:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x7
+                  maximum: 0x7
+
+    iommu-map:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x10000
+                  maximum: 0x50000
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x10000
+                  maximum: 0x10000
+
+    dma-coherent:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+    msi-map:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x110000
+                  maximum: 0x210000
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x10000
+                  maximum: 0x10000
+
+    bus-range:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0xff
+                  maximum: 0xff
+
+    nvidia,bpmp:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x5
+
+    numa-node-id:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0x0
+
+    ats-supported:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+    nvidia,host1x:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x19
+        maximum: 0x19
+
+required:
+    - compatible
+    - reg
+
+examples:
+    - |
+        pcie@810c000000 {
+            status = "disabled";
+            compatible = "nvidia,tegra264-pcie";
+            reg = <0x81 0x0c000000 0x0 0x00004000>,
+                  <0x81 0x0c004000 0x0 0x00001000>,
+                  <0x81 0x0c005000 0x0 0x00001000>,
+                  <0xd0 0xb0000000 0x0 0x10000000>;
+            reg-names = "xal, xtl, xtl-pri, ecam";
+            #address-cells = <0x3>;
+            #size-cells = <0x2>;
+            device_type = "pci";
+            linux,pci-domain = <0x0>;
+            #interrupt-cells = <0x1>;
+            interrupt-map-mask = <0x0 0x0 0x0 0x7>;
+            interrupt-map = <0x0 0x0 0x0 0x1 &gic 0x0 0x0 GIC_SPI 0x9b IRQ_TYPE_LEVEL_HIGH0x0 0x0 0x0 0x2 &gic 0x0 0x0 GIC_SPI 0x9c IRQ_TYPE_LEVEL_HIGH0x0 0x0 0x0 0x3 &gic 0x0 0x0 GIC_SPI 0x9d IRQ_TYPE_LEVEL_HIGH0x0 0x0 0x0 0x4 &gic 0x0 0x0 GIC_SPI 0x9e IRQ_TYPE_LEVEL_HIGH>;
+            iommu-map = <0x0 &smmu2_mmu 0x10000 0x10000>;
+            dma-coherent;
+            msi-map = <0x0 &its 0x210000 0x10000>;
+            bus-range = <0x0 0xff>;
+            ranges = <0x82000000 0x00 0x20000000 0x00 0x20000000 0x0 0x080000000xc3000000 0xd0 0xc0000000 0xd0 0xc0000000 0x7 0xc00000000x81000000 0xd0 0x82000000 0xd0 0x82000000 0x0 0x00200000>;
+            nvidia,bpmp = <&bpmp 0x0>;
+            numa-node-id = <0x0>;
+            ats-supported;
+            nvidia,host1x = <&host1x>;
+        };

@@ -1,0 +1,230 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/spi@c6c0000/nvidia,tegra234-spi.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: NVIDIA Tegra SPI Controller Driver
+
+maintainers:
+  - Suresh Mangipudi
+
+description: |
+     the compatability = nvidia,tegra234-spi is mentioned in the following drivers
+        - <TOP>/kernel/kernel-oot/drivers/spi/spi-tegra114.c
+
+     The following nodes use this compatibility
+        - /bus@0/spi@c6c0000
+        - /bus@0/spi@810c590000
+        - /bus@0/spi@810c440000
+        - /bus@0/spi@810c450000
+
+select:
+  properties:
+    compatible:
+        minItems: 2
+        maxItems: 2
+        items:
+            enum:
+                - nvidia,tegra234-spi
+                - nvidia,tegra210-spi
+
+  required:
+    - compatible
+
+properties:
+
+    reg:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Registers are given by a tuple of two values:
+                - register address:
+                - register block size.
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x81
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0xc440000
+                  maximum: 0xc6c0000
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x10000
+                  maximum: 0x10000
+
+    interrupts:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Interrupts are give by a tuple of 3 values:
+                - interrupt specifier (GIC_SPI = 0, GIC_PPI = 1)
+                  definitions in dt-bindings/interrupt-controller/arm-gic.h
+                - interrupt number
+                - trigger type (rising edge, falling edge, both, etc)
+                  definitions in dt-bindings/interrupt-controller/irq.h
+        items:
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0xa4
+                  maximum: 0x216
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x4
+                  maximum: 0x4
+
+    dma-coherent:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+    dma-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - rx
+                - tx
+
+
+    dmas:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x8
+                  maximum: 0xf
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x8
+                  maximum: 0x19
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x808
+                  maximum: 0x80f
+
+    iommus:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            iommus are given by a tuple of 2 values:
+                - Phandle to the device
+                - Device ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x808
+                  maximum: 0x80f
+
+    clocks:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Clocks are given by a tuple of 2 values:
+                - Phandle to the device
+                - Clock ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x1
+                  maximum: 0xa0
+
+    clock-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - spi
+
+
+    assigned-clocks:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x2a
+                  maximum: 0x2d
+
+    assigned-clock-parents:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x16
+                  maximum: 0xa0
+
+    resets:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Resets are given by a tuple of 2 values:
+                - Phandle to the device
+                - Reset ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x24
+                  maximum: 0x27
+
+    reset-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - spi
+
+
+required:
+    - compatible
+    - reg
+    - interrupts
+    - iommus
+    - clocks
+    - clock-names
+    - resets
+    - reset-names
+
+examples:
+    - |
+        spi@c6c0000 {
+            compatible = "nvidia,tegra234-spi, nvidia,tegra210-spi";
+            status = "disabled";
+            reg = <0x0 0x0c6c0000 0x0 0x10000>;
+            interrupts = <GIC_SPI 534 IRQ_TYPE_LEVEL_HIGH>;
+            dma-coherent;
+            dma-names = "rx, tx";
+            dmas = <&gpcdma 8 8 TEGRA264_GPCDMA_SID_SPI2>,
+                   <&gpcdma 8 18 TEGRA264_GPCDMA_SID_SPI2>;
+            iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_SPI2>;
+            clocks = <&bpmp TEGRA264_CLK_SPI2>,
+                     <&bpmp TEGRA264_CLK_PLLAON>,
+                     <&bpmp TEGRA264_CLK_OSC>;
+            clock-names = "spi";
+            assigned-clocks = <&bpmp TEGRA264_CLK_SPI2>;
+            assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLAON>;
+            resets = <&bpmp TEGRA264_RESET_SPI2>;
+            reset-names = "spi";
+        };

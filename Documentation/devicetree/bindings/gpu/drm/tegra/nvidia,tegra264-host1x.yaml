@@ -1,0 +1,289 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/host1x@8181200000/nvidia,tegra264-host1x.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Host1x driver for Tegra products
+
+maintainers:
+  - Santosh B S
+
+description: |
+     the compatability = nvidia,tegra264-host1x is mentioned in the following drivers
+        - <TOP>/kernel/nvidia-oot/drivers/gpu/drm/tegra/virt.c
+        - <TOP>/kernel/nvidia-oot/drivers/gpu/drm/tegra/drm.c
+        - <TOP>/kernel/nvidia-oot/drivers/gpu/host1x-nvhost/nvhost.c
+        - <TOP>/kernel/nvidia-oot/drivers/gpu/host1x-fence/dev.c
+        - <TOP>/kernel/nvidia-oot/drivers/gpu/host1x/dev.c
+        - <TOP>/kernel/nvidia-oot/drivers/crypto/tegra-hv-vse-safety.c
+
+     The following nodes use this compatibility
+        - /bus@0/host1x@8181200000
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra264-host1x
+
+  required:
+    - compatible
+
+properties:
+
+    reg:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Registers are given by a tuple of two values:
+                - register address:
+                - register block size.
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x81
+                  maximum: 0x81
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x81240000
+                  maximum: 0x81320000
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x10000
+                  maximum: 0x20000
+
+    reg-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - vm
+                - actmon
+
+
+    interrupts:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Interrupts are give by a tuple of 3 values:
+                - interrupt specifier (GIC_SPI = 0, GIC_PPI = 1)
+                  definitions in dt-bindings/interrupt-controller/arm-gic.h
+                - interrupt number
+                - trigger type (rising edge, falling edge, both, etc)
+                  definitions in dt-bindings/interrupt-controller/irq.h
+        items:
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x145
+                  maximum: 0x14e
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x4
+                  maximum: 0x4
+
+    interrupt-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - syncpt0
+                - syncpt1
+                - syncpt2
+                - syncpt3
+                - syncpt4
+                - syncpt5
+                - syncpt6
+                - syncpt7
+                - host1x
+
+
+    clocks:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Clocks are given by a tuple of 2 values:
+                - Phandle to the device
+                - Clock ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x1
+                  maximum: 0xe
+
+    clock-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - host1x
+                - actmon
+
+
+    interconnects:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 3
+            maxItems: 3
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x16
+                  maximum: 0x16
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+
+    interconnect-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - dma-mem
+
+
+    iommus:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            iommus are given by a tuple of 2 values:
+                - Phandle to the device
+                - Device ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0xb01
+                  maximum: 0xb01
+
+    dma-coherent:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+    '#address-cells':
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x2
+        maximum: 0x2
+
+    '#size-cells':
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x2
+        maximum: 0x2
+
+    iommu-map:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x7
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x3001
+                  maximum: 0x3008
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x1
+                  maximum: 0x1
+
+    numa-node-id:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0x0
+
+    nvidia,channels:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0x1d
+
+    nvidia,syncpoints:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0x240
+
+    nvidia,server-ivc:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0xf
+        maximum: 0x2a
+
+required:
+    - compatible
+    - reg
+    - interrupts
+    - interrupt-names
+    - clocks
+    - clock-names
+    - iommus
+
+examples:
+    - |
+        host1x@8181200000 {
+            compatible = "nvidia,tegra264-host1x";
+            reg = <0x81 0x81200000 0x0 0x10000>,
+                  <0x81 0x81210000 0x0 0x10000>,
+                  <0x81 0x81240000 0x0 0x10000>,
+                  <0x81 0x81320000 0x0 0x20000>;
+            reg-names = "common, hypervisor, vm, actmon";
+            interrupts = <GIC_SPI 0x147 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0x148 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0x149 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0x14a IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0x14b IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0x14c IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0x14d IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0x14e IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 0x145 IRQ_TYPE_LEVEL_HIGH>;
+            interrupt-names = "syncpt0",
+                              "syncpt1",
+                              "syncpt2",
+                              "syncpt3",
+                              "syncpt4",
+                              "syncpt5",
+                              "syncpt6",
+                              "syncpt7",
+                              "host1x";
+            clocks = <&bpmp TEGRA264_CLK_HOST1X>,
+                     <&bpmp TEGRA264_CLK_OSC>;
+            clock-names = "host1x, actmon";
+            interconnects = <&mc TEGRA264_MEMORY_CLIENT_HOST1XR &emc>;
+            interconnect-names = "dma-mem";
+            iommus = <&smmu1_mmu TEGRA_SID_HOST1X>;
+            dma-coherent;
+            #address-cells = <0x2>;
+            #size-cells = <0x2>;
+            iommu-map = <0x0 &smmu1_mmu (TEGRA_SID_VIC+0x1) 0x1>,
+                        <0x1 &smmu1_mmu (TEGRA_SID_VIC+0x2) 0x1>,
+                        <0x2 &smmu1_mmu (TEGRA_SID_VIC+0x3) 0x1>,
+                        <0x3 &smmu1_mmu (TEGRA_SID_VIC+0x4) 0x1>,
+                        <0x4 &smmu1_mmu (TEGRA_SID_VIC+0x5) 0x1>,
+                        <0x5 &smmu1_mmu (TEGRA_SID_VIC+0x6) 0x1>,
+                        <0x6 &smmu1_mmu (TEGRA_SID_VIC+0x7) 0x1>,
+                        <0x7 &smmu1_mmu (TEGRA_SID_VIC+0x8) 0x1>;
+            ranges = <0x81 0x81200000 0x81 0x81200000 0x00 0x10000>,
+                     <0x81 0x81210000 0x81 0x81210000 0x00 0x10000>,
+                     <0x81 0x81240000 0x81 0x81240000 0x00 0x10000>,
+                     <0x81 0x88150000 0x81 0x88150000 0x00 0x40000>,
+                     <0x81 0x88050000 0x81 0x88050000 0x00 0x40000>,
+                     <0x81 0x8c000000 0x81 0x8c000000 0x00 0x900000>,
+                     <0x00 0x10700000 0x00 0x10700000 0x00 0x100000>,
+                     <0x81 0x88140000 0x81 0x88140000 0x00 0x10000>,
+                     <0x81 0x88120000 0x81 0x88120000 0x00 0x10000>,
+                     <0x81 0x88110000 0x81 0x88110000 0x00 0x10000>,
+                     <0x81 0x89880000 0x81 0x89880000 0x00 0x10000>,
+                     <0x81 0x88800000 0x81 0x88800000 0x00 0x300000>;
+            numa-node-id = <0x0>;
+            status = "disabled";
+        };

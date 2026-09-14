@@ -1,0 +1,130 @@
+# SPDX-License-Identifier: GPL-2.0
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/pwm/pwm-tegra-tachometer.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: NVIDIA Tegra PWM based tachometer
+
+maintainers:
+  - Laxman Dewangan <ldewangan@nvidia.com>
+  - Vishwaroop A <va@nvidia.com>
+
+description: |+
+  Nvidia SoCs Tegra contains PWM based tachometer which captrues the PWM signal
+  and reports this as RPM.
+
+properties:
+  compatible:
+    enum:
+      - nvidia,pwm-tegra234-tachometer
+      - nvidia,pwm-tegra194-tachometer
+      - nvidia,pwm-tegra186-tachometer
+
+  reg:
+    maxItems: 1
+    description: Base address and size of the Tachometer controller.
+
+  clocks:
+    maxItems: 1
+
+  clock-names:
+    description: |
+      Should contain all following required clock names:
+      - "tach" - Base clock for the tachometer to measure the timing of PWM period.
+
+  resets:
+    maxItems: 1
+
+  reset-names:
+    description: |
+      Should contain all following required reset names:
+      - "tach" - Reset name for the tachometer controller.
+
+  interrupts:
+    description:
+      Interrupt from the tachometer if speed of wheel crosses the upper/lowe threshold.
+
+  "#pwm-cells":
+    description:
+      The only third cell flag supported by this binding
+      is PWM_POLARITY_INVERTED.
+    const: 2
+
+  pulse-per-rev:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    description: |
+      Number of PWM pusles per revolution of the wheel.
+
+  capture-window-length:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    description: |
+      Number of window for which PWM signal needs to capture for calculating the speed in RPM.
+
+  disable-clk-gate:
+    $ref: /schemas/types.yaml#/definitions/flag
+    description: |
+      If present than disable the clock gating to continuously provide the clock to the controller.
+  
+  upper-threshold:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    description: |
+      Upper threshold of RPM for which interrupt is generated.
+
+  lower-threshold:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    description: |
+      Lower threshold of RPM for which interrupt is generated.
+
+required:
+  - compatible
+  - reg
+  - clocks
+  - clock-names
+  - resets
+  - reset-names
+  - "#pwm-cells"
+  - pulse-per-rev
+  - capture-window-length
+
+additionalProperties: false
+
+allOf:
+  - $ref: pwm.yaml#
+
+  - if:
+      properties:
+        compatible:
+          contains:
+            enum:
+              - nvidia,pwm-tegra234-tachometer
+    then:
+      required:
+        - interrupts
+        - upper-threshold
+        - lower-threshold
+
+examples:
+  - |
+    #define TEGRA234_RESET_TACH0                   95U
+    #define TEGRA234_CLK_TACH0                     152U
+
+
+    soc {
+        #address-cells = <2>;
+        #size-cells = <2>;
+
+        tegra_tachometer: pwm@39c0000 {
+                compatible = "nvidia,pwm-tegra194-tachometer";
+                reg = <0x0 0x039c0000 0x0 0x10>;
+                #pwm-cells = <2>;
+                clocks = <&bpmp_clks TEGRA234_CLK_TACH0>;
+                clock-names = "tach";
+                resets = <&bpmp_resets TEGRA234_RESET_TACH0>;
+                reset-names = "tach";
+                pulse-per-rev = <2>;
+                capture-window-length = <2>;
+                disable-clk-gate;
+        };
+     };
+...

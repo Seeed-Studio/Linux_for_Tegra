@@ -1,0 +1,51 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/cpuidle/nvidia,cpuidle-tegra-auto.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Nvidia Tegra Automotive cpuidle Driver
+
+maintainers:
+  - Manish Bhardwaj
+
+description: |
+     the compatability = nvidia,cpuidle-tegra-auto is mentioned in the following drivers
+        - <TOP>/kernel/nvidia-oot/drivers/cpuidle/cpuidle-tegra-auto.c
+
+     The following nodes use this compatibility
+        - /cpuidle
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,cpuidle-tegra-auto
+
+  required:
+    - compatible
+
+properties:
+
+required:
+    - compatible
+
+examples:
+    - |
+        cpuidle {
+            compatible = "nvidia,cpuidle-tegra-auto";
+            status = "okay";
+        };

@@ -1,0 +1,705 @@
+# SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
+# Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/platform/tegra/tegra-nvethernet.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Device tree binding for NVIDIA Tegra Ethernet Controller
+
+maintainers:
+  - Revanth Kumar Uppala <ruppala@nvidia.com>
+
+description: |
+   The tegra nvethernet driver provides an interface for communication over ethernet.
+
+properties:
+  compatible:
+    enum:
+      - For EQOS: should be "nvidia,nveqos"
+      - FOR MGBE: should be "nvidia,nvmgbe"
+
+  reg:
+    description: |
+       Physical base address and size of register space.
+
+  reg-names:
+    description: |
+       Specifies the names of the registers.
+
+  interrupts:
+    description: |
+       An array of tuples specifying IRQ number for
+       each tx/rx queue in case of multi-queue, and
+       for the only tx/rx queue,in case of single queue
+       EQOS has a common interrupt for triggering any
+       non DMA channel interrupts like link up/down.
+       Order of interrupts need to be listed as common,
+       Tx followed by Rx interrupts.
+
+  interrupt-names:
+    description: |
+       Specifies the names of the interrupts.
+
+  clocks:
+    description: |
+       Holds Phandle and clock specifiers in same
+       order for each entry in clock-names property.
+
+  clock-names:
+    description: |
+       Specifies the names of the needed clocks.
+
+  resets:
+    description: |
+       Holds Phandle and rest specifiers in the same
+       order for each entry in reset-names property.
+
+  reset-names:
+    description: |
+       Specifies the name of the reset line.
+
+  iommus:
+    description: |
+       A list of phandle and IOMMU specifier pairs that
+       describe the IOMMU master interfaces of the
+       device. IOMMU specifier points stream ID used
+       for IP which can be used for address translation.
+
+  interconnects :
+    description: |
+       Pairs of phandles and interconnect provider specifier to denote
+       the edge source and destination ports of the interconnect path.
+       An optional path tag value could specified as additional argument
+       to both endpoints and in such cases, this information will be
+       passed to the interconnect framework to do aggregation based on
+       the attached tag.
+
+  interconnect-names :
+    description: |
+       List of interconnect path name strings sorted in the same
+       order as the interconnects property. Consumers drivers will use
+       interconnect-names to match interconnect paths with interconnect
+       specifier pairs.
+
+  nvidia,num-dma-chans:
+    description: |
+       Number of DMA channels that need to be used.
+       For EQOS, Minimum value is 1 and Maximum value is 8.
+       For MGBE, Minimum value is 1 and Maximum value is 10.
+
+  nvidia,dma-chans:
+    description: |
+       The channel number of DMA channels to be used.
+       Number of channels provided here should be equal
+       to the value in nvidia,num-dma-chans property.
+       For EQOS, Valid numbers are 0,1,2,3,4,5,6,7
+       For MGBE, Valid numbers are 0,1,2,3,4,5,6,7,8,9
+
+  nvidia,num-mtl-queues:
+    description: |
+       Number of MTL Queues that need to be used.
+       For EQOS, Minimum value is 1 and Maximum value is 8.
+       For MGBE, Minimum value is 1 and Maximum value is 10.
+
+  nvidia,mtl-queues:
+    description: |
+       Queues that need to be filled based on the
+       nvidia,mtl-queues.
+       For EQOS, Valid numbers are 0,1,2,3,4,5,6,7
+       For MGBE, Valid numbers are 0,1,2,3,4,5,6,7,8,9
+
+  nvidia,tc-mapping:
+    description: |
+       Traffic class mapping for TxQ. This will map
+       Transmit queue to a traffic class. Default
+       mapping is 1:1 between TxQ and TC class. Valid
+       property for IP with more number queue than TC.
+
+  nvidia,residual-queue:
+    description: |
+       Residual Queue to receive untagged Preempted
+       fragments. RxQ0 can't be residual queue.
+
+  nvidia,rx-queue-prio:
+    description: |
+       When a bit is uniquely set in this property
+       i.e. same bit map shall not be set in multiple bytes of this
+       property, it means the tagged packet with that
+       priority will be routed to the Rx queue
+       specified in nvidia,mtl-queues property at the
+       same index position.
+       For EQOS, Each byte in this property is a bit map of
+       individual vlan priorities 0 to 7.
+       For MGBE, Each byte in this property is a bit map of
+       individual vlan priorities 0 to 9.
+
+  nvidia,tx-queue-prio:
+    description: |
+       When this is set, it means the packet with that priority
+       will be routed to the Tx queue specified in
+       nvidia,mtl-queues property at the same index
+       position.
+       For EQOS, Each byte in this property is a bit map of
+       individual vlan priorities 0 to 7.
+       For MGBE, Each byte in this property is a bit map of
+       individual vlan priorities 0 to 9.
+
+  nvidia,rxq_enable_ctrl:
+    description: |
+       Mode of the MTL Receive Queue to enable either
+       AV mode or legacy mode.
+       example -  rxq_enable_ctrl = <rx0 rx1 rx2 rx3>
+       0x0 = Not enabled, 0x1 = Enabled for AV
+       0x2 = Enabled for Legacy, 0x3 = Reserved
+
+  nvidia,dcs-enable:
+    description: |
+       Enable this to dynamically select the most suitable channel
+       for data transmission when high interference is detected on
+       the current channel.
+       Dynamic Channel Selection enable(1) or
+       disable(0). This property is mutually
+       exclusive with rx-queue-prio i.e. if this is
+       enabled, then rx-queue-prio should not be
+       provided and vice versa.
+
+  nvidia,pad_calibration:
+    description: |
+       Specifies if pad calibration should be allowed
+       or not. Set to 1 to allow or 0 to disallow
+       pad calibration mode. Default is 1 (allowed).
+
+  nvidia,pad_auto_cal_pu_offset:
+    description: |
+       Specifies eqos ETHER_QOS_AUTO_CAL_CONFIG_0
+       reg, pad calibration 2's complement offset
+       for pull-up value. Allowed range 0x0-0x1F.
+       Default is 0 (allowed).
+
+  nvidia,pad_auto_cal_pd_offset:
+    description: |
+       Specifies eqos ETHER_QOS_AUTO_CAL_CONFIG_0
+       reg, pad calibration 2's complement offset
+       for pull-down value. Allowed range 0x0-0x1F.
+       Default is 0 (allowed).
+
+  nvidia,rx_riwt:
+    description: |
+       Specifies the RX wathcdog interrupt timeout in
+       usec.The RIWT field is programmed as
+       (<val> * 256) / 62.5. if rx_riwt is 0 then RIWT
+       is disabled and IOC will be enabled. Minimum
+       value is 3 and Maximum value is 1020.
+
+  nvidia,rx_frames:
+    description: |
+       Specifies the RX frame count for interrupt
+       coalescing. If rx_frames is 0 then RX frame
+       count based interrupt coalescing is disabled and
+       Rx interrupt will be triggered based on rx_riwt
+       value.
+       For EQOS, Minimum value for rx_frames is 1 and
+       Maximum value is 256.
+       For MGBE, Minimum value for rx_frames is 1 and
+       Maximum value is 4096.
+
+  nvidia,tx_usecs:
+    description: |
+       Specifies the TX software timer interrupt
+       timeout in usec. if tx_usecs is 0 then TX
+       software timer is disabled and Tx interrupt
+       will be triggered for each packet. Minimum
+       value is 32 and Maximum value is 1020.
+
+  nvidia,tx_frames:
+    description: |
+       Specifies the TX frame count for interrupt
+       coalescing. If tx_frames is 0 then TX frame
+       count based interrupt coalescing is disabled and
+       Tx interrupt will be triggered based on tx_usecs
+       value.
+       For EQOS, Minimum value for tx_frames is 1 and
+       Maximum value is 10.
+       For MGBE, Minimum value for tx_frames is 1 and
+       Maximum value is 170.
+
+  nvidia,promisc_mode:
+    description: |
+       Specifies if promiscuous mode should be allowed
+       or not. Set to 1 to allow or 0 to disallow
+       promiscuous mode. Default is 1 (allowed).
+
+  nvidia,slot_num_check:
+    description: |
+       List of flags (0x0 to disable, 0x1 to enable)
+       to configure slot function per DMA channel.
+       Once this flag is enabled the corresponding TX
+       queue will be configured in AVB Strict priority
+       mode, not in CBS mode. So it will starve
+       TX queue 0 hence it is recommended to enable
+       CBS to set bandwidth limits as per use case.
+       The TX queue 0 can't be programmed for AVB mode,
+       so the corresponding DMA channel can't be
+       configured for slot function.
+
+  nvidia,slot_intvl_vals:
+    description: |
+       List of slot intervals (with a range from 1usec
+       to 4096usec) for fetching the data from
+       system memory per DMA channel give in
+       the dma-chans property. If this is not
+       specified 125usec default will be used.
+
+  nvidia,ptp_ref_clock_speed:
+    description: |
+       This is reference for PTP clock frequency and
+       the value set for tegra is 312.5MHz.
+       The frequency of this clock is programmable and
+       can be configured based on the requirements.
+       The maximum frequency it can take is 312.5MHz
+       and minimum frequency is 25MHz
+       FOR EQOS, Value set is 208.3MHz
+       FOR MGBE, Value set is 312.5MHz.
+
+  nvidia,instance_id:
+    description: |
+       Ethernet interface instance id. Fixed id value
+       is used. For mgbe0 is 0, mgbe1 is 1,
+       mgbe2 is 2, mgbe3 is 3 and eqos is 4.
+
+  nvidia,ptp-rx-queue:
+    description: |
+       This field specifies the Rx queue on which the
+       untagged PTP packets sent over the Ethernet
+       payload (not over IPv4 or IPv6) are routed.
+
+  dma-coherent:
+    description: |
+       Present if dma operations are coherent.
+
+  nvidia,ptp_m2m_role:
+    description: |
+       Ethernet HW role in PTP MAC-TO-MAC time sync.
+       This  DT property holds the value to identify
+       role of HW. Ethernet HW can act as primary
+       interface(1), secondary interface(2) or
+       inactive interface(0). By default all HW are
+       inactive interface if DT property not defined.
+
+  nvidia,skip_mac_reset:
+    description: |
+       Flag to skip MAC reset from driver.
+       1 = skip doing mac reset, 0 = okay to reset.
+
+  nvidia,mac-addr-idx:
+    description: |
+       Chosen node inside DT will updated with list of
+       MAC addresses in increasing order up to the
+       maximum MAC addresses based on platform
+       configuration.
+       This DT property holds the value (index)
+       to fetch from the MAC address list inside
+       chosen node. This is read only property for
+       a given platform.
+       example - If there is Ethernet controller DT node
+       with index 8, the controller MAC address
+       is at /chosen/nvidia,ether-mac8.
+
+  nvidia,dma_rx_ring_sz:
+    description: |
+       Specifies the RX ring size.
+       For EQOS values are 64, 128, 256, 512, and 1024.
+       For MGBE values are 64, 128, 256, 512, 1024, 2048, and 4096.
+
+  nvidia,dma_tx_ring_sz:
+    description: |
+       Specifies the TX ring size.
+       For EQOS values are 64, 128, 256, 512, and 1024.
+       For MGBE values are 64, 128, 256, 512, 1024, 2048, and 4096.
+
+  status:
+    description: |
+       To disable and enable the VF DT node.Values should
+       be okay/disable.
+
+  nvidia,if-name:
+    description: |
+       Specifies interface name of the VF.This will be derived from name
+       and uint as <<if name prefix>><<DMA channel no>>
+       If name prefix -
+                        For EQOS use eoqs_
+                        For MGBE0 use mgbe0_
+                        For MGBE1 use mgbe1_
+                        For MGBE2 use mgbe2_
+                        For MGBE3 use mgbe3_
+       DMA channel no -
+                        Use DMA channel number given in the DT node.
+
+  nvidia,uphy-gbe-mode:
+    description: |
+       Specifies Gigabit Ethernet mode for UPHY.
+       1 = 10G, 0 = 5G.
+
+  nvidia,phy-iface-mode:
+    description: |
+       Specifies PHY interface mode.
+       0 = XFI 10G, 1 = XFI 5G, 2 = USXGMII 10G, 3 = USXGMII 5G.
+
+  nvidia,mdio_addr:
+    description: |
+       Specifies the MDIO address of the PHY.
+
+  nvidia,phy:
+    description: |
+       Specifies the name of the PHY used by Ethernet controller.
+       For MGBE0, value is "88Q4364".
+
+  nvidia,max-platform-mtu:
+    description: |
+       Maximum MTU size supported for a platform.
+       currently it is set to 9000 for embedded
+       platforms. if DT entry is not
+       present then it will be set to 1500 for
+       automotive platforms. In case of automotive
+       platforms MAC is connected to a switch and not
+       to PHY directly. The switch limits the max MTU
+       to 1500B, hence this property is used to
+       prevent configuring MTU size greater than 1500B
+       for EQOS contoller as well. In case of
+       embedded platforms MAC is connected directly to
+       PHY and hence MTU size of up to 9018 is supported
+       (9022 in case of tagged frame).
+
+  nvidia,macsec-enable:
+    description: |
+       Initialization of the MACsec happens only if this property
+       is enabled.
+       0x1= enable, 0x0=disable.
+
+  nvidia,vm-irq-config:
+    description: |
+       Specifies IRQ data and IRQ numbers for different VMs.
+
+  nvidia,ptp-tsc-trig:
+    description: |
+       Specifies the trigger time interval in which PTP-TSC timestamp
+       capture is triggered.
+       0 = disable, 1 to UINT32_MAX = trigger time in ms.
+  pinctrl-names:
+    description: |
+       If we define this property, then we can control
+       EQOS pin-mux states dynamically so that we can
+       save power based on the Ethernet link.
+
+  pinctrl-0:
+    description: |
+       Valid only when "pictrl-names" is defined, this
+       property has the configuration that need to be
+       set to EQOS signals when Ethernet link is down.
+
+  pinctrl-1:
+    description: |
+       Valid only when "pinctrl-names" is defined, this
+       property has the configuration that need to be
+       set when Ethernet link is up.
+
+  phy-mode:
+    description: |
+       Operation mode of the PHY interface and it
+       should be "rgmii-id".
+
+  phy-handle:
+    description: |
+       Phandle, specifies a reference to a node
+       representing a PHY device.
+
+#MDIO node
+
+  mdio:
+    description: |
+       Child of Ethernet controller which holds the PHY
+       devices connected via MDIO bus.
+
+  compatible:
+    enum:
+      - nvidia,eqos-mdio
+
+#PHY nodes
+
+  reg:
+    description: |
+       PHY ID number.
+
+#Fixed Link
+
+  fixed-link:
+    description: |
+       Some Ethernet MACs have a "fixed link", and are not connected
+       to a normal MDIO-managed PHY device. For those situations,
+       a Device Tree binding allows to describe a "fixed link".
+
+  speed:
+    description: |
+       Specifies the link speed.
+       Accepted values are 10, 100, 1000, 5000 and 10000.
+
+  full-duplex:
+    description: |
+       To indicate that full duplex is used.
+       When absent, half duplex is assumed.
+
+required:
+  - compatible
+  - reg
+  - reg-names
+  - interrupts
+  - interrupt-names
+  - clocks
+  - clock-names
+  - resets
+  - reset-names
+  - iommus
+  - interconnects
+  - interconnect-names
+  - nvidia,num-dma-chans
+  - nvidia,dma-chans
+  - nvidia,num-mtl-queues
+  - nvidia,mtl-queues
+  - nvidia,tc-mapping
+  - nvidia,residual-queue
+  - nvidia,rx-queue-prio
+  - nvidia,tx-queue-prio
+  - nvidia,rxq_enable_ctrl
+  - nvidia,dcs-enable
+  - nvidia,pad_calibration
+  - nvidia,pad_auto_cal_pu_offset
+  - nvidia,pad_auto_cal_pd_offset
+  - nvidia,rx_riwt
+  - nvidia,rx_frames
+  - nvidia,tx_usecs
+  - nvidia,tx_frames
+  - nvidia,promisc_mode
+  - nvidia,slot_num_check
+  - nvidia,slot_intvl_vals
+  - nvidia,ptp_ref_clock_speed
+  - nvidia,instance_id
+  - nvidia,ptp-rx-queue
+  - dma-coherent
+  - nvidia,ptp_m2m_role
+  - nvidia,skip_mac_reset
+  - nvidia,mac-addr-idx
+  - nvidia,dma_rx_ring_sz
+  - nvidia,dma_tx_ring_sz
+  - status
+  - nvidia,if-name
+  - nvidia,uphy-gbe-mode
+  - nvidia,phy-iface-mode
+  - nvidia,mdio_addr
+  - nvidia,phy
+  - nvidia,max-platform-mtu
+  - nvidia,macsec-enable
+  - nvidia,vm-irq-config
+  - nvidia,ptp-tsc-trig
+  - pinctrl-names
+  - pinctrl-0
+  - pinctrl-1
+  - phy-mode
+  - phy-handle
+  - mdio
+  - compatible
+  - reg
+  - fixed-link
+  - speed
+  - full-duplex
+
+additionalProperties: false
+
+#EQOS
+examples:
+  - |
+    ethernet@2310000 {
+		compatible = "nvidia,nveqos";
+		reg = <0x0 0x02310000 0x0 0x10000>,    /* EQOS Base Register */
+		      <0x0 0x023D0000 0x0 0x10000>,    /* MACSEC Base Register */
+		      <0x0 0x02300000 0x0 0x10000>;    /* HV Base Register */
+		reg-names = "mac", "macsec-base", "hypervisor";
+		interrupts = <0 194 0x4>,       /* common */
+			     <0 186 0x4>, /* vm0 */
+			     <0 187 0x4>, /* vm1 */
+			     <0 188 0x4>, /* vm2 */
+			     <0 189 0x4>, /* vm3 */
+			     <0 190 0x4>, /* MACsec non-secure intr */
+			     <0 191 0x4>; /* MACsec secure intr */
+		interrupt-names = "common", "vm0", "vm1", "vm2", "vm3",
+				  "macsec-ns-irq", "macsec-s-irq";
+		resets = <&bpmp TEGRA234_RESET_EQOS>,
+			 <&bpmp TEGRA234_RESET_EQOS_MACSEC>; /* MACsec non-secure reset */
+		reset-names = "mac", "macsec_ns_rst";
+		clocks = <&bpmp TEGRA234_CLK_PLLREFE_VCOOUT>,
+			 <&bpmp TEGRA234_CLK_EQOS_AXI>,
+			 <&bpmp TEGRA234_CLK_EQOS_RX>,
+			 <&bpmp TEGRA234_CLK_EQOS_PTP_REF>,
+			 <&bpmp TEGRA234_CLK_EQOS_TX>,
+			 <&bpmp TEGRA234_CLK_AXI_CBB>,
+			 <&bpmp TEGRA234_CLK_EQOS_RX_M>,
+			 <&bpmp TEGRA234_CLK_EQOS_RX_INPUT>,
+			 <&bpmp TEGRA234_CLK_EQOS_MACSEC_TX>,
+			 <&bpmp TEGRA234_CLK_EQOS_TX_DIVIDER>,
+			 <&bpmp TEGRA234_CLK_EQOS_MACSEC_RX>;
+		clock-names = "pllrefe_vcoout", "eqos_axi", "eqos_rx",
+			      "eqos_ptp_ref", "eqos_tx", "axi_cbb",
+			      "eqos_rx_m", "eqos_rx_input",
+			      "eqos_macsec_tx", "eqos_tx_divider",
+			      "eqos_macsec_rx";
+#if TEGRA_IOMMU_DT_VERSION >= DT_VERSION_2
+		interconnects = <&mc TEGRA234_MEMORY_CLIENT_EQOSR>,
+				<&mc TEGRA234_MEMORY_CLIENT_EQOSW>;
+		interconnect-names = "dma-mem", "write";
+#endif
+		iommus = <&smmu_niso1 TEGRA234_SID_EQOS>;
+		nvidia,num-dma-chans = <8>;
+		nvidia,num-mtl-queues = <8>;
+		nvidia,mtl-queues = <0 1 2 3 4 5 6 7>;
+		nvidia,dma-chans = <0 1 2 3 4 5 6 7>;
+		nvidia,tc-mapping = <0 1 2 3 4 5 6 7>;
+		/* Residual Queue can be any valid queue except RxQ0 */
+		nvidia,residual-queue = <1>;
+		nvidia,rx-queue-prio = <0x2 0x1 0x30 0x48 0x0 0x0 0x0 0x0>;
+		nvidia,tx-queue-prio = <0x0 0x7 0x2 0x3 0x0 0x0 0x0 0x0>;
+		nvidia,rxq_enable_ctrl = <2 2 2 2 2 2 2 2>;
+		nvidia,vm-irq-config = <&eqos_vm_irq_config>;
+		nvidia,dcs-enable = <0x1>;
+		nvidia,macsec-enable = <0x1>;
+		nvidia,pad_calibration = <0x1>;
+		/* pad calibration 2's complement offset for pull-down value */
+		nvidia,pad_auto_cal_pd_offset = <0x0>;
+		/* pad calibration 2's complement offset for pull-up value */
+		nvidia,pad_auto_cal_pu_offset = <0x0>;
+		nvidia,rx_riwt = <512>;
+		nvidia,rx_frames = <64>;
+		nvidia,tx_usecs = <256>;
+		nvidia,tx_frames = <5>;
+		nvidia,promisc_mode = <1>;
+		nvidia,slot_num_check = <0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0>;
+		nvidia,slot_intvl_vals = <0x0 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D>;
+		nvidia,ptp_ref_clock_speed = <208333334>;
+		nvidia,instance_id = <4>; /* EQOS instance */
+		nvidia,ptp-rx-queue = <3>;
+		pinctrl-names = "mii_rx_disable", "mii_rx_enable";
+		pinctrl-0 = <&eqos_mii_rx_input_state_disable>;
+		pinctrl-1 = <&eqos_mii_rx_input_state_enable>;
+		nvidia,dma_rx_ring_sz = <1024>;
+		nvidia,dma_tx_ring_sz = <1024>;
+		dma-coherent;
+		nvidia,ptp_m2m_role = <2>;
+		status = "okay";
+		nvidia,if-name = "eqos_0";
+		nvidia,mac-addr-idx = <0>;
+		nvidia,skip_mac_reset = <1>;
+		phy-mode = "rgmii-id";
+		phy-handle = <&phy>;
+		nvidia,ptp-tsc-trig = <500>;
+		/delete-node/ fixed-link;
+
+		mdio {
+			compatible = "nvidia,eqos-mdio";
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			phy: phy@1 {
+				reg = <1>;
+			};
+		};
+        };
+
+#MGBE
+examples:
+  - |
+    ethernet@6810000 {
+		compatible = "nvidia,nvmgbe";
+		reg = <0x0 0x06810000 0x0 0x10000>, /* MGBE base */
+		      <0x0 0x068A0000 0x0 0x10000>, /* XPCS base */
+		      <0x0 0x068D0000 0x0 0x10000>, /* MACsec RM base */
+		      <0x0 0x06800000 0x0 0x10000>; /* HV base */
+		reg-names = "mac", "xpcs", "macsec-base", "hypervisor";
+		interrupts = 	<0 384 0x4>,	/* common */
+				<0 385 0x4>,	/* vm0 */
+				<0 386 0x4>,	/* vm1 */
+				<0 387 0x4>,	/* vm2 */
+				<0 388 0x4>,	/* vm3 */
+				<0 389 0x4>,	/* vm4 */
+				<0 390 0x4>,	/* MACsec non-secure intr */
+				<0 391 0x4>;	/* MACsec secure intr */
+		interrupt-names = "common", "vm0", "vm1", "vm2", "vm3", "vm4",
+				  "macsec-ns-irq", "macsec-s-irq";
+		resets = <&bpmp TEGRA234_RESET_MGBE0_MAC>,
+			 <&bpmp TEGRA234_RESET_MGBE0_PCS>,
+			 <&bpmp TEGRA234_RESET_MGBE0_MACSEC>; /* MACsec non-secure reset */
+		reset-names = "mac", "pcs", "macsec_ns_rst";
+		clocks = <&bpmp TEGRA234_CLK_MGBE0_RX_INPUT_M>,
+			 <&bpmp TEGRA234_CLK_MGBE0_RX_PCS_M>,
+			 <&bpmp TEGRA234_CLK_MGBE0_RX_PCS_INPUT>,
+			 <&bpmp TEGRA234_CLK_MGBE0_RX_PCS>,
+			 <&bpmp TEGRA234_CLK_MGBE0_TX>,
+			 <&bpmp TEGRA234_CLK_MGBE0_TX_PCS>,
+			 <&bpmp TEGRA234_CLK_MGBE0_MAC_DIVIDER>,
+			 <&bpmp TEGRA234_CLK_MGBE0_MAC>,
+			 <&bpmp TEGRA234_CLK_MGBE0_EEE_PCS>,
+			 <&bpmp TEGRA234_CLK_MGBE0_APP>,
+			 <&bpmp TEGRA234_CLK_MGBE0_PTP_REF>,
+			 <&bpmp TEGRA234_CLK_MGBE0_MACSEC>,
+			 <&bpmp TEGRA234_CLK_MGBE0_RX_INPUT>;
+		clock-names = "rx-input-m", "rx-pcs-m", "rx-pcs-input",
+			      "rx-pcs", "tx", "tx-pcs", "mac-divider",
+			      "mac", "eee-pcs", "mgbe", "ptp-ref",
+			      "mgbe_macsec", "rx-input";
+#if TEGRA_IOMMU_DT_VERSION >= DT_VERSION_2
+		interconnects = <&mc TEGRA234_MEMORY_CLIENT_MGBEARD>,
+				<&mc TEGRA234_MEMORY_CLIENT_MGBEAWR>;
+		interconnect-names = "dma-mem", "write";
+#endif
+		iommus = <&smmu_niso0 TEGRA_SID_NISO0_MGBE>;
+		nvidia,num-dma-chans = <10>;
+		nvidia,dma-chans = <0 1 2 3 4 5 6 7 8 9>;
+		nvidia,num-mtl-queues = <10>;
+		nvidia,mtl-queues = <0 1 2 3 4 5 6 7 8 9>;
+		nvidia,tc-mapping = <0 1 2 3 4 5 6 7 0 1>;
+		/* Residual Queue can be any valid queue except RxQ0 */
+		nvidia,residual-queue = <1>;
+		nvidia,rxq_enable_ctrl = <2 2 2 2 2 2 2 2 2 2>;
+		nvidia,vm-irq-config = <&mgbe_vm_irq_config>;
+		nvidia,tx-queue-prio = <0 1 2 3 4 5 6 7 0 0>;
+		nvidia,rx-queue-prio = <0x1 0x2 0x4 0x8 0x10 0x20 0x40 0x80 0x0 0x0>;
+		nvidia,dcs-enable = <0x1>;
+		nvidia,macsec-enable = <0x1>;
+		nvidia,rx_riwt = <512>;
+		nvidia,rx_frames = <64>;
+		nvidia,tx_usecs = <256>;
+		nvidia,tx_frames = <16>;
+		nvidia,promisc_mode = <1>;
+		nvidia,slot_num_check = <0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0>;
+		nvidia,slot_intvl_vals = <0x0 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D>;
+		nvidia,ptp_ref_clock_speed = <312500000>;
+		nvidia,instance_id = <0>; /* MGBE0 instance */
+		nvidia,ptp-rx-queue = <3>;
+		nvidia,dma_rx_ring_sz = <4096>;
+		nvidia,dma_tx_ring_sz = <4096>;
+		dma-coherent;
+		status = "okay";
+		nvidia,if-name = "mgbe0_0";
+		nvidia,mac-addr-idx = <2>;
+		nvidia,skip_mac_reset = <1>;
+		nvidia,mdio_addr = <0>;
+		nvidia,phy = "88Q4364";
+		/* 1:10G, 0:5G */
+		nvidia,uphy-gbe-mode = <1>;
+		/* 0:XFI 10G, 1:XFI 5G, 2:USXGMII 10G, 3:USXGMII 5G */
+		nvidia,phy-iface-mode = <0>;
+		nvidia,max-platform-mtu = <9215>;
+		fixed-link {
+			speed = <10000>;
+			full-duplex;
+		};
+        };
+...

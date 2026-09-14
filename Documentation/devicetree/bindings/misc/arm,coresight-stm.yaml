@@ -1,0 +1,110 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/stm@10070000/arm,coresight-stm.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Coresight STM Driver
+
+maintainers:
+  - Rich Wiley
+
+description: |
+     The following nodes use this compatibility
+        - /stm@10070000
+
+select:
+  properties:
+    compatible:
+        minItems: 2
+        maxItems: 2
+        items:
+            enum:
+                - arm,coresight-stm
+                - arm,primecell
+
+  required:
+    - compatible
+
+properties:
+
+    reg:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Registers are given by a tuple of two values:
+                - register address:
+                - register block size.
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x10070000
+                  maximum: 0x11000000
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x1000
+                  maximum: 0x1000000
+
+    reg-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - stm-base
+                - stm-stimulus-base
+
+
+    clocks:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Clocks are given by a tuple of 2 values:
+                - Phandle to the device
+                - Clock ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0xca
+                  maximum: 0xca
+
+    clock-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - apb_pclk
+
+
+required:
+    - compatible
+    - reg
+    - clocks
+    - clock-names
+
+examples:
+    - |
+        stm@10070000 {
+            compatible = "arm,coresight-stm, arm,primecell";
+            status = "disabled";
+            reg = <0x0 0x10070000 0x0 0x1000>,
+                  <0x0 0x11000000 0x0 0x1000000>;
+            reg-names = "stm-base, stm-stimulus-base";
+            clocks = <&bpmp TEGRA264_CLK_CSITE>;
+            clock-names = "apb_pclk";
+        };

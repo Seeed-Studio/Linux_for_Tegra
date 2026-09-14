@@ -1,0 +1,148 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/gpio@a808300000/nvidia,tegra264-gpio-uphy.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: NVIDIA Tegra GPIO controller driver
+
+maintainers:
+  - Suresh Mangipudi
+
+description: |
+     the compatability = nvidia,tegra264-gpio-uphy is mentioned in the following drivers
+        - <TOP>/kernel/kernel-oot/drivers/gpio/gpio-tegra186.c
+
+     The following nodes use this compatibility
+        - /bus@0/gpio@a808300000
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra264-gpio-uphy
+
+  required:
+    - compatible
+
+properties:
+
+    reg-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - security
+                - gpio
+
+
+    reg:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Registers are given by a tuple of two values:
+                - register address:
+                - register block size.
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0xa8
+                  maximum: 0xa8
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x8300000
+                  maximum: 0x8310000
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x2000
+                  maximum: 0x2000
+
+    interrupts:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Interrupts are give by a tuple of 3 values:
+                - interrupt specifier (GIC_SPI = 0, GIC_PPI = 1)
+                  definitions in dt-bindings/interrupt-controller/arm-gic.h
+                - interrupt number
+                - trigger type (rising edge, falling edge, both, etc)
+                  definitions in dt-bindings/interrupt-controller/irq.h
+        items:
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x34b
+                  maximum: 0x35a
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x4
+                  maximum: 0x4
+
+    gpio-controller:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+    '#gpio-cells':
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x2
+        maximum: 0x2
+
+    interrupt-controller:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+    '#interrupt-cells':
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x2
+        maximum: 0x2
+
+    pinctrl-node:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+
+required:
+    - compatible
+    - reg
+    - interrupts
+
+examples:
+    - |
+        gpio@a808300000 {
+            reg-names = "security, gpio";
+            compatible = "nvidia,tegra264-gpio-uphy";
+            status = "disabled";
+            reg = <0xa8 0x08300000 0x0 0x2000>,
+                  <0xa8 0x08310000 0x0 0x2000>;
+            interrupts = <GIC_SPI 843 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 844 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 845 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 846 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 847 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 848 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 849 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 850 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 851 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 852 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 853 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 854 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 855 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 856 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 857 IRQ_TYPE_LEVEL_HIGH>,
+                         <GIC_SPI 858 IRQ_TYPE_LEVEL_HIGH>;
+            gpio-controller;
+            #gpio-cells = <2>;
+            interrupt-controller;
+            #interrupt-cells = <2>;
+            pinctrl-node = <&padctl_uphy>;
+        };

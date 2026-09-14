@@ -1,0 +1,123 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/crypto@8188140000/nvidia,tegra264-se-hash.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Crypto driver for NVIDIA Security Engine in Tegra Chips
+
+maintainers:
+  - Suresh Mangipudi
+
+description: |
+     the compatability = nvidia,tegra264-se-hash is mentioned in the following drivers
+        - <TOP>/kernel/nvidia-oot/drivers/crypto/tegra/tegra-se-main.c
+
+     The following nodes use this compatibility
+        - /bus@0/host1x@8181200000/crypto@8188140000
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra264-se-hash
+
+  required:
+    - compatible
+
+properties:
+
+    reg:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Registers are given by a tuple of two values:
+                - register address:
+                - register block size.
+        items:
+            minItems: 4
+            maxItems: 4
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x81
+                  maximum: 0x81
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x88140000
+                  maximum: 0x88140000
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x0
+                  maximum: 0x0
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x10000
+                  maximum: 0x10000
+
+    clocks:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            Clocks are given by a tuple of 2 values:
+                - Phandle to the device
+                - Clock ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x25
+                  maximum: 0x25
+
+    clock-names:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - se
+
+
+    iommus:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            iommus are given by a tuple of 2 values:
+                - Phandle to the device
+                - Device ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                  minimum: 0x1804
+                  maximum: 0x1804
+
+    dma-coherent:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+required:
+    - compatible
+    - reg
+    - clocks
+    - clock-names
+    - iommus
+
+examples:
+    - |
+        crypto@8188140000 {
+            compatible = "nvidia,tegra264-se-hash";
+            reg = <0x81 0x88140000 0x0 0x10000>;
+            clocks = <&bpmp TEGRA264_CLK_SE>;
+            clock-names = "se";
+            iommus = <&smmu1_mmu TEGRA_SID_SE_SE4>;
+            dma-coherent;
+            status = "disabled";
+        };

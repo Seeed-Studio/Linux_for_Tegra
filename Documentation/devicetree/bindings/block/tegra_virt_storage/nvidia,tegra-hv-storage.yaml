@@ -1,0 +1,104 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/tegra_virt_storage79/nvidia,tegra-hv-storage.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Virtual storage device over Tegra Hypervisor IVC channel
+
+maintainers:
+  - Sreenivas Velpula
+
+description: |
+     the compatability = nvidia,tegra-hv-storage is mentioned in the following drivers
+        - <TOP>/kernel/nvidia-oot/drivers/block/tegra_virt_storage/tegra_hv_vblk.c
+
+     The following nodes use this compatibility
+        - /tegra_virt_storage79
+        - /tegra_virt_storage80
+        - /tegra_virt_storage81
+        - /tegra_virt_storage82
+        - /tegra_virt_storage84
+        - /tegra_virt_storage85
+        - /tegra_virt_storage86
+        - /tegra_virt_storage87
+        - /tegra_virt_storage89
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra-hv-storage
+
+  required:
+    - compatible
+
+properties:
+
+    iommus:
+        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
+        description: |
+            iommus are given by a tuple of 2 values:
+                - Phandle to the device
+                - Device ID
+        items:
+            minItems: 2
+            maxItems: 2
+            items:
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+                - $ref: "/schemas/types.yaml#/definitions/uint32"
+
+    instance:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0x3c
+
+    ivc:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0xf
+        maximum: 0x46
+
+    mempool:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x13
+        maximum: 0x1e
+
+    partition-name:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - gos0-shared-pers
+                - gos0-ufs
+                - gos0_nvlog
+                - pers-ota
+                - ist-runtimeinfo
+                - ist-resultdata
+                - gos0-fs
+                - gos0-rw-overlay
+                - custom
+
+
+    read-only:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+required:
+    - compatible
+    - iommus
+
+examples:
+    - |
+        tegra_virt_storage79 {
+        };

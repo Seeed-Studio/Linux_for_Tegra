@@ -1,0 +1,116 @@
+# SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/watchdog/watchdog-tegra-t18x.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: NVIDIA Tegra186 Watchdog Timer (WDT) Controller
+
+maintainers:
+  - Laxman Dewangan <ldewangan@nvidia.com>
+
+description: |
+   Watchdog timer for the Nvidia Tegra186 SoCs.
+
+allOf:
+  - $ref: "watchdog.yaml#"
+
+properties:
+  compatible:
+    enum:
+      - nvidia,tegra-wdt-t234
+      - nvidia,tegra-wdt-t19x
+      - nvidia,tegra-wdt-t18x
+      - nvidia,tegra-wdt-t18x-linsim
+
+  reg:
+    items:
+      - description: Base register address and size of the watchdog timer 0.
+      - description: Base register address and size of the Timer 0.
+      - description: Base register address and size of the TKE.
+
+  interrupts:
+    maxItems: 1
+    description: |
+       Interrupt of the watchdog timer.
+
+  nvidia,watchdog-index:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    description: |
+       Index of watchdog timer controller starting from 0.
+
+  nvidia,timer-index:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    description: |
+       Index of timer used for watchdog timing clock.
+
+  nvidia,enable-on-init:
+    $ref: /schemas/types.yaml#/definitions/flag
+    description: |
+       If present, start the watchdog timer during initialisation else not.
+
+  nvidia,extend-watchdog-suspend:
+    $ref: /schemas/types.yaml#/definitions/flag
+    description: |
+       If present, extend the watchdog timer during suspend else not.
+
+  nvidia,disable-debug-reset:
+    $ref: /schemas/types.yaml#/definitions/flag
+    description: |
+       If present, disable watchdog timer during debug reset.
+
+  nvidia,disable-por-reset:
+    $ref: /schemas/types.yaml#/definitions/flag
+    description: |
+       If present, disable the Power-On-Reset of SoCs when it expires.
+
+  nvidia,disallow-wdt-freeze:
+    $ref: /schemas/types.yaml#/definitions/flag
+    description: |
+       If present, disable watchdog timer when system freeze. This will help to not reset
+       SoCs during freeze when doing hardware debug.
+
+  nvidia,disable-remote-interrupt:
+    $ref: /schemas/types.yaml#/definitions/flag
+    description: |
+       If present, skip the remote interrupt when watchdog timer expire.
+
+  nvidia,shutdown-timeout:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    description: |
+       Shutdown timeout in second.
+
+  nvidia,expiry-count:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    description: |
+       Watchdog expiry count before reset.
+
+required:
+  - compatible
+  - interrupts
+  - reg
+  - timeout-sec
+
+unevaluatedProperties: false
+
+examples:
+  - |
+    soc {
+        #address-cells = <2>;
+        #size-cells = <2>;
+
+        watchdog@2190000 {
+           compatible = "nvidia,tegra-wdt-t234";
+           reg = <0x0 0x02190000 0x0 0x10000>, /* WDT0 */
+                 <0x0 0x02090000 0x0 0x10000>, /* TMR0 */
+                 <0x0 0x02080000 0x0 0x10000>; /* TKE */
+           interrupts = <0 7 0x4 0 8 0x4>; /* TKE shared int */
+           nvidia,watchdog-index = <0>;
+           nvidia,timer-index = <7>;
+           nvidia,enable-on-init;
+           nvidia,extend-watchdog-suspend;
+           timeout-sec = <120>;
+           nvidia,disable-debug-reset;
+        };
+     };
+...

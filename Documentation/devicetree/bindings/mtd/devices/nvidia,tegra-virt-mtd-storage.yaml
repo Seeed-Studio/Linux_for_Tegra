@@ -1,0 +1,86 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/tegra_virt_storage83/nvidia,tegra-virt-mtd-storage.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Nvidia Tegra t264 Hypervisor MTD Driver
+
+maintainers:
+  - Sreenivas Velpula
+
+description: |
+     the compatability = nvidia,tegra-virt-mtd-storage is mentioned in the following drivers
+        - <TOP>/kernel/nvidia-oot/drivers/mtd/devices/tegra_hv_mtd.c
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra-virt-mtd-storage
+
+  required:
+    - compatible
+
+properties:
+
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra-virt-mtd-storage
+
+    instance:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0x0
+
+    ivc:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0xf
+        maximum: 0x3f
+
+    read-only:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+
+    mempool:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x17
+        maximum: 0x17
+
+    partition-name:
+        $ref: "/schemas/types.yaml#/definitions/string-array"
+        items:
+            enum:
+                - board-info
+
+
+required:
+    - compatible
+
+examples:
+    - |
+        tegra_virt_storage83 {
+            compatible = "nvidia,tegra-virt-mtd-storage";
+            status = "okay";
+            instance = <0x00000000>;
+            ivc = <0x0000000f>,
+                  <0x0000003f>;
+            read-only;
+            mempool = <0x00000017>;
+            partition-name = "board-info";
+        };

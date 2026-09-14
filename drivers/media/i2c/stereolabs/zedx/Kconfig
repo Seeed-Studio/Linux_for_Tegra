@@ -1,0 +1,15 @@
+config SL_VIDEO_ZEDX
+	tristate "ZED-X AR0234 camera sensor support"
+	depends on I2C && VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API && ( SL_DESER_MAX96712 || SL_DESER_MAX9296 )
+	help
+	  This is a Video4Linux2 sensor-level driver for Stereolabs ZED-X
+	  camera.
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called sl_zedx.
+config TEGRA_L4T_351
+	bool "L4T R35.1 compatible"
+	depends on SL_VIDEO_ZEDX
+	default n
+	help
+		If you wish to compile for L4T R35.1, please check this option.

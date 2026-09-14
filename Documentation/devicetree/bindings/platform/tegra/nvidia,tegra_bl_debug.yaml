@@ -1,0 +1,54 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/tegra_bl_debug/nvidia,tegra_bl_debug.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Nvidia Tegra Bootloader Debug Module
+
+maintainers:
+  - Anvesh Salveru
+
+description: |
+     the compatability = nvidia,tegra_bl_debug is mentioned in the following drivers
+        - <TOP>/kernel/nvidia-oot/drivers/platform/tegra/tegra_bootloader_debug.c
+
+     The following nodes use this compatibility
+        - /tegra_bl_debug
+
+select:
+  properties:
+    compatible:
+        minItems: 1
+        maxItems: 1
+        items:
+            enum:
+                - nvidia,tegra_bl_debug
+
+  required:
+    - compatible
+
+properties:
+
+    usec_timer_reg_base:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0xc240000
+        maximum: 0xc240000
+
+required:
+    - compatible
+
+examples:
+    - |
+        tegra_bl_debug {
+        };
