@@ -1,0 +1,61 @@
+// SPDX-License-Identifier: GPL-2.0-only
+
+/*
+ * Board-level configuration for the Robotics J401 ZED X overlay.
+ *
+ * The overlay is built for every BSP target, so keep Robotics J401 as the
+ * standalone-build default. The normal image build injects
+ * CONFIG_RECOMPUTER_ORIN_ROBOTICS_J401 through overlay/Makefile.
+ */
+#if !defined(CONFIG_RECOMPUTER_ORIN_ROBOTICS_J401)
+#define CONFIG_RECOMPUTER_ORIN_ROBOTICS_J401
+#endif
+
+#if defined(CONFIG_RECOMPUTER_ORIN_ROBOTICS_J401)
+
+/*
+ * Seeed reComputer Robotics J401 (Orin NX/Nano, p3767) with the 4-port
+ * Robotics GMSL board. Each MAX96712 link accepts either a ZED X stereo or
+ * a ZED X One GS camera; the driver selects the matching per-link DT slot.
+ *
+ * Deserializer control I2C = CAM_I2C -> i2c@3180000.
+ * MAX96712 RESETB = SPI0_CS1 -> TEGRA234_MAIN_GPIO(Z, 7).
+ * MAX96712 PWDNB  = CAM0_PWDN -> TEGRA234_MAIN_GPIO(H, 6).
+ */
+#define ZEDX_OVERLAY_NAME	"Stereolabs ZED X for reComputer Robotics J401"
+
+#define CAM0_RST		TEGRA234_MAIN_GPIO(Z, 7)
+#define CAM0_PWDN		TEGRA234_MAIN_GPIO(H, 6)
+
+#define TEGRA_ZEDX_GMSL_I2C	i2c@3180000
+#define ZEDX_DSER_RESET_GPIO	<&gpio CAM0_RST GPIO_ACTIVE_HIGH>
+#define ZEDX_DSER_PWDN_GPIO	<&gpio CAM0_PWDN GPIO_ACTIVE_HIGH>
+
+/* Bus number in devname is cosmetic; i2c@3180000 is bus 2 on the DUT. */
+#define ZEDX_DEVNAME_LEFT0	"zedx 2-0028"
+#define ZEDX_DEVNAME_RIGHT0	"zedx 2-0020"
+#define ZEDX_DEVNAME_LEFT1	"zedx 2-0038"
+#define ZEDX_DEVNAME_RIGHT1	"zedx 2-0030"
+#define ZEDX_DEVNAME_LEFT2	"zedx 2-0048"
+#define ZEDX_DEVNAME_RIGHT2	"zedx 2-0040"
+#define ZEDX_DEVNAME_LEFT3	"zedx 2-0014"
+#define ZEDX_DEVNAME_RIGHT3	"zedx 2-0041"
+#define ZEDX_DEVNAME_ONE_GS0	"zedx 2-0010"
+#define ZEDX_DEVNAME_ONE_GS1	"zedx 2-0011"
+#define ZEDX_DEVNAME_ONE_GS2	"zedx 2-0012"
+#define ZEDX_DEVNAME_ONE_GS3	"zedx 2-0013"
+
+#define ZEDX_PROC_LEFT0		"/proc/device-tree/bus@0/i2c@3180000/zedx_left_0@28"
+#define ZEDX_PROC_RIGHT0		"/proc/device-tree/bus@0/i2c@3180000/zedx_right_0@20"
+#define ZEDX_PROC_LEFT1		"/proc/device-tree/bus@0/i2c@3180000/zedx_left_1@38"
+#define ZEDX_PROC_RIGHT1		"/proc/device-tree/bus@0/i2c@3180000/zedx_right_1@30"
+#define ZEDX_PROC_LEFT2		"/proc/device-tree/bus@0/i2c@3180000/zedx_left_2@48"
+#define ZEDX_PROC_RIGHT2		"/proc/device-tree/bus@0/i2c@3180000/zedx_right_2@40"
+#define ZEDX_PROC_LEFT3		"/proc/device-tree/bus@0/i2c@3180000/zedx_left_3@14"
+#define ZEDX_PROC_RIGHT3		"/proc/device-tree/bus@0/i2c@3180000/zedx_right_3@41"
+#define ZEDX_PROC_ONE_GS0	"/proc/device-tree/bus@0/i2c@3180000/zedxone_gs_0@10"
+#define ZEDX_PROC_ONE_GS1	"/proc/device-tree/bus@0/i2c@3180000/zedxone_gs_1@11"
+#define ZEDX_PROC_ONE_GS2	"/proc/device-tree/bus@0/i2c@3180000/zedxone_gs_2@12"
+#define ZEDX_PROC_ONE_GS3	"/proc/device-tree/bus@0/i2c@3180000/zedxone_gs_3@13"
+
+#endif

@@ -1,0 +1,274 @@
+/*
+ * Copyright (c) 2018-2021, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <dt-bindings/memory/tegra234-mc.h>
+#include "dt-bindings/clock/tegra234-clock.h"
+
+#include "sgx-yuv-gmsl2.dtsi"
+
+#define CAM_VDD_SYS_EN	TEGRA234_MAIN_GPIO(AC, 7)
+#define DES_0_RESET		TEGRA234_MAIN_GPIO(H, 6)
+#define DES_1_RESET		TEGRA234_MAIN_GPIO(H, 3)
+#define DES_3_RESET		TEGRA234_MAIN_GPIO(AC, 1)
+#define DES_2_RESET		TEGRA234_MAIN_GPIO(AC, 0)
+#define CAMERA_I2C_MUX_BUS(x) (0x1E + x)
+
+/* camera control gpio definitions */
+/ {
+	bus@0 {
+		gpio@2200000 {
+			camera-control-output-low {
+				gpio-hog;
+				output-low;
+				gpios = <CAM_VDD_SYS_EN 0 DES_0_RESET 1 DES_1_RESET 1 DES_2_RESET 1 DES_3_RESET 1>; 
+				label = "cam_vdd_sys_en", "cam0_rst", "cam0_pwdn","cam1_rst", "cam1_pwdn";
+			};
+		};
+
+		i2c@3180000 {
+			status = "okay";
+			// iommus = <&smmu_niso0 TEGRA_SID_NISO0_GPCDMA_0>;
+			// iommus = <&smmu_niso0 TEGRA234_SID_GPCDMA>;
+			// dma-coherent;
+			// nvidia,hw-instance-id = <0x2>;
+			// scl-gpio = <&tegra_main_gpio TEGRA234_MAIN_GPIO(P, 2) 0>;
+			// sda-gpio = <&tegra_main_gpio TEGRA234_MAIN_GPIO(P, 3) 0>;
+			// nvidia,epl-reporter-id = <0x8052>;
+			// tca9546@70 {
+			// 	vif-supply = <&p3737_vdd_1v8_sys>;
+			// 	vcc-pullup-supply = <&battery_reg>;
+			// };
+
+			tca9546@70 {
+				compatible = "nxp,pca9546";
+				reg = <0x70>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+				status = "okay";
+				skip_mux_detect = "yes";
+				// vif-supply = <&p3737_vdd_1v8_sys>;
+				vcc-supply = <&p3737_vdd_1v8_sys>;
+				// vcc-pullup-supply = <&battery_reg>;
+				force_bus_start = <CAMERA_I2C_MUX_BUS(0)>;
+
+				i2c@0 {
+					reg = <0>;
+					i2c-mux,deselect-on-exit;
+					#address-cells = <1>;
+					#size-cells = <0>;
+					dser_0: max9296_0@48 {
+						compatible = "maxim,max9296_0";
+						reg = <0x48>;
+						csi-mode = "2x4";
+						max-src = <2>;
+						reset-gpios = <&tegra_main_gpio DES_0_RESET GPIO_ACTIVE_HIGH>;
+						#if defined(SGX_YUV_GMSL1)
+						poc-ctrl = <&tegra_main_gpio CAM_VDD_SYS_EN GPIO_ACTIVE_LOW>;
+						#endif
+					};
+					ser_prim_0: max9295_prim_0@40{
+						compatible = "maxim,max9295_0";
+						reg = <0x40>;
+						is-prim-ser;
+					};
+					ser_0: max9295_0@60 {
+						compatible = "maxim,max9295_0";
+						reg = <0x60>;
+						sensing,gmsl-dser-device = <&dser_0>;
+					};
+					ser_1: max9295_1@62 {
+						compatible = "maxim,max9295_0";
+						reg = <0x62>;
+						sensing,gmsl-dser-device = <&dser_0>;
+					};
+					cam_0@1b {
+						/* Define any required hw resources needed by driver */
+						/* ie. clocks, io pins, power sources */
+						clocks = <&bpmp TEGRA234_CLK_EXTPERIPH1>,
+								<&bpmp TEGRA234_CLK_EXTPERIPH1>;
+						clock-names = "extperiph1", "pllp_grtba";
+						mclk = "extperiph1";
+						sensing,gmsl-ser-device = <&ser_0>;
+						sensing,gmsl-dser-device = <&dser_0>;
+					};
+					cam_1@1c {
+						/* Define any required hw resources needed by driver */
+						/* ie. clocks, io pins, power sources */
+						clocks = <&bpmp TEGRA234_CLK_EXTPERIPH1>,
+								<&bpmp TEGRA234_CLK_EXTPERIPH1>;
+						clock-names = "extperiph1", "pllp_grtba";
+						mclk = "extperiph1";
+						sensing,gmsl-ser-device = <&ser_1>;
+						sensing,gmsl-dser-device = <&dser_0>;
+					};
+				};
+				i2c@1 {
+					reg = <1>;
+					i2c-mux,deselect-on-exit;
+					#address-cells = <1>;
+					#size-cells = <0>;
+					dser_1: max9296_1@48 {
+						compatible = "maxim,max9296_1";
+						reg = <0x48>;
+						csi-mode = "2x4";
+						max-src = <2>;
+						reset-gpios = <&tegra_main_gpio DES_1_RESET GPIO_ACTIVE_HIGH>;
+						// #if defined(SGX_YUV_GMSL1)
+						poc-ctrl = <&tegra_main_gpio CAM_VDD_SYS_EN GPIO_ACTIVE_LOW>;
+						// #endif
+					};
+					ser_prim_1: max9295_prim_1@40{
+						compatible = "maxim,max9295_1";
+						reg = <0x40>;
+						is-prim-ser;
+					};
+					ser_2: max9295_2@60 {
+						compatible = "maxim,max9295_1";
+						reg = <0x60>;
+						sensing,gmsl-dser-device = <&dser_1>;
+					};
+					ser_3: max9295_3@62 {
+						compatible = "maxim,max9295_1";
+						reg = <0x62>;
+						sensing,gmsl-dser-device = <&dser_1>;
+					};
+					cam_2@1b {
+						/* Define any required hw resources needed by driver */
+						/* ie. clocks, io pins, power sources */
+						clocks = <&bpmp TEGRA234_CLK_EXTPERIPH1>,
+								<&bpmp TEGRA234_CLK_EXTPERIPH1>;
+						clock-names = "extperiph1", "pllp_grtba";
+						mclk = "extperiph1";
+						sensing,gmsl-ser-device = <&ser_2>;
+						sensing,gmsl-dser-device = <&dser_1>;
+					};
+					cam_3@1c {
+						/* Define any required hw resources needed by driver */
+						/* ie. clocks, io pins, power sources */
+						clocks = <&bpmp TEGRA234_CLK_EXTPERIPH1>,
+								<&bpmp TEGRA234_CLK_EXTPERIPH1>;
+						clock-names = "extperiph1", "pllp_grtba";
+						mclk = "extperiph1";
+						sensing,gmsl-ser-device = <&ser_3>;
+						sensing,gmsl-dser-device = <&dser_1>;
+					};
+				};
+				i2c@2 {
+					reg = <2>;
+					i2c-mux,deselect-on-exit;
+					#address-cells = <1>;
+					#size-cells = <0>;
+					dser_2: max9296_2@48 {
+						compatible = "maxim,max9296_2";
+						reg = <0x48>;
+						csi-mode = "2x4";
+						max-src = <2>;
+						reset-gpios = <&tegra_main_gpio DES_2_RESET GPIO_ACTIVE_HIGH>;
+						#if defined(SGX_YUV_GMSL1)
+						poc-ctrl = <&tegra_main_gpio CAM_VDD_SYS_EN GPIO_ACTIVE_LOW>;
+						#endif
+					};
+					ser_prim_2: max9295_prim_2@40{
+						compatible = "maxim,max9295_2";
+						reg = <0x40>;
+						is-prim-ser;
+					};
+					ser_4: max9295_4@60 {
+						compatible = "maxim,max9295_2";
+						reg = <0x60>;
+						sensing,gmsl-dser-device = <&dser_2>;
+					};
+					ser_5: max9295_5@62 {
+						compatible = "maxim,max9295_2";
+						reg = <0x62>;
+						sensing,gmsl-dser-device = <&dser_2>;
+					};
+					cam_4@1b {
+						/* Define any required hw resources needed by driver */
+						/* ie. clocks, io pins, power sources */
+						clocks = <&bpmp TEGRA234_CLK_EXTPERIPH1>,
+								<&bpmp TEGRA234_CLK_EXTPERIPH1>;
+						clock-names = "extperiph1", "pllp_grtba";
+						mclk = "extperiph1";
+						sensing,gmsl-ser-device = <&ser_4>;
+						sensing,gmsl-dser-device = <&dser_2>;
+					};
+					cam_5@1c {
+						/* Define any required hw resources needed by driver */
+						/* ie. clocks, io pins, power sources */
+						clocks = <&bpmp TEGRA234_CLK_EXTPERIPH1>,
+								<&bpmp TEGRA234_CLK_EXTPERIPH1>;
+						clock-names = "extperiph1", "pllp_grtba";
+						mclk = "extperiph1";
+						sensing,gmsl-ser-device = <&ser_5>;
+						sensing,gmsl-dser-device = <&dser_2>;
+					};
+				};
+				i2c@3 {
+					reg = <3>;
+					i2c-mux,deselect-on-exit;
+					#address-cells = <1>;
+					#size-cells = <0>;
+					dser_3: max9296_3@48 {
+						compatible = "maxim,max9296_3";
+						reg = <0x48>;
+						csi-mode = "2x4";
+						max-src = <2>;
+						reset-gpios = <&tegra_main_gpio DES_3_RESET GPIO_ACTIVE_HIGH>;
+						#if defined(SGX_YUV_GMSL1)
+						poc-ctrl = <&tegra_main_gpio CAM_VDD_SYS_EN GPIO_ACTIVE_LOW>;
+						#endif
+					};
+					ser_prim_3: max9295_prim_3@40{
+						compatible = "maxim,max9295_3";
+						reg = <0x40>;
+						is-prim-ser;
+					};
+					ser_6: max9295_6@60 {
+						compatible = "maxim,max9295_3";
+						reg = <0x60>;
+						sensing,gmsl-dser-device = <&dser_3>;
+					};
+					ser_7: max9295_7@62 {
+						compatible = "maxim,max9295_3";
+						reg = <0x62>;
+						sensing,gmsl-dser-device = <&dser_3>;
+					};
+					cam_6@1b {
+						/* Define any required hw resources needed by driver */
+						/* ie. clocks, io pins, power sources */
+						clocks = <&bpmp TEGRA234_CLK_EXTPERIPH1>,
+								<&bpmp TEGRA234_CLK_EXTPERIPH1>;
+						clock-names = "extperiph1", "pllp_grtba";
+						mclk = "extperiph1";
+						sensing,gmsl-ser-device = <&ser_6>;
+						sensing,gmsl-dser-device = <&dser_3>;
+					};
+					cam_7@1c {
+						/* Define any required hw resources needed by driver */
+						/* ie. clocks, io pins, power sources */
+						clocks = <&bpmp TEGRA234_CLK_EXTPERIPH1>,
+								<&bpmp TEGRA234_CLK_EXTPERIPH1>;
+						clock-names = "extperiph1", "pllp_grtba";
+						mclk = "extperiph1";
+						sensing,gmsl-ser-device = <&ser_7>;
+						sensing,gmsl-dser-device = <&dser_3>;
+					};
+				};
+			};
+		};
+	};	
+};
